@@ -13,8 +13,8 @@ const Page: React.FC = () => (
     <Section className='white-background'>
       <div className='container'>
         <div className='center'>
-          <Heading type={1} color='gray' text='Discover' />
-          <p className='gray'>Discover, search and filter best events in London.</p>
+          <Heading type={1} color='gray' text='Nexivent' />
+          <p className='gray'>Nexivent, Busca eventos en Lima.</p>
         </div>
       </div>
 

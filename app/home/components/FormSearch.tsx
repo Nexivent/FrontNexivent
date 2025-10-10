@@ -48,7 +48,7 @@ const FormSearch: React.FC = () => {
     const { keyword } = formValues;
 
     if (keyword === '' || keyword.length < 3) {
-      showAlert({ type: 'error', text: 'Please enter minimum 3 characters for search.' });
+      showAlert({ type: 'error', text: 'Ingrese al menos 3 caráteres.' });
     }
   };
 
@@ -60,7 +60,7 @@ const FormSearch: React.FC = () => {
           name='keyword'
           value={formValues.keyword}
           maxLength={64}
-          placeholder='Event, venue, artist, keyword'
+          placeholder='Eventos, local, artista, palabra clave'
           required
           onChange={handleChange}
         />

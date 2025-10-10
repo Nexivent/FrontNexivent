@@ -35,7 +35,7 @@ const Page: React.FC = () => (
       <div className='container'>
         <FormMain
           data={{
-            name: 'Cenk',
+            name: 'Sahur',
             lastname: 'SARI',
             email: 'cenk@cenksari.com',
           }}

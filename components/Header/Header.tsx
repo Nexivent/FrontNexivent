@@ -57,10 +57,10 @@ const Header: React.FC = () => {
             Home
           </Link>
           <Link href='/contact' className='gray'>
-            Contact us
+            Contactanos
           </Link>
           <Link href='/news' className='gray'>
-            News
+            Noticias
           </Link>
         </div>
         <div className='members' ref={wrapperRef}>
@@ -70,7 +70,7 @@ const Header: React.FC = () => {
           <span>or</span>
           <ButtonLink color='blue-filled' text='Sign in' url={`members/signin`} /> */}
           <Link href='/members/account'>
-            <ProfilePhoto image='https://www.cenksari.com/content/profile.jpg' size='small' />
+            <ProfilePhoto image='https://images.pexels.com/photos/45201/kitty-cat-kitten-pet-45201.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500' size='small' />
           </Link>
           <button
             type='button'
@@ -79,7 +79,7 @@ const Header: React.FC = () => {
               setDropdown(!dropdown);
             }}
           >
-            Cenk
+            Fipi
             <span className='material-symbols-outlined'>
               {dropdown ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
             </span>

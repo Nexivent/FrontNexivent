@@ -14,8 +14,8 @@ const Page: React.FC = () => (
     <Section className='white-background'>
       <div className='container'>
         <div className='center'>
-          <Heading type={1} color='gray' text='Venues' />
-          <p className='gray'>Discover the best venues in London.</p>
+          <Heading type={1} color='gray' text='Locales' />
+          <p className='gray'>Encuentra los locales de eventos en Lima.</p>
           <div className='top-search'>
             <FormSearch />
           </div>
