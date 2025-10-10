@@ -9,6 +9,7 @@ import CardGroup from '@components/Card/CardGroup';
 
 import FormSearch from './components/FormSearch';
 
+
 const Page: React.FC = () => (
   <Master>
     <Section className='white-background'>

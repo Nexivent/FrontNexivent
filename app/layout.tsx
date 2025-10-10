@@ -5,12 +5,18 @@ import { type Metadata, type Viewport } from 'next';
 import './styles/ui.css';
 import './styles/site.css';
 
+// context
+import { UserProvider } from '@contexts/UserContext';
 // variables
 export const runtime = 'edge';
 
 const RootLayout: React.FC<Readonly<{ children: React.ReactNode }>> = ({ children }) => (
   <html lang='en'>
-    <body>{children}</body>
+    <body>
+      <UserProvider>
+        {children}
+      </UserProvider>
+    </body>
   </html>
 );
 
