@@ -30,7 +30,7 @@ const Page: React.FC = () => (
       </div>
     </Section>
 
-    <CardGroup url='list' title='Latest events' color='blue' background='gray'>
+    <CardGroup url='list' title='Nuevos eventos' color='blue' background='gray'>
       <EventCard
         url='1'
         from='20'
@@ -87,7 +87,7 @@ const Page: React.FC = () => (
       />
     </CardGroup>
 
-    <CardGroup url='list' title='More events' color='red' background='white'>
+    <CardGroup url='list' title='Más eventos' color='red' background='white'>
       <EventCard
         url='1'
         from='20'
@@ -144,7 +144,7 @@ const Page: React.FC = () => (
       />
     </CardGroup>
 
-    <CardGroup url='list' title='Editors choice' color='orange' background='gray'>
+    <CardGroup url='list' title='Tendencia' color='orange' background='gray'>
       <EventCard
         url='1'
         from='20'
@@ -201,7 +201,7 @@ const Page: React.FC = () => (
       />
     </CardGroup>
 
-    <CardGroup url='list' title='For kids' color='purple' background='white'>
+    <CardGroup url='list' title='Para niños' color='purple' background='white'>
       <EventCard
         url='1'
         from='20'

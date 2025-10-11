@@ -86,10 +86,10 @@ const Header: React.FC = () => {
           </button>
           {dropdown && (
             <Dropdown color='gray'>
-              <DropdownItem url='members/tickets' text='My tickets' />
-              <DropdownItem url='members/account' text='My account' />
+              <DropdownItem url='members/tickets' text='Mis tickets' />
+              <DropdownItem url='members/account' text='Mi cuenta' />
               <hr />
-              <DropdownItem url='members/signout' text='Sign out' />
+              <DropdownItem url='members/signout' text='Cerrar sesión' />
             </Dropdown>
           )}
         </div>
@@ -138,7 +138,7 @@ const Header: React.FC = () => {
                 </li>
                 <li>
                   <Link href='/tickets' className='white'>
-                    My tickets
+                    Mis Tickets
                   </Link>
                 </li>
                 <li>

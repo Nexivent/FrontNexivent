@@ -14,16 +14,16 @@ const Page: React.FC = () => (
     <Section className='white-background'>
       <div className='container'>
         <div className='center'>
-          <Heading type={1} color='gray' text='My tickets' />
+          <Heading type={1} color='gray' text='Mis Tickets' />
           <p className='gray form-information'>
-            You can access the tickets you purchased from this page at any time. You can download or
-            send your tickets. Please note: You will not be able to see tickets for events that have
-            already ended or been canceled on this page.
+            Puedes acceder a los boletos que compraste desde esta página en cualquier momento.
+Puedes descargarlos o enviarlos.
+Ten en cuenta que no podrás ver los boletos de eventos que ya hayan finalizado o sido cancelados en esta página.
           </p>
           <div className='button-container'>
             <ButtonGroup color='gray'>
-              <ButtonGroupItem url='members/tickets' text='My tickets' active />
-              <ButtonGroupItem url='members/account' text='My account' />
+              <ButtonGroupItem url='members/tickets' text='Mis Tickets' active />
+              <ButtonGroupItem url='members/account' text='Mi Cuenta' />
             </ButtonGroup>
           </div>
         </div>
@@ -95,7 +95,7 @@ const Page: React.FC = () => (
   </Master>
 );
 
-const title = 'My tickets';
+const title = 'Mis Tickets';
 const canonical = 'https://modern-ticketing.com/members/tickets';
 const description = 'Modern ticketing is a modern ticketing solution';
 

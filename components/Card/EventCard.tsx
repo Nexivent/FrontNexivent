@@ -37,15 +37,15 @@ const EventCard: React.FC<IProps> = ({ url, from, when, name, venue, image, colo
           <span className='material-symbols-outlined'>apartment</span> {venue}
         </p>
         <p>
-          <span className='material-symbols-outlined'>local_activity</span> from{' '}
-          <strong>£{from}</strong>
+          <span className='material-symbols-outlined'>local_activity</span> desde{' '}
+          <strong>s/.{from}</strong>
         </p>
       </div>
     </Link>
     <div className='card-buttons'>
       <ButtonLink
         color={`${color}-overlay`}
-        text='Details'
+        text='Detalles'
         rightIcon='arrow_forward'
         url={`event/${url}`}
       />

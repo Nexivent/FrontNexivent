@@ -6,8 +6,7 @@ import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
 import ButtonGroup from '@components/Button/ButtonGroup';
 import ButtonGroupItem from '@components/Button/ButtonGroupItem';
-import FormPhoto from './components/FormPhoto';
-import ProfileClient from './ProfileClient'; // 👈 nuevo componente cliente
+import ProfileClient from './ProfileClient'; // 👈 mantiene solo este
 
 export const metadata: Metadata = {
   title: 'My account',
@@ -30,24 +29,21 @@ const Page = () => {
       <Section className='white-background'>
         <div className='container'>
           <div className='center'>
-            <Heading type={1} color='gray' text='My account' />
+            <Heading type={1} color='gray' text='Mi cuenta' />
             <p className='gray form-information'>
-              You can update your profile photo and your account details here.
+              Puedes actualizar lod datos de tu cuenta y cambiar tu foto de perfil desde esta página.
             </p>
             <div className='button-container'>
               <ButtonGroup color='gray'>
-                <ButtonGroupItem url='members/tickets' text='My tickets' />
-                <ButtonGroupItem url='members/account' text='My account' active />
+                <ButtonGroupItem url='members/tickets' text='Mis Tickets' />
+                <ButtonGroupItem url='members/account' text='Mi Cuenta' active />
               </ButtonGroup>
-            </div>
-            <div className='padding-top'>
-              <FormPhoto data='https://www.desura.games/files/images/49/49eee8a55fe13133dc5d8ae33106c74b.jpg' />
             </div>
           </div>
         </div>
       </Section>
 
-      {/* 👇 este componente sí puede usar hooks */}
+      {/* ✅ Solo queda este componente, que incluye FormPhoto + FormMain */}
       <Section className='white-background'>
         <div className='container'>
           <ProfileClient />
