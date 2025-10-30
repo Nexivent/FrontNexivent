@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { type Metadata } from 'next';
 
 // components
@@ -11,64 +9,64 @@ import Form from './components/Form';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='white-background'>
+    <Section className='gray-background'>
       <div className='container'>
-        <div className='center'>
-          <Heading type={1} color='gray' text='Buy tickets' />
+        <div className='center' style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <Heading type={1} color='white' text='Comprar tickets' />
           <p className='gray'>
-            Please enter your personal &amp; payment details. We will issue and send your tickets
-            your e-mail address immediately.
+            Por favor, ingresa tus datos personales y de pago. Emitiremos y enviaremos los tickets a
+            tu correo electrónico de inmediato.
           </p>
         </div>
-        <div className='padding-top center'>
-          <div className='padding-top'>
-            <Heading type={5} color='gray' text='Details' />
-            <p>
-              <strong>Event</strong> Event name goes here
-            </p>
-            <p>
-              <strong>Venue</strong> Royal Albert Hall
-            </p>
-            <p>
-              <strong>Date</strong> Tue, Sep 21, 2024 19:00
-            </p>
+        <div className='purchase-summary'>
+          <Heading type={4} color='gray' text='Detalles de la compra' />
+          <div className='details-grid'>
+            <div>
+              <strong>Evento:</strong> Event name goes here
+            </div>
+            <div>
+              <strong>Lugar:</strong> Royal Albert Hall
+            </div>
+            <div>
+              <strong>Fecha:</strong> Tue, Sep 21, 2024 19:00
+            </div>
           </div>
-        </div>
-        <div className='form shrink'>
-          <table className='table'>
+          <table className='purchase-summary-table'>
             <thead>
               <tr>
-                <th className='left'>Name</th>
-                <th className='center'>Qty.</th>
-                <th className='right'>Price</th>
+                <th>Ticket</th>
+                <th align='center'>Cantidad</th>
+                <th align='right'>Precio</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td className='left'>Child</td>
-                <td className='center'>2</td>
-                <td className='right'>£23</td>
+                <td>Niño</td>
+                <td align='center'>2</td>
+                <td>£46</td>
               </tr>
               <tr>
-                <td className='left'>Adult</td>
-                <td className='center'>2</td>
-                <td className='right'>£23</td>
-              </tr>
-              <tr>
-                <td className='right' colSpan={3}>
-                  <strong>Total : </strong> £23
-                </td>
+                <td>Adulto</td>
+                <td align='center'>2</td>
+                <td>£46</td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={2}>Total</td>
+                <td>£92</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
         <Form />
-        <div className='paragraph-container center'>
-          <p>
-            By clicking place payment button I agree to the&nbsp;
-            <Link href='/legal/terms-of-service' className='blue'>
-              Terms of service
-            </Link>
+        <div className='center' style={{ marginTop: '20px' }}>
+          <p className='gray' style={{ fontSize: '0.9em' }}>
+            Al hacer clic en el botón de pago, acepto los{' '}
+            <a href='/terms' target='_blank' rel='noopener noreferrer' className='yellow'>
+              Términos de servicio
+            </a>
+            .
           </p>
         </div>
       </div>
@@ -76,14 +74,14 @@ const Page: React.FC = () => (
   </Master>
 );
 
-const title = 'Buy tickets';
+const title = 'Comprar tickets';
 const canonical = 'https://modern-ticketing.com/buy';
 const description = 'Modern ticketing is a modern ticketing solution';
 
 export const metadata: Metadata = {
   title,
   description,
-  keywords: 'modern ticketing',
+  keywords: 'modern ticketing, comprar tickets',
   alternates: { canonical },
   openGraph: {
     title,

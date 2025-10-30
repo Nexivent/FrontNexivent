@@ -82,7 +82,7 @@ const Page: React.FC = () => (
             </p>
           </div>
           <div className='button-container'>
-            <ButtonLink color='blue-filled' text='Open maps' rightIcon='arrow_forward' url='' />
+            <ButtonLink color='yellow-filled' text='Open maps' rightIcon='arrow_forward' url='' />
           </div>
         </div>
       </div>

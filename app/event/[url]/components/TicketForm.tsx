@@ -152,7 +152,7 @@ const TicketForm: React.FC<IProps> = ({ data }) => {
   };
 
   if (loading) {
-    return <Loader type='inline' color='gray' text='Hang on a second' />;
+    return <Loader type='inline' color='gray' text='Cargando...' />;
   }
 
   return (
@@ -169,7 +169,7 @@ const TicketForm: React.FC<IProps> = ({ data }) => {
               <>
                 <span className='material-symbols-outlined'>lock</span>
                 <span>{ticket.name}</span>
-                <strong>Sold out</strong>
+                <strong>Agotado </strong>
                 {ticket.information != null && (
                   <span className='material-symbols-outlined icon' title={ticket.information}>
                     info
@@ -217,9 +217,9 @@ const TicketForm: React.FC<IProps> = ({ data }) => {
       </div>
       <div className='ticket-box-buttons'>
         {formValues.length > 0 ? (
-          <Button type='submit' color='blue-filled' text='Buy tickets' rightIcon='arrow_forward' />
+          <Button type='submit' color='yellow-filled' text='Ir a pagar' rightIcon='arrow_forward' />
         ) : (
-          <Button type='submit' color='disabled' text='Tickets not found' />
+          <Button type='submit' color='disabled' text='No se encontraron entradas' />
         )}
       </div>
     </form>

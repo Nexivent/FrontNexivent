@@ -200,21 +200,30 @@ a.button {
   background-color: var(--gray);
 }
 
-.button.yellow-filled {
-  color: var(--white);
-  background-color: var(--yellow);
-  border: 2px solid var(--yellow);
+.button.yellow-filled,
+button.yellow-filled {
+  background-color: var(--primary);
+  color: var(--primary-contrast);
+  border: none;
+  font-weight: 600;
+  padding: 15px 35px;
 }
 
 .button.yellow-overlay {
   color: var(--yellow);
-  background-color: var(--white);
+  background-color: var(--black);
   border: 2px solid var(--yellow);
 }
 
 .button.yellow-overlay:hover {
-  color: var(--white);
+  color: var(--black);
   background-color: var(--yellow);
+}
+
+.button.yellow-filled:hover,
+button.yellow-filled:hover {
+  background-color: #e4b702;
+  color: var(--primary-contrast);
 }
 
 .button.purple-filled {
@@ -1379,7 +1388,7 @@ a.button {
 
 .button-group.gray button,
 .button-group.gray .button {
-  color: var(--gray);
+  color: var(--black);
   border-right: 1px solid var(--gray);
 }
 

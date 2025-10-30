@@ -8,7 +8,7 @@ import EventCard from '@components/Card/EventCard';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='white-background'>
+    <Section className='gray-background'>
       <div className='container'>
         <div className='padding-bottom center'>
           <Heading type={1} color='gray' text='Eventos' />

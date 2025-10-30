@@ -59,29 +59,29 @@ const Page: React.FC = () => (
           <div>
             <div className='ticket-box'>
               <div className='ticket-box-header'>
-                <Heading type={4} color='gray' text='Tickets' />
+                <Heading type={4} color='gray' text='Entradas' />
               </div>
               <TicketForm
                 data={[
                   {
                     id: 1,
-                    name: 'Family',
+                    name: 'Familiar',
                     price: '£10',
                     ordering: 1,
                     soldout: true,
                   },
                   {
                     id: 2,
-                    name: 'Adult',
+                    name: 'Adulto',
                     price: '£20',
                     ordering: 2,
                   },
                   {
                     id: 3,
-                    name: 'Child',
+                    name: 'Niño',
                     price: '£30',
                     ordering: 3,
-                    information: 'Information about child tickets',
+                    information: 'Información adicional',
                   },
                 ]}
               />
@@ -119,11 +119,11 @@ const Page: React.FC = () => (
       </div>
     </Section>
 
-    <CardGroup url='list' title='Other events' color='orange' background='gray'>
+    <CardGroup url='list' title='Other events' color='blue' background='gray'>
       <EventCard
         url='1'
         from='20'
-        color='orange'
+        color='blue'
         when='Tue, Sep 21, 2024 19:00'
         name='Event name goes here'
         venue='Royal Albert Hall'
@@ -132,7 +132,7 @@ const Page: React.FC = () => (
       <EventCard
         url='1'
         from='25'
-        color='orange'
+        color='blue'
         when='Wed, Aug 9, 2024 22:00'
         name='Event name goes here'
         venue='o2 Arena'
@@ -141,7 +141,7 @@ const Page: React.FC = () => (
       <EventCard
         url='1'
         from='10'
-        color='orange'
+        color='blue'
         when='Sun, Mar 14, 2024 15:00'
         name='Event name goes here'
         venue='Wembley Stadium'
@@ -150,7 +150,7 @@ const Page: React.FC = () => (
       <EventCard
         url='1'
         from='60'
-        color='orange'
+        color='blue'
         when='Mon, Jul 2, 2024 20:00'
         name='Event name goes here'
         venue='Eventim Apollo'
@@ -159,7 +159,7 @@ const Page: React.FC = () => (
       <EventCard
         url='1'
         from='20'
-        color='orange'
+        color='blue'
         when='Tue, Sep 21, 2024 19:00'
         name='Event name goes here'
         venue='Royal Albert Hall'
@@ -168,7 +168,7 @@ const Page: React.FC = () => (
       <EventCard
         url='1'
         from='25'
-        color='orange'
+        color='blue'
         when='Wed, Aug 9, 2024 22:00'
         name='Event name goes here'
         venue='o2 Arena'

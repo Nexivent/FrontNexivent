@@ -10,7 +10,7 @@ import ButtonLink from '@components/Button/ButtonLink';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='white-background'>
+    <Section className='gray-background'>
       <div className='container'>
         <div className='center'>
           <Heading type={1} color='gray' text='Help category' />
@@ -19,7 +19,7 @@ const Page: React.FC = () => (
       </div>
     </Section>
 
-    <Section className='white-background'>
+    <Section className='gray-background'>
       <div className='container'>
         <div className='help-answers center'>
           <ul>

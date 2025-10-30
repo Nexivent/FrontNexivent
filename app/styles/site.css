@@ -521,6 +521,43 @@ footer .terms a:hover {
   text-align: right;
 }
 
+.form .form-buttons button.yellow-filled {
+  width: 100%;
+  padding: 18px;
+  font-size: 1.1rem;
+}
+
+.form .form-elements .label-line label {
+  color: var(--gray);
+  font-weight: 500;
+  font-size: 0.95em;
+}
+
+.form .form-elements input[type='text'],
+.form .form-elements input[type='email'] {
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  color: var(--white);
+  border-radius: 8px;
+  padding: 15px;
+  font-size: 1rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.form .form-elements input[type='text']:focus,
+.form .form-elements input[type='email']:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(253, 203, 2, 0.25);
+}
+
+.form .form-elements input[type='text']::placeholder,
+.form .form-elements input[type='email']::placeholder {
+  color: var(--dark-gray);
+}
+
 .upload-picture {
   width: 225px;
   margin: 0 auto;
@@ -679,18 +716,14 @@ footer .terms a:hover {
   user-select: none;
   border-radius: 10px;
   --webkit-user-select: none;
-  border: 1px solid var(--light-gray);
-  box-shadow:
-    0 4px 6px -4px rgba(0, 0, 0, 0.1),
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 0 0 1px rgba(17, 24, 39, 0.05);
+  border: 1px solid var(--black);
 }
 
 .ticket-box .ticket-box-header {
   padding: 10px;
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
-  background-color: var(--light-gray);
+  background-color: var(--black);
 }
 
 .ticket-box .ticket-box-header h4 {
@@ -708,11 +741,11 @@ footer .terms a:hover {
   user-select: none;
   display: inline-block;
   vertical-align: middle;
-  color: var(--dark-gray);
+  color: var(--white);
 }
 
 .ticket-box .ticket-box-line .icon:hover {
-  color: var(--blue);
+  color: var(--white);
 }
 
 .ticket-box .ticket-box-line span,
@@ -732,7 +765,7 @@ footer .terms a:hover {
   text-align: center;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
-  background-color: var(--light-gray);
+  background-color: var(--black);
 }
 
 .ticket-box .ticket-box-buttons button {
@@ -750,7 +783,8 @@ footer .terms a:hover {
   height: 30px;
   border-radius: 0;
   display: inline-block;
-  border: 1px solid var(--blue);
+  border: none;
+  color: var(--primary-contrast);
 }
 
 .ticket-box .quantity input {
@@ -758,15 +792,27 @@ footer .terms a:hover {
   width: 35px;
   font-size: 0.9em;
   text-align: center;
-  border: 1px solid var(--light-gray);
+  border: 1px solid var(--black);
 }
 
-.ticket-box .quantity button {
+.ticket-box .ticket-box-line .quantity button {
   padding: 0;
+  height: 30px;
   width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  color: var(--white);
-  background-color: var(--blue);
+  font-style: normal;
+  color: var(--primary-contrast);
+  background-color: var(--primary);
+  border: none;
+  border-radius: 50%;
+  font-weight: bold;
+}
+
+.ticket-box .ticket-box-line .quantity button:hover {
+  background-color: #e4b702;
 }
 
 .top-search {
@@ -938,8 +984,11 @@ footer .terms a:hover {
 }
 
 .button.blue-filled,
+button.blue-filled,
 a.button.blue-filled,
 button.button.blue-filled,
+button.yellow-filled,
+.button.yellow-filled,
 .button-group.blue .button,
 .button-group.blue button,
 .loader.blue,
@@ -968,10 +1017,8 @@ button.button.blue-filled,
 }
 
 .ticket-box .quantity input,
-.ticket-box .quantity button,
 .breadcrumb button,
 .select * {
-  border-color: rgba(255, 255, 255, 0.08) !important;
   color: var(--white) !important;
 }
 
@@ -1223,4 +1270,61 @@ button.button.blue-filled {
     transform 0.18s ease,
     box-shadow 0.18s ease,
     background-color 0.18s ease;
+}
+
+.purchase-summary {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 25px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.purchase-summary .details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 15px 0;
+  color: var(--gray);
+}
+
+.purchase-summary .details-grid strong {
+  color: var(--white);
+}
+
+.purchase-summary-table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.purchase-summary-table th,
+.purchase-summary-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.purchase-summary-table th {
+  color: var(--dark-gray);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.8em;
+}
+
+.purchase-summary-table tfoot td {
+  font-weight: bold;
+  font-size: 1.2em;
+  color: var(--white);
+  border-bottom: none;
+}
+
+.purchase-summary-table tfoot td:last-child {
+  text-align: right;
+}
+
+.purchase-summary-table td:last-child {
+  text-align: right;
+  font-weight: 600;
 }
