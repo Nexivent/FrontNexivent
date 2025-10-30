@@ -10,7 +10,7 @@ import CircleButtons from './home/components/CircleButtons';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='white-background'>
+    <Section className='gray-background'>
       <div className='container'>
         <div className='center'>
           <Heading type={1} color='gray' text='Nexivent' />

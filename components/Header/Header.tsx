@@ -40,7 +40,7 @@ const Header: React.FC = () => {
       <div className='container'>
         <div className='logo'>
           <Link href='/'>
-            <Image src='/logo2.png' alt='Nexivent' width={100} height={70} />
+            <Image src='/logo3.png' alt='Nexivent' width={80} height={70} />
           </Link>
           <button
             type='button'
