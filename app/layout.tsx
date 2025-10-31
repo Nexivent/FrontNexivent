@@ -13,9 +13,7 @@ export const runtime = 'edge';
 const RootLayout: React.FC<Readonly<{ children: React.ReactNode }>> = ({ children }) => (
   <html lang='en'>
     <body>
-      <UserProvider>
-        {children}
-      </UserProvider>
+      <UserProvider>{children}</UserProvider>
     </body>
   </html>
 );

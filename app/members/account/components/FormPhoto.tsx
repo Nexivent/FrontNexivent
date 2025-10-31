@@ -5,7 +5,7 @@ import { useUser } from '@contexts/UserContext';
 import useAlert from '@hooks/useAlert';
 import Loader from '@components/Loader/Loader';
 import ProfilePhoto from '@components/Profile/ProfilePhoto';
-import Request, { type IRequest, type IResponse } from '@utils/Request';
+//import Request, { type IRequest, type IResponse } from '@utils/Request';
 
 const FormPhoto: React.FC = () => {
   const { user, setUser } = useUser();

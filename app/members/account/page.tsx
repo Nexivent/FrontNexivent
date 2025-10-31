@@ -4,8 +4,8 @@ import { type Metadata } from 'next';
 import Master from '@components/Layout/Master';
 import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
-import ButtonGroup from '@components/Button/ButtonGroup';
-import ButtonGroupItem from '@components/Button/ButtonGroupItem';
+//import ButtonGroup from '@components/Button/ButtonGroup';
+//import ButtonGroupItem from '@components/Button/ButtonGroupItem';
 import ProfileClient from './ProfileClient'; // 👈 mantiene solo este
 
 export const metadata: Metadata = {

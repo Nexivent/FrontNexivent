@@ -17,7 +17,7 @@ const Master: React.FC<IProps> = ({ children }) => (
   <div className='light-theme'>
     <AlertProvider>
       <Alert />
-      <Header />
+      <Header user={null} onMenuToggle={() => {}} />
       {children}
       <Footer />
     </AlertProvider>
