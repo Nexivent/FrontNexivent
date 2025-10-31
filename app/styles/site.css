@@ -48,15 +48,14 @@ section {
   font-family: 'Rethink Sans', sans-serif;
 }
 
+/* --- Global Body & Font Styles --- */
 ::selection {
-  color: #ffffff;
-  background: var(--gray);
+  color: var(--primary-contrast);
+  background: var(--primary);
 }
 
 html,
 body {
-  background-color: var(--light-gray);
-  background-color: var(--light-gray, #0f0f0f);
   background-color: var(--light-gray);
 }
 
@@ -75,7 +74,7 @@ section {
 strong {
   font-weight: 600;
 }
-
+/* Dark Theme Overrides */
 .no-padding-top {
   padding-top: 0;
 }
@@ -902,17 +901,18 @@ footer .terms a:hover {
 
 .circle-button .circle:hover,
 .circle-button .circle:focus {
-  background-color: var(--primary);
+  background-color: var(--primary) !important;
   border-color: rgba(214, 255, 0, 0.25);
-  transform: translateY(8px) !important;
-  box-shadow: 0 18px 40px rgba(214, 255, 0, 0.14) !important;
-  z-index: 10000 !important;
+  transform: translateY(8px);
+  box-shadow: 0 18px 48px rgba(214, 255, 0, 0.14);
+  z-index: 10000;
+  color: var(--primary-contrast) !important;
 }
 
 .circle-button .circle:hover span,
 .circle-button .circle:focus span {
-  color: var(--primary-contrast);
-  transform: scale(1.04);
+  color: var(--primary-contrast) !important;
+  transform: scale(1.2);
 }
 
 .circle-button .circle:active {
@@ -961,21 +961,6 @@ footer .terms a:hover {
   margin-top: 12px;
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.9em;
-}
-
-.circle-button .circle:hover,
-.circle-button .circle:focus {
-  background-color: var(--primary);
-  border-color: rgba(214, 255, 0, 0.25);
-  transform: translateY(8px) !important;
-  box-shadow: 0 18px 40px rgba(214, 255, 0, 0.14) !important;
-  z-index: 10000 !important;
-}
-
-.circle-button .circle:hover span,
-.circle-button .circle:focus span {
-  color: var(--primary-contrast);
-  transform: scale(1.04);
 }
 
 /* active state */
@@ -1157,14 +1142,6 @@ body,
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.circle-button .circle:hover,
-.circle-button .circle:focus {
-  background-color: var(--primary) !important;
-  border-color: rgba(214, 255, 0, 0.25) !important;
-  color: var(--primary-contrast) !important;
-  box-shadow: 0 14px 30px rgba(214, 255, 0, 0.12) !important;
-}
-
 input,
 textarea,
 select,
@@ -1246,13 +1223,6 @@ button.button.blue-filled {
   position: relative !important;
   z-index: 9999 !important;
   will-change: transform;
-}
-
-.circle-button .circle:hover,
-.circle-button .circle:focus {
-  z-index: 10000 !important;
-  box-shadow: 0 18px 48px rgba(214, 255, 0, 0.14) !important;
-  transform: translateY(8px) !important;
 }
 
 .search-inputs,
