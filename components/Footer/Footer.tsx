@@ -46,7 +46,7 @@ const Footer: React.FC = () => (
           Registrarse
         </Link>
         <span>or</span>
-        <ButtonLink color='blue-filled' text='Iniciar Sesión' url='members/signin' />
+        <ButtonLink color='yellow-filled' text='Iniciar Sesión' url='members/signin' />
       </div>
     </div>
     <div className='newsletter'>

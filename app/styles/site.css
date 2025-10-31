@@ -521,12 +521,6 @@ footer .terms a:hover {
   text-align: right;
 }
 
-.form .form-buttons button.yellow-filled {
-  width: 100%;
-  padding: 18px;
-  font-size: 1.1rem;
-}
-
 .form .form-elements .label-line label {
   color: var(--gray);
   font-weight: 500;
@@ -813,6 +807,12 @@ footer .terms a:hover {
 
 .ticket-box .ticket-box-line .quantity button:hover {
   background-color: #e4b702;
+}
+
+.ticket-purchase-details {
+  margin-top: 1rem;
+  padding-bottom: 0.5rem;
+  min-height: 180px;
 }
 
 .top-search {

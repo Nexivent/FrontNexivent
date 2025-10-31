@@ -24,16 +24,16 @@ const FormPhoto: React.FC = () => {
       const newPhotoUrl = URL.createObjectURL(file);
       setUser({ ...user, foto: newPhotoUrl });
 
-      showAlert({ type: 'success', text: 'Profile photo updated!' });
+      showAlert({ type: 'success', text: 'Foto de perfil actualizada!' });
     } catch {
-      showAlert({ type: 'error', text: 'Error updating photo.' });
+      showAlert({ type: 'error', text: 'Error al actualizar la foto.' });
     }
 
     setLoading(false);
   };
 
   if (loading) {
-    return <Loader type='inline' color='gray' text='Hang on a second' />;
+    return <Loader type='inline' color='gray' text='Cargando...' />;
   }
 
   return (
@@ -48,10 +48,9 @@ const FormPhoto: React.FC = () => {
           onChange={handlePhotoChange}
         />
         <label htmlFor='image'>
-          <span className='material-symbols-outlined'>add_a_photo</span>
+          <span className='material-symbols-outlined'>edit</span>
         </label>
         <ProfilePhoto image={user.foto || '/default-avatar.jpg'} size='large' />
-        <span className='muted block text-center'>click para cambiar la foto</span>
       </div>
     </form>
   );

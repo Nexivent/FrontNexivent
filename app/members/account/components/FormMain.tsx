@@ -173,9 +173,9 @@ const FormMain: React.FC<IProps> = ({ data }) => {
           />
         </div>
         <div className='form-buttons'>
-          <ButtonLink color='gray-overlay' text='Cerrar sesión' url='members/signout' />
+          <ButtonLink color='yellow-overlay' text='Cerrar sesión' url='members/signout' />
           &nbsp; &nbsp;
-          <Button type='submit' color='blue-filled' text='Actualizar perfil' />
+          <Button type='submit' color='yellow-filled' text='Actualizar perfil' />
         </div>
       </div>
     </form>

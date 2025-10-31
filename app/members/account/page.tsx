@@ -26,25 +26,19 @@ export const metadata: Metadata = {
 const Page = () => {
   return (
     <Master>
-      <Section className='white-background'>
+      <Section className='black-background'>
         <div className='container'>
           <div className='center'>
             <Heading type={1} color='gray' text='Mi cuenta' />
             <p className='gray form-information'>
-              Puedes actualizar lod datos de tu cuenta y cambiar tu foto de perfil desde esta página.
+              Puedes actualizar los datos de tu cuenta y cambiar tu foto de perfil desde esta
+              página.
             </p>
-            <div className='button-container'>
-              <ButtonGroup color='gray'>
-                <ButtonGroupItem url='members/tickets' text='Mis Tickets' />
-                <ButtonGroupItem url='members/account' text='Mi Cuenta' active />
-              </ButtonGroup>
-            </div>
           </div>
         </div>
       </Section>
-
       {/* ✅ Solo queda este componente, que incluye FormPhoto + FormMain */}
-      <Section className='white-background'>
+      <Section className='black-background'>
         <div className='container'>
           <ProfileClient />
         </div>
