@@ -8,7 +8,7 @@ import TicketCard from '@components/Card/TicketCard';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='black-background'>
+    <Section className='black-background hero-offset'>
       <div className='container'>
         <div className='center'>
           <Heading type={1} color='gray' text='Mis Tickets' />

@@ -9,7 +9,7 @@ import Form from './components/Form';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='gray-background'>
+    <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='center' style={{ maxWidth: '800px', margin: '0 auto' }}>
           <Heading type={1} color='white' text='Comprar tickets' />

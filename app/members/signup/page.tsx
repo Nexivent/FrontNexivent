@@ -11,16 +11,16 @@ import Form from './components/Form';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='white-background'>
+    <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='center'>
-          <Heading type={1} color='gray' text='Sign up' />
+          <Heading type={1} color='gray' text='Registrarse' />
           <p className='gray form-information'>
-            Create an account to customize your experience for your ticketing journey.{' '}
+            Registrate para vivir la experiencia Nexivent completa.{' '}
             <Link href='/members/signin' className='blue'>
-              Click here
+              Haz click aquí
             </Link>{' '}
-            to sign in if you already have an account.
+            para iniciar sesión si ya tienes una cuenta.
           </p>
         </div>
         <Form />

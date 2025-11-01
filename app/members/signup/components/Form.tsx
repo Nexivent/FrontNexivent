@@ -110,7 +110,7 @@ const Form: React.FC = () => {
   };
 
   if (loading) {
-    return <Loader type='inline' color='gray' text='Hang on a second' />;
+    return <Loader type='inline' color='gray' text='Cargando...' />;
   }
 
   return (
@@ -152,25 +152,24 @@ const Form: React.FC = () => {
                   <path fill='none' d='M0 0h48v48H0z' />
                 </g>
               </svg>
-              <span>Sign up with Google</span>
+              <span>Ingresa con Google</span>
             </button>
           </div>
         </div>
         <div className='or-line'>
           <hr />
-          <span>OR</span>
         </div>
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line'>
-              <label htmlFor='name'>Name</label>
+              <label htmlFor='name'>Nombre</label>
             </div>
             <Input
               type='text'
               name='name'
               value={formValues.name}
               maxLength={64}
-              placeholder='Enter your name'
+              placeholder='Ingresa tu nombre'
               required
               onChange={handleChange}
             />
@@ -179,14 +178,14 @@ const Form: React.FC = () => {
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line'>
-              <label htmlFor='lastname'>Last name</label>
+              <label htmlFor='lastname'>Apellido</label>
             </div>
             <Input
               type='text'
               name='lastname'
               value={formValues.lastname}
               maxLength={64}
-              placeholder='Enter your last name'
+              placeholder='Ingresa tu apellido'
               required
               onChange={handleChange}
             />
@@ -195,14 +194,14 @@ const Form: React.FC = () => {
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line'>
-              <label htmlFor='email'>E-mail address</label>
+              <label htmlFor='email'>Correo electrónico</label>
             </div>
             <Input
               type='email'
               name='email'
               value={formValues.email}
               maxLength={128}
-              placeholder='Enter your e-mail address'
+              placeholder='Ingresa tu correo electrónico'
               required
               onChange={handleChange}
             />
@@ -210,35 +209,35 @@ const Form: React.FC = () => {
         </div>
         <div className='form-line'>
           <div className='label-line'>
-            <label htmlFor='password'>Password</label>
+            <label htmlFor='password'>Contraseña</label>
           </div>
           <Input
             type='password'
             name='password'
             value={formValues.password}
             maxLength={64}
-            placeholder='Enter your password'
+            placeholder='Ingresa tu contraseña'
             required
             onChange={handleChange}
           />
         </div>
         <div className='form-line'>
           <div className='label-line'>
-            <label htmlFor='tos'>Agreements</label>
+            <label htmlFor='tos'>Acuerdos</label>
           </div>
           <Switch name='tos' color='blue' onChange={handleCheckboxChange}>
-            I agree to the{' '}
+            Acepto la{' '}
             <Link href='/legal/privacy-policy' className='blue'>
-              Privacy policy
+              Política de privacidad
             </Link>{' '}
-            and{' '}
+            y{' '}
             <Link href='/legal/terms-of-service' className='blue'>
-              TOS
+              Términos de servicio
             </Link>
           </Switch>
         </div>
         <div className='form-buttons'>
-          <Button type='submit' color='blue-filled' text='Sign up' />
+          <Button type='submit' color='yellow-filled' text='Registrarse' />
         </div>
       </div>
     </form>

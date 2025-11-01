@@ -87,7 +87,7 @@ const Form: React.FC = () => {
   };
 
   if (loading) {
-    return <Loader type='inline' color='gray' text='Hang on a second' />;
+    return <Loader type='inline' color='gray' text='Cargando...' />;
   }
 
   return (
@@ -129,25 +129,24 @@ const Form: React.FC = () => {
                   <path fill='none' d='M0 0h48v48H0z' />
                 </g>
               </svg>
-              <span>Sign in with Google</span>
+              <span>Ingresa con Google</span>
             </button>
           </div>
         </div>
         <div className='or-line'>
           <hr />
-          <span>OR</span>
         </div>
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line'>
-              <label htmlFor='email'>E-mail address</label>
+              <label htmlFor='email'>Correo electrónico</label>
             </div>
             <Input
               type='email'
               name='email'
               value={formValues.email}
               maxLength={128}
-              placeholder='Enter your e-mail address'
+              placeholder='Ingresa tu correo electrónico'
               required
               onChange={handleChange}
             />
@@ -155,9 +154,9 @@ const Form: React.FC = () => {
         </div>
         <div className='form-line'>
           <div className='label-line flex flex-v-center flex-space-between'>
-            <label htmlFor='password'>Password</label>
+            <label htmlFor='password'>Contraseña</label>
             <Link href='/members/forgot' className='blue'>
-              Forgot password?
+              ¿Olvidaste tu contraseña?
             </Link>
           </div>
           <Input
@@ -165,13 +164,13 @@ const Form: React.FC = () => {
             name='password'
             value={formValues.password}
             maxLength={64}
-            placeholder='Enter your password'
+            placeholder='Ingresa tu contraseña'
             required
             onChange={handleChange}
           />
         </div>
         <div className='form-buttons'>
-          <Button type='submit' color='blue-filled' text='Sign in' />
+          <Button type='submit' color='yellow-filled' text='Iniciar sesión' />
         </div>
       </div>
     </form>

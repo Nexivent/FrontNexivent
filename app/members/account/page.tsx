@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 const Page = () => {
   return (
     <Master>
-      <Section className='black-background'>
+      <Section className='black-background hero-offset'>
         <div className='container'>
           <div className='center'>
             <Heading type={1} color='gray' text='Mi cuenta' />
@@ -37,7 +37,6 @@ const Page = () => {
           </div>
         </div>
       </Section>
-      {/* ✅ Solo queda este componente, que incluye FormPhoto + FormMain */}
       <Section className='black-background'>
         <div className='container'>
           <ProfileClient />

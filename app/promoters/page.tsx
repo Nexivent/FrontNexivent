@@ -10,7 +10,7 @@ import ButtonLink from '@components/Button/ButtonLink';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='white-background'>
+    <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='padding-bottom center'>
           <Heading type={1} color='gray' text='Promoters' />

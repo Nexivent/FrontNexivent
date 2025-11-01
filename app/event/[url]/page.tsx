@@ -32,7 +32,7 @@ const Page: React.FC = () => (
         <Heading type={6} color='white' text='Royal Albert Hall' />
       </div>
     </div>
-    <Section className='white-background'>
+    <Section className='gray-background'>
       <div className='container'>
         <div className='event-details'>
           <div>
