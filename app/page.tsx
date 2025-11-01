@@ -1,6 +1,6 @@
 // components
 import Master from '@components/Layout/Master';
-import NexiventFeed from '@components/Feed/components/NexiventFeed';
+import NexiventFeed from '../components/Feed/components/NexiventFeed';
 
 const Page: React.FC = () => (
   <Master>

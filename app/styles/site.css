@@ -1301,3 +1301,11 @@ button.button.blue-filled {
   text-align: right;
   font-weight: 600;
 }
+
+:root {
+  --site-header-height: 84px;
+}
+
+.hero-offset {
+  padding-top: calc(var(--site-header-height, 84px) + 12px);
+}

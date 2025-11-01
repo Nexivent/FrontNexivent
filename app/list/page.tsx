@@ -5,10 +5,11 @@ import Master from '@components/Layout/Master';
 import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
 import EventCard from '@components/Card/EventCard';
+import SearchPanel from './SearchPanelClient';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='gray-background'>
+    <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='padding-bottom center'>
           <Heading type={1} color='gray' text='Eventos' />
@@ -16,7 +17,11 @@ const Page: React.FC = () => (
         </div>
       </div>
     </Section>
-
+    <Section>
+      <div className='container'>
+        <SearchPanel />
+      </div>
+    </Section>
     <Section className='list-cards'>
       <div className='container center'>
         <EventCard

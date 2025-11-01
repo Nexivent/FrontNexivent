@@ -1,6 +1,5 @@
 'use client';
-
-import { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { Menu, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
@@ -16,24 +15,25 @@ interface MergedHeaderProps {
 }
 
 const Header: React.FC<MergedHeaderProps> = ({ user, onMenuToggle }) => {
-  const [isDropdownOpen, setDropdownOpen] = useState<boolean>(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const [scrolled, setScrolled] = useState<boolean>(false);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
-    <header className='fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/90 to-transparent'>
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
+        scrolled
+          ? 'bg-black/95 backdrop-blur-sm shadow-lg'
+          : 'bg-gradient-to-b from-black/90 to-transparent'
+      }`}
+    >
       <div className='container mx-auto grid grid-cols-3 items-center px-4 py-3'>
         <div className='flex items-center justify-start gap-4'>
           <button
@@ -43,7 +43,7 @@ const Header: React.FC<MergedHeaderProps> = ({ user, onMenuToggle }) => {
             <Menu size={24} />
           </button>
           <Link href='/'>
-            <img src='/logo6.png' alt='Nexivent' className='h-10 w-auto' />
+            <img src='/logo_transparente.png' alt='Nexivent' className='h-20 w-auto' />
           </Link>
         </div>
         <nav className='hidden md:flex items-center justify-center gap-8'>
@@ -60,9 +60,9 @@ const Header: React.FC<MergedHeaderProps> = ({ user, onMenuToggle }) => {
             Tendencias
           </Link>
           <Link
-            href='/search'
+            href='/list?search=1'
             className='text-white hover:text-white/80 transition-colors'
-            aria-label='Ir a la página de búsqueda'
+            aria-label='Ir a la sección de búsqueda en la lista de eventos'
           >
             <Search size={22} />
           </Link>
