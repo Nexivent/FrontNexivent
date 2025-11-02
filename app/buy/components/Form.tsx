@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 // hooks
 import useAlert from '@hooks/useAlert';
@@ -26,6 +27,7 @@ interface IFormProps {
 
 const Form: React.FC = () => {
   const { showAlert, hideAlert } = useAlert();
+  const router = useRouter();
 
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<IFormProps>({
@@ -202,7 +204,12 @@ const Form: React.FC = () => {
           </div>
         </div>
         <div className='form-buttons'>
-          <Button type='submit' color='blue-filled' text='Realizar pago y emitir tickets' />
+          <Button
+            type='submit'
+            color='yellow-filled'
+            text='Realizar pago y emitir tickets'
+            onClick={() => void router.push('/buy/components/success')}
+          />
         </div>
       </div>
     </form>
