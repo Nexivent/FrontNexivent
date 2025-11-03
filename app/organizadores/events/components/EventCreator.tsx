@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ChangeEvent, type FC } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FC } from 'react';
 
 // hooks
 import useAlert from '@hooks/useAlert';
@@ -14,13 +14,19 @@ import {
   adminEventApi,
   eventCategories,
   organizers,
+  type AdjustmentType,
   type AdminEvent,
   type AdminEventPayload,
-  type DiscountType,
   type EventStatus,
-  type TicketPhaseState,
-  type OrganizerReport,
+  type SoldOutAction,
+  type TicketPhaseStatus,
+  type TicketPhaseVisibility,
 } from '@utils/organizers/events';
+
+interface PriceAdjustmentDraft {
+  tipo: AdjustmentType;
+  valor: string;
+}
 
 interface EventFormState {
   titulo: string;
@@ -30,130 +36,133 @@ interface EventFormState {
   fechaHoraFin: string;
   idOrganizador: number;
   idCategoria: number;
+  moneda: 'PEN';
+  impuestos: PriceAdjustmentDraft;
+  comisiones: PriceAdjustmentDraft;
 }
 
 interface BuyerProfileDraft {
   id: string;
-  name: string;
-  description: string;
-  requirement: string;
+  nombre: string;
+  descripcion: string;
 }
 
-interface TicketSectorDraft {
+interface SectorDraft {
   id: string;
-  name: string;
-  capacity: string;
+  nombre: string;
+  capacidad: string;
+  accesibilidad: {
+    sillaRuedas: boolean;
+    acompaniamientoPermitido: boolean;
+    acompaniamientoObligatorio: boolean;
+    sectorVinculadoId: string;
+  };
 }
 
-interface PhaseCombinationDraft {
+interface PhaseDraft {
+  id: string;
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  visibilidad: TicketPhaseVisibility;
+  bloqueadoHasta: string;
+  estado: TicketPhaseStatus;
+}
+
+interface PriceCombinationDraft {
   id: string;
   sectorId: string;
-  profileId: string;
-  basePrice: string;
-  allocation: string;
+  perfilId: string;
+  faseId: string;
+  disponible: boolean;
+  precio: string;
+  accionAgotado: SoldOutAction;
+  mensajeAgotado: string;
 }
 
-interface TicketPhaseDraft {
+interface CouponDraft {
   id: string;
-  name: string;
-  ticketType: string;
-  startDate: string;
-  endDate: string;
-  state: TicketPhaseState;
-  combinations: PhaseCombinationDraft[];
+  codigo: string;
+  tipo: 'PORCENTAJE' | 'FIJO';
+  valor: string;
+  requisito: string;
+  descripcion: string;
 }
 
-interface DiscountDraft {
-  id: string;
-  code: string;
-  type: DiscountType;
-  value: string;
-  usageLimitPerUser: string;
-  isActive: boolean;
-}
-
-interface TaxConfigDraft {
-  taxType: DiscountType;
-  taxValue: string;
-  feeType: DiscountType;
-  feeValue: string;
-}
-
-interface PhaseTemplate {
-  id: string;
-  name: string;
-  ticketType: string;
-  state: TicketPhaseState;
-  combinations: Array<{
-    sectorName: string;
-    profileName: string;
-    basePrice: string;
-    allocation: string;
-  }>;
+interface PricePreview extends PriceCombinationDraft {
+  finalPrice: number;
+  sectorNombre: string;
+  perfilNombre: string;
+  faseNombre: string;
 }
 
 const generateId = (): string =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-const createBuyerProfileDraft = (name = ''): BuyerProfileDraft => ({
+const createBuyerProfileDraft = (): BuyerProfileDraft => ({
   id: generateId(),
-  name,
-  description: '',
-  requirement: '',
+  nombre: '',
+  descripcion: '',
 });
 
-const createTicketSectorDraft = (name = ''): TicketSectorDraft => ({
+const createSectorDraft = (): SectorDraft => ({
   id: generateId(),
-  name,
-  capacity: '',
+  nombre: '',
+  capacidad: '',
+  accesibilidad: {
+    sillaRuedas: false,
+    acompaniamientoPermitido: true,
+    acompaniamientoObligatorio: false,
+    sectorVinculadoId: '',
+  },
 });
 
-const createCombinationDraft = (sectorId: string, profileId: string): PhaseCombinationDraft => ({
-  id: `${sectorId}-${profileId}-${generateId()}`,
+const createPhaseDraft = (): PhaseDraft => ({
+  id: generateId(),
+  nombre: '',
+  fechaInicio: '',
+  fechaFin: '',
+  visibilidad: 'PUBLICO',
+  bloqueadoHasta: '',
+  estado: 'BORRADOR',
+});
+
+const createPriceDraft = (
+  sectorId: string,
+  perfilId: string,
+  faseId: string
+): PriceCombinationDraft => ({
+  id: generateId(),
   sectorId,
-  profileId,
-  basePrice: '',
-  allocation: '',
+  perfilId,
+  faseId,
+  disponible: true,
+  precio: '',
+  accionAgotado: 'DETENER',
+  mensajeAgotado: '',
 });
 
-const createTicketPhaseDraft = (
-  buyerProfiles: BuyerProfileDraft[],
-  ticketSectors: TicketSectorDraft[]
-): TicketPhaseDraft => ({
+const createCouponDraft = (): CouponDraft => ({
   id: generateId(),
-  name: 'Nueva fase',
-  ticketType: '',
-  startDate: '',
-  endDate: '',
-  state: 'BORRADOR',
-  combinations: ticketSectors.flatMap((sector) =>
-    buyerProfiles.map((profile) => createCombinationDraft(sector.id, profile.id))
-  ),
+  codigo: '',
+  tipo: 'PORCENTAJE',
+  valor: '',
+  requisito: '',
+  descripcion: '',
 });
 
-const createDiscountDraft = (): DiscountDraft => ({
-  id: generateId(),
-  code: '',
-  type: 'PORCENTAJE',
-  value: '',
-  usageLimitPerUser: '',
-  isActive: true,
-});
-
-const defaultTaxConfig = (): TaxConfigDraft => ({
-  taxType: 'PORCENTAJE',
-  taxValue: '18',
-  feeType: 'PORCENTAJE',
-  feeValue: '6',
-});
-
-const statusLabels: Record<EventStatus, string> = {
-  BORRADOR: 'Borrador',
-  PUBLICADO: 'Publicado',
-  CANCELADO: 'Cancelado',
+const adjustmentLabels: Record<AdjustmentType, string> = {
+  PORCENTAJE: 'Porcentaje',
+  FIJO: 'Monto fijo',
 };
 
-const phaseStateLabels: Record<TicketPhaseState, string> = {
+const visibilityLabels: Record<TicketPhaseVisibility, string> = {
+  PUBLICO: 'Público',
+  OCULTO: 'Oculto (solo enlace)',
+  BLOQUEADO: 'Bloqueado hasta una fecha',
+};
+
+const phaseStatusLabels: Record<TicketPhaseStatus, string> = {
   BORRADOR: 'Borrador',
   ACTIVO: 'Activo',
   PAUSADO: 'Pausado',
@@ -161,20 +170,36 @@ const phaseStateLabels: Record<TicketPhaseState, string> = {
   FINALIZADO: 'Finalizado',
 };
 
-const calculateFinalPrice = (basePrice: number, taxConfig: TaxConfigDraft): number => {
-  if (Number.isNaN(basePrice)) {
-    return 0;
+const soldOutActionLabels: Record<SoldOutAction, string> = {
+  DETENER: 'Detener venta',
+  LISTA_ESPERA: 'Habilitar lista de espera',
+};
+
+const eventStatusLabels: Record<EventStatus, string> = {
+  BORRADOR: 'Borrador',
+  PUBLICADO: 'Publicado',
+  CANCELADO: 'Cancelado',
+};
+
+const formatDateTimePreview = (value: string): string => {
+  if (!value) {
+    return 'Por definir';
   }
 
-  const taxValue = Number(taxConfig.taxValue) || 0;
-  const feeValue = Number(taxConfig.feeValue) || 0;
+  const date = new Date(value);
 
-  const taxAmount = taxConfig.taxType === 'PORCENTAJE' ? (basePrice * taxValue) / 100 : taxValue;
+  if (Number.isNaN(date.getTime())) {
+    return 'Fecha inválida';
+  }
 
-  const feeAmount = taxConfig.feeType === 'PORCENTAJE' ? (basePrice * feeValue) / 100 : feeValue;
-
-  return basePrice + taxAmount + feeAmount;
+  return new Intl.DateTimeFormat('es-PE', {
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }).format(date);
 };
+
+const buildCombinationKey = (sectorId: string, perfilId: string, faseId: string): string =>
+  `${sectorId}::${perfilId}::${faseId}`;
 
 const EventCreator: FC = () => {
   const { showAlert, hideAlert } = useAlert();
@@ -189,25 +214,22 @@ const EventCreator: FC = () => {
     fechaHoraFin: '',
     idOrganizador: organizers[0]?.idOrganizador ?? 0,
     idCategoria: eventCategories[0]?.idCategoria ?? 0,
+    moneda: 'PEN',
+    impuestos: { tipo: 'PORCENTAJE', valor: '0' },
+    comisiones: { tipo: 'PORCENTAJE', valor: '0' },
   }));
   const [buyerProfiles, setBuyerProfiles] = useState<BuyerProfileDraft[]>(() => [
-    createBuyerProfileDraft('Adulto'),
+    { ...createBuyerProfileDraft(), nombre: 'Adulto' },
   ]);
-  const [ticketSectors, setTicketSectors] = useState<TicketSectorDraft[]>(() => [
-    createTicketSectorDraft('General'),
+  const [ticketSectors, setTicketSectors] = useState<SectorDraft[]>(() => [
+    { ...createSectorDraft(), nombre: 'General', capacidad: '0' },
   ]);
-  const [ticketPhases, setTicketPhases] = useState<TicketPhaseDraft[]>(() => {
-    const profile = createBuyerProfileDraft('Adulto');
-    const sector = createTicketSectorDraft('General');
-
-    return [createTicketPhaseDraft([profile], [sector])];
-  });
-  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
-  const [discounts, setDiscounts] = useState<DiscountDraft[]>(() => []);
-  const [taxConfig, setTaxConfig] = useState<TaxConfigDraft>(() => defaultTaxConfig());
-  const [phaseTemplates, setPhaseTemplates] = useState<PhaseTemplate[]>([]);
-  const [reports, setReports] = useState<OrganizerReport[]>([]);
-
+  const [ticketPhases, setTicketPhases] = useState<PhaseDraft[]>(() => [
+    { ...createPhaseDraft(), nombre: 'Preventa' },
+  ]);
+  const [priceMatrix, setPriceMatrix] = useState<PriceCombinationDraft[]>([]);
+  const [coupons, setCoupons] = useState<CouponDraft[]>([]);
+  const [templateCombinationId, setTemplateCombinationId] = useState<string | null>(null);
   useEffect(() => {
     const fetchEvents = async (): Promise<void> => {
       const data = await adminEventApi.listEvents();
@@ -215,68 +237,57 @@ const EventCreator: FC = () => {
       setEvents(data);
     };
 
-    const fetchReports = async (): Promise<void> => {
-      const data = await adminEventApi.listReports();
-
-      setReports(data);
-    };
-
     void fetchEvents();
-    void fetchReports();
   }, []);
 
-  useEffect(() => {
-    setTicketPhases((prev) => {
-      return prev.map((phase) => {
-        const existingMap = new Map(
-          phase.combinations.map((combination) => [
-            `${combination.sectorId}-${combination.profileId}`,
-            combination,
-          ])
-        );
+  const syncPriceMatrix = useCallback(() => {
+    setPriceMatrix((prev) => {
+      const map = new Map<string, PriceCombinationDraft>();
 
-        const updatedCombinations: PhaseCombinationDraft[] = [];
+      prev.forEach((item) => {
+        map.set(buildCombinationKey(item.sectorId, item.perfilId, item.faseId), item);
+      });
 
-        ticketSectors.forEach((sector) => {
-          buyerProfiles.forEach((profile) => {
-            const key = `${sector.id}-${profile.id}`;
-            const current = existingMap.get(key);
+      const next: PriceCombinationDraft[] = [];
 
-            if (current !== undefined) {
-              updatedCombinations.push({ ...current, sectorId: sector.id, profileId: profile.id });
-            } else {
-              updatedCombinations.push(createCombinationDraft(sector.id, profile.id));
+      ticketSectors.forEach((sector) => {
+        if (sector.nombre.trim() === '' || sector.id === '') {
+          return;
+        }
+
+        buyerProfiles.forEach((perfil) => {
+          if (perfil.nombre.trim() === '' || perfil.id === '') {
+            return;
+          }
+
+          ticketPhases.forEach((fase) => {
+            if (fase.nombre.trim() === '' || fase.id === '') {
+              return;
             }
+
+            const key = buildCombinationKey(sector.id, perfil.id, fase.id);
+            const existing = map.get(key);
+
+            next.push(
+              existing ?? {
+                ...createPriceDraft(sector.id, perfil.id, fase.id),
+              }
+            );
           });
         });
-
-        return {
-          ...phase,
-          combinations: updatedCombinations,
-        };
       });
+
+      return next;
     });
-  }, [buyerProfiles, ticketSectors]);
+  }, [buyerProfiles, ticketPhases, ticketSectors]);
 
   useEffect(() => {
-    if (ticketPhases.length === 0) {
-      setSelectedPhaseId(null);
+    syncPriceMatrix();
+  }, [syncPriceMatrix]);
 
-      return;
-    }
-
-    setSelectedPhaseId((prev) => {
-      if (prev === null) {
-        return ticketPhases[0]?.id ?? null;
-      }
-
-      const stillExists = ticketPhases.some((phase) => phase.id === prev);
-
-      return stillExists ? prev : (ticketPhases[0]?.id ?? null);
-    });
-  }, [ticketPhases]);
-
-  const handleInputChange = (event: ChangeEvent<HTMLInputElement>): void => {
+  const handleGeneralInputChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void => {
     const { name, value } = event.target;
 
     setFormState((prev) => ({
@@ -285,16 +296,7 @@ const EventCreator: FC = () => {
     }));
   };
 
-  const handleTextAreaChange = (event: ChangeEvent<HTMLTextAreaElement>): void => {
-    const { name, value } = event.target;
-
-    setFormState((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+  const handleGeneralSelectChange = (event: ChangeEvent<HTMLSelectElement>): void => {
     const { name, value } = event.target;
 
     setFormState((prev) => ({
@@ -302,14 +304,29 @@ const EventCreator: FC = () => {
       [name]: Number(value),
     }));
   };
-  const updateBuyerProfile = (
-    profileId: string,
+
+  const handleAdjustmentChange = (
+    key: 'impuestos' | 'comisiones',
+    field: 'tipo' | 'valor',
+    value: string
+  ): void => {
+    setFormState((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [field]: field === 'valor' ? value.replace(/[^0-9.,-]/g, '').replace(',', '.') : value,
+      },
+    }));
+  };
+
+  const handleBuyerProfileChange = (
+    id: string,
     field: keyof Omit<BuyerProfileDraft, 'id'>,
     value: string
   ): void => {
     setBuyerProfiles((prev) =>
       prev.map((profile) =>
-        profile.id === profileId
+        profile.id === id
           ? {
               ...profile,
               [field]: value,
@@ -319,58 +336,71 @@ const EventCreator: FC = () => {
     );
   };
 
-  const updateTicketSector = (
-    sectorId: string,
-    field: keyof Omit<TicketSectorDraft, 'id'>,
+  const addBuyerProfile = (): void => {
+    setBuyerProfiles((prev) => [...prev, createBuyerProfileDraft()]);
+  };
+
+  const removeBuyerProfile = (id: string): void => {
+    setBuyerProfiles((prev) =>
+      prev.length === 1 ? prev : prev.filter((profile) => profile.id !== id)
+    );
+  };
+
+  const handleSectorChange = (
+    id: string,
+    field: keyof Omit<SectorDraft, 'id' | 'accesibilidad'>,
     value: string
   ): void => {
     setTicketSectors((prev) =>
       prev.map((sector) =>
-        sector.id === sectorId
+        sector.id === id
           ? {
               ...sector,
-              [field]: value,
+              [field]: field === 'capacidad' ? value.replace(/[^0-9]/g, '') : value,
             }
           : sector
       )
     );
   };
 
-  const updateCombination = (
-    phaseId: string,
-    combinationId: string,
-    field: keyof Omit<PhaseCombinationDraft, 'id' | 'sectorId' | 'profileId'>,
-    value: string
+  const handleSectorAccessibilityChange = (
+    id: string,
+    field: keyof SectorDraft['accesibilidad'],
+    value: string | boolean
   ): void => {
-    setTicketPhases((prev) =>
-      prev.map((phase) => {
-        if (phase.id !== phaseId) {
-          return phase;
-        }
-
-        return {
-          ...phase,
-          combinations: phase.combinations.map((combination) =>
-            combination.id === combinationId
-              ? {
-                  ...combination,
-                  [field]: value,
-                }
-              : combination
-          ),
-        };
-      })
+    setTicketSectors((prev) =>
+      prev.map((sector) =>
+        sector.id === id
+          ? {
+              ...sector,
+              accesibilidad: {
+                ...sector.accesibilidad,
+                [field]: value,
+              },
+            }
+          : sector
+      )
     );
   };
 
-  const updatePhase = <Key extends keyof Omit<TicketPhaseDraft, 'combinations'>>(
-    phaseId: string,
-    field: Key,
-    value: TicketPhaseDraft[Key]
+  const addSector = (): void => {
+    setTicketSectors((prev) => [...prev, createSectorDraft()]);
+  };
+
+  const removeSector = (id: string): void => {
+    setTicketSectors((prev) =>
+      prev.length === 1 ? prev : prev.filter((sector) => sector.id !== id)
+    );
+  };
+
+  const handlePhaseChange = (
+    id: string,
+    field: keyof Omit<PhaseDraft, 'id' | 'visibilidad' | 'estado'>,
+    value: string
   ): void => {
     setTicketPhases((prev) =>
       prev.map((phase) =>
-        phase.id === phaseId
+        phase.id === id
           ? {
               ...phase,
               [field]: value,
@@ -380,297 +410,380 @@ const EventCreator: FC = () => {
     );
   };
 
-  const handleTaxConfigChange = (
-    field: keyof TaxConfigDraft,
-    value: string | DiscountType
+  const handlePhaseSelectChange = (
+    id: string,
+    field: 'visibilidad' | 'estado',
+    value: TicketPhaseVisibility | TicketPhaseStatus
   ): void => {
-    setTaxConfig((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const addBuyerProfile = (): void => {
-    setBuyerProfiles((prev) => [...prev, createBuyerProfileDraft()]);
-  };
-
-  const removeBuyerProfile = (profileId: string): void => {
-    setBuyerProfiles((prev) => {
-      if (prev.length === 1) {
-        return prev;
-      }
-
-      return prev.filter((profile) => profile.id !== profileId);
-    });
-  };
-
-  const addTicketSector = (): void => {
-    setTicketSectors((prev) => [...prev, createTicketSectorDraft()]);
-  };
-
-  const removeTicketSector = (sectorId: string): void => {
-    setTicketSectors((prev) => {
-      if (prev.length === 1) {
-        return prev;
-      }
-
-      return prev.filter((sector) => sector.id !== sectorId);
-    });
-  };
-
-  const addPhase = (): void => {
-    const newPhase = createTicketPhaseDraft(buyerProfiles, ticketSectors);
-
-    setTicketPhases((prev) => [...prev, newPhase]);
-    setSelectedPhaseId(newPhase.id);
-  };
-
-  const duplicatePhase = (phaseId: string): void => {
-    const phaseToDuplicate = ticketPhases.find((phase) => phase.id === phaseId);
-
-    if (phaseToDuplicate === undefined) {
-      return;
-    }
-
-    const duplicatedPhase: TicketPhaseDraft = {
-      ...phaseToDuplicate,
-      id: generateId(),
-      name: `${phaseToDuplicate.name} (copia)`,
-      combinations: phaseToDuplicate.combinations.map((combination) => ({
-        ...combination,
-        id: `${combination.sectorId}-${combination.profileId}-${generateId()}`,
-      })),
-    };
-
-    setTicketPhases((prev) => [...prev, duplicatedPhase]);
-    setSelectedPhaseId(duplicatedPhase.id);
-  };
-
-  const removePhase = (phaseId: string): void => {
-    setTicketPhases((prev) => {
-      if (prev.length === 1) {
-        return prev;
-      }
-
-      return prev.filter((phase) => phase.id !== phaseId);
-    });
-  };
-
-  const addDiscount = (): void => {
-    setDiscounts((prev) => [...prev, createDiscountDraft()]);
-  };
-
-  const updateDiscount = (
-    discountId: string,
-    field: keyof Omit<DiscountDraft, 'id'>,
-    value: string | DiscountType | boolean
-  ): void => {
-    setDiscounts((prev) =>
-      prev.map((discount) =>
-        discount.id === discountId
+    setTicketPhases((prev) =>
+      prev.map((phase) =>
+        phase.id === id
           ? {
-              ...discount,
+              ...phase,
               [field]: value,
             }
-          : discount
+          : phase
       )
     );
   };
 
-  const removeDiscount = (discountId: string): void => {
-    setDiscounts((prev) => prev.filter((discount) => discount.id !== discountId));
+  const addPhase = (): void => {
+    setTicketPhases((prev) => [...prev, createPhaseDraft()]);
   };
 
-  const selectedPhase = useMemo(() => {
-    if (selectedPhaseId === null) {
-      return null;
-    }
+  const removePhase = (id: string): void => {
+    setTicketPhases((prev) => (prev.length === 1 ? prev : prev.filter((phase) => phase.id !== id)));
+  };
 
-    return ticketPhases.find((phase) => phase.id === selectedPhaseId) ?? null;
-  }, [selectedPhaseId, ticketPhases]);
-
-  const combinationSummaries = useMemo(() => {
-    if (selectedPhase === null) {
-      return [];
-    }
-
-    return selectedPhase.combinations.map((combination) => {
-      const sector = ticketSectors.find((item) => item.id === combination.sectorId);
-      const profile = buyerProfiles.find((item) => item.id === combination.profileId);
-
-      const basePriceNumber = Number(combination.basePrice) || 0;
-      const allocationNumber = Number(combination.allocation) || 0;
-      const finalPrice = calculateFinalPrice(basePriceNumber, taxConfig);
-
-      return {
-        ...combination,
-        sectorName: sector?.name ?? 'Sector',
-        profileName: profile?.name ?? 'Perfil',
-        basePriceNumber,
-        allocationNumber,
-        finalPrice,
-      };
-    });
-  }, [selectedPhase, ticketSectors, buyerProfiles, taxConfig]);
-
-  const estimatedRevenue = useMemo(() => {
-    return ticketPhases.reduce((eventAcc, phase) => {
-      const phaseRevenue = phase.combinations.reduce((acc, combination) => {
-        const basePriceNumber = Number(combination.basePrice) || 0;
-        const allocationNumber = Number(combination.allocation) || 0;
-        const finalPrice = calculateFinalPrice(basePriceNumber, taxConfig);
-
-        return acc + finalPrice * allocationNumber;
-      }, 0);
-
-      return eventAcc + phaseRevenue;
-    }, 0);
-  }, [ticketPhases, taxConfig]);
-
-  const totalPlannedCapacity = useMemo(() => {
-    return ticketSectors.reduce((acc, sector) => acc + (Number(sector.capacity) || 0), 0);
-  }, [ticketSectors]);
-  const saveTemplateFromPhase = (phaseId: string): void => {
-    const phase = ticketPhases.find((item) => item.id === phaseId);
-
-    if (phase === undefined) {
-      return;
-    }
-
-    const templateName = window.prompt(
-      'Nombre de la plantilla',
-      `${phase.ticketType || phase.name}`
+  const handlePriceDraftChange = (
+    id: string,
+    field: keyof Omit<
+      PriceCombinationDraft,
+      'id' | 'sectorId' | 'perfilId' | 'faseId' | 'disponible' | 'accionAgotado'
+    >,
+    value: string
+  ): void => {
+    setPriceMatrix((prev) =>
+      prev.map((combination) =>
+        combination.id === id
+          ? {
+              ...combination,
+              [field]: value,
+            }
+          : combination
+      )
     );
-
-    if (templateName === null || templateName.trim() === '') {
-      return;
-    }
-
-    const template: PhaseTemplate = {
-      id: generateId(),
-      name: templateName.trim(),
-      ticketType: phase.ticketType,
-      state: phase.state,
-      combinations: phase.combinations.map((combination) => {
-        const sectorName =
-          ticketSectors.find((sector) => sector.id === combination.sectorId)?.name ?? '';
-        const profileName =
-          buyerProfiles.find((profile) => profile.id === combination.profileId)?.name ?? '';
-
-        return {
-          sectorName,
-          profileName,
-          basePrice: combination.basePrice,
-          allocation: combination.allocation,
-        };
-      }),
-    };
-
-    setPhaseTemplates((prev) => [template, ...prev]);
-    showAlert({ type: 'success', text: 'Plantilla guardada para reutilizar en próximos eventos.' });
   };
 
-  const applyTemplateToPhase = (phaseId: string, templateId: string): void => {
-    const template = phaseTemplates.find((item) => item.id === templateId);
+  const handlePriceToggle = (id: string, available: boolean): void => {
+    setPriceMatrix((prev) =>
+      prev.map((combination) =>
+        combination.id === id
+          ? {
+              ...combination,
+              disponible: available,
+            }
+          : combination
+      )
+    );
+  };
 
-    if (template === undefined) {
+  const handleSoldOutActionChange = (id: string, action: SoldOutAction): void => {
+    setPriceMatrix((prev) =>
+      prev.map((combination) =>
+        combination.id === id
+          ? {
+              ...combination,
+              accionAgotado: action,
+            }
+          : combination
+      )
+    );
+  };
+
+  const addCoupon = (): void => {
+    setCoupons((prev) => [...prev, createCouponDraft()]);
+  };
+
+  const removeCoupon = (id: string): void => {
+    setCoupons((prev) => prev.filter((coupon) => coupon.id !== id));
+  };
+
+  const handleCouponChange = (
+    id: string,
+    field: keyof Omit<CouponDraft, 'id'>,
+    value: string
+  ): void => {
+    setCoupons((prev) =>
+      prev.map((coupon) =>
+        coupon.id === id
+          ? {
+              ...coupon,
+              [field]:
+                field === 'valor' ? value.replace(/[^0-9.,-]/g, '').replace(',', '.') : value,
+            }
+          : coupon
+      )
+    );
+  };
+
+  const selectedTemplate = useMemo(
+    () => priceMatrix.find((combination) => combination.id === templateCombinationId) ?? null,
+    [priceMatrix, templateCombinationId]
+  );
+
+  const applyTemplate = (scope: 'ALL' | 'SECTOR' | 'PERFIL' | 'FASE'): void => {
+    if (selectedTemplate === null) {
+      showAlert({ type: 'error', text: 'Selecciona una combinación como plantilla primero.' });
+
       return;
     }
 
-    setTicketPhases((prev) =>
-      prev.map((phase) => {
-        if (phase.id !== phaseId) {
-          return phase;
+    setPriceMatrix((prev) =>
+      prev.map((combination) => {
+        if (combination.id === selectedTemplate.id) {
+          return combination;
         }
 
-        const updatedCombinations = phase.combinations.map((combination) => {
-          const sectorName =
-            ticketSectors.find((sector) => sector.id === combination.sectorId)?.name ?? '';
-          const profileName =
-            buyerProfiles.find((profile) => profile.id === combination.profileId)?.name ?? '';
+        const sameSector = combination.sectorId === selectedTemplate.sectorId;
+        const samePerfil = combination.perfilId === selectedTemplate.perfilId;
+        const samePhase = combination.faseId === selectedTemplate.faseId;
 
-          const templateCombination = template.combinations.find(
-            (item) => item.sectorName === sectorName && item.profileName === profileName
-          );
+        const shouldApply =
+          scope === 'ALL' ||
+          (scope === 'SECTOR' && sameSector) ||
+          (scope === 'PERFIL' && samePerfil) ||
+          (scope === 'FASE' && samePhase);
 
-          if (templateCombination === undefined) {
-            return combination;
-          }
-
-          return {
-            ...combination,
-            basePrice: templateCombination.basePrice,
-            allocation: templateCombination.allocation,
-          };
-        });
+        if (!shouldApply) {
+          return combination;
+        }
 
         return {
-          ...phase,
-          ticketType: template.ticketType,
-          state: template.state,
-          combinations: updatedCombinations,
+          ...combination,
+          precio: selectedTemplate.precio,
+          disponible: selectedTemplate.disponible,
+          accionAgotado: selectedTemplate.accionAgotado,
+          mensajeAgotado: selectedTemplate.mensajeAgotado,
         };
       })
     );
 
-    showAlert({
-      type: 'success',
-      text: 'Plantilla aplicada correctamente a la fase seleccionada.',
-    });
+    showAlert({ type: 'success', text: 'Plantilla aplicada correctamente.' });
   };
-
-  const handleExportMatrix = (): void => {
-    showAlert({
-      type: 'info',
-      text: 'La exportación generará un archivo CSV/Excel en la versión conectada al backend.',
-    });
-  };
-
-  const handleImportMatrix = (): void => {
-    showAlert({
-      type: 'info',
-      text: 'Podrás importar una matriz desde CSV/Excel cuando se integren los endpoints oficiales.',
-    });
-  };
-
-  const validatePhaseOverlaps = (): string | null => {
-    const phasesByType = new Map<string, TicketPhaseDraft[]>();
-
-    ticketPhases.forEach((phase) => {
-      const key = phase.ticketType.trim() !== '' ? phase.ticketType.trim().toLowerCase() : phase.id;
-      const phases = phasesByType.get(key) ?? [];
-      phases.push(phase);
-      phasesByType.set(key, phases);
-    });
-
-    for (const [, phases] of phasesByType.entries()) {
-      const sorted = phases
-        .map((phase) => ({
-          ...phase,
-          start: new Date(phase.startDate),
-          end: new Date(phase.endDate),
-        }))
-        .sort((a, b) => a.start.getTime() - b.start.getTime());
-
-      for (let index = 1; index < sorted.length; index += 1) {
-        const prevPhase = sorted[index - 1];
-        const currentPhase = sorted[index];
-
-        if (
-          prevPhase.start instanceof Date &&
-          currentPhase.start instanceof Date &&
-          prevPhase.end instanceof Date &&
-          !Number.isNaN(prevPhase.start.getTime()) &&
-          !Number.isNaN(prevPhase.end.getTime()) &&
-          !Number.isNaN(currentPhase.start.getTime()) &&
-          prevPhase.end > currentPhase.start
-        ) {
-          return `Las fechas de la fase "${currentPhase.name}" se solapan con otra fase del mismo tipo.`;
-        }
+  const calculateFinalPrice = useCallback(
+    (rawPrice: number): number => {
+      if (Number.isNaN(rawPrice)) {
+        return 0;
       }
+
+      const applyAdjustment = (base: number, adjustment: PriceAdjustmentDraft): number => {
+        const amount = Number(adjustment.valor) || 0;
+
+        if (adjustment.tipo === 'PORCENTAJE') {
+          return base + (base * amount) / 100;
+        }
+
+        return base + amount;
+      };
+
+      let price = rawPrice;
+
+      price = applyAdjustment(price, formState.impuestos);
+      price = applyAdjustment(price, formState.comisiones);
+
+      return price;
+    },
+    [formState.comisiones, formState.impuestos]
+  );
+
+  const pricePreview = useMemo<PricePreview[]>(() => {
+    return priceMatrix.map((combination) => {
+      const basePrice = Number(combination.precio) || 0;
+      const finalPrice = calculateFinalPrice(basePrice);
+      const sectorNombre =
+        ticketSectors.find((sector) => sector.id === combination.sectorId)?.nombre ?? 'Sector';
+      const perfilNombre =
+        buyerProfiles.find((perfil) => perfil.id === combination.perfilId)?.nombre ?? 'Perfil';
+      const faseNombre =
+        ticketPhases.find((phase) => phase.id === combination.faseId)?.nombre ?? 'Fase';
+
+      return {
+        ...combination,
+        finalPrice,
+        sectorNombre,
+        perfilNombre,
+        faseNombre,
+      };
+    });
+  }, [buyerProfiles, calculateFinalPrice, priceMatrix, ticketPhases, ticketSectors]);
+
+  const totalCapacity = useMemo(() => {
+    return ticketSectors.reduce((acc, sector) => acc + (Number(sector.capacidad) || 0), 0);
+  }, [ticketSectors]);
+
+  const exportMatrix = (): void => {
+    if (priceMatrix.length === 0) {
+      showAlert({ type: 'error', text: 'No hay combinaciones para exportar.' });
+
+      return;
     }
 
-    return null;
+    const header = 'Sector,Perfil,Fase,Precio,Disponible,AccionAgotado,MensajeAgotado\n';
+    const rows = pricePreview
+      .map((combination) => {
+        const data = [
+          combination.sectorNombre,
+          combination.perfilNombre,
+          combination.faseNombre,
+          combination.precio,
+          combination.disponible ? 'SI' : 'NO',
+          combination.accionAgotado,
+          combination.mensajeAgotado?.replaceAll('\n', ' '),
+        ];
+
+        return data.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(',');
+      })
+      .join('\n');
+
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${formState.titulo || 'matriz-precios'}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const importMatrix = (event: ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0];
+
+    if (file === undefined) {
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const text = reader.result;
+
+      if (typeof text !== 'string') {
+        showAlert({ type: 'error', text: 'No se pudo leer el archivo seleccionado.' });
+
+        return;
+      }
+
+      const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
+
+      if (lines.length <= 1) {
+        showAlert({ type: 'error', text: 'El archivo no contiene datos para importar.' });
+
+        return;
+      }
+
+      const [, ...rows] = lines;
+      const updates: Array<
+        [
+          string,
+          string,
+          string,
+          {
+            precio: string;
+            disponible: boolean;
+            accionAgotado: SoldOutAction;
+            mensajeAgotado: string;
+          },
+        ]
+      > = [];
+
+      rows.forEach((row) => {
+        const values = row
+          .split(',')
+          .map((value) => value.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+
+        if (values.length < 6) {
+          return;
+        }
+
+        const [
+          sectorNombre,
+          perfilNombre,
+          faseNombre,
+          precio,
+          disponible,
+          accionAgotado,
+          mensajeAgotado = '',
+        ] = values;
+
+        const sector = ticketSectors.find(
+          (current) => current.nombre.toLowerCase() === sectorNombre.toLowerCase()
+        );
+        const perfil = buyerProfiles.find(
+          (current) => current.nombre.toLowerCase() === perfilNombre.toLowerCase()
+        );
+        const fase = ticketPhases.find(
+          (current) => current.nombre.toLowerCase() === faseNombre.toLowerCase()
+        );
+
+        if (!sector || !perfil || !fase) {
+          return;
+        }
+
+        const key = buildCombinationKey(sector.id, perfil.id, fase.id);
+
+        updates.push([
+          key,
+          sector.id,
+          perfil.id,
+          {
+            precio,
+            disponible: disponible.toUpperCase() === 'SI',
+            accionAgotado: (accionAgotado as SoldOutAction) ?? 'DETENER',
+            mensajeAgotado,
+          },
+        ]);
+      });
+
+      if (updates.length === 0) {
+        showAlert({ type: 'error', text: 'No se encontraron coincidencias en la matriz.' });
+
+        return;
+      }
+
+      setPriceMatrix((prev) => {
+        const map = new Map<string, PriceCombinationDraft>();
+
+        prev.forEach((combination) => {
+          map.set(
+            buildCombinationKey(combination.sectorId, combination.perfilId, combination.faseId),
+            combination
+          );
+        });
+
+        updates.forEach(([key, sectorId, perfilId, data]) => {
+          const existing = map.get(key);
+
+          if (existing !== undefined) {
+            map.set(key, {
+              ...existing,
+              sectorId,
+              perfilId,
+              precio: data.precio,
+              disponible: data.disponible,
+              accionAgotado: data.accionAgotado,
+              mensajeAgotado: data.mensajeAgotado,
+            });
+          }
+        });
+
+        return Array.from(map.values());
+      });
+
+      showAlert({ type: 'success', text: 'Matriz importada exitosamente.' });
+    };
+
+    reader.readAsText(file, 'utf-8');
+  };
+
+  const resetForm = (): void => {
+    setFormState({
+      titulo: '',
+      descripcion: '',
+      lugar: '',
+      fechaHoraInicio: '',
+      fechaHoraFin: '',
+      idOrganizador: organizers[0]?.idOrganizador ?? 0,
+      idCategoria: eventCategories[0]?.idCategoria ?? 0,
+      moneda: 'PEN',
+      impuestos: { tipo: 'PORCENTAJE', valor: '0' },
+      comisiones: { tipo: 'PORCENTAJE', valor: '0' },
+    });
+    setBuyerProfiles([{ ...createBuyerProfileDraft(), nombre: 'Adulto' }]);
+    setTicketSectors([{ ...createSectorDraft(), nombre: 'General', capacidad: '0' }]);
+    setTicketPhases([{ ...createPhaseDraft(), nombre: 'Preventa' }]);
+    setPriceMatrix([]);
+    setCoupons([]);
+    setTemplateCombinationId(null);
   };
   const validateForm = (): string | null => {
     if (formState.titulo.trim() === '') {
@@ -700,142 +813,207 @@ const EventCreator: FC = () => {
       return 'La fecha de fin debe ser posterior a la fecha de inicio.';
     }
 
-    if (buyerProfiles.length === 0) {
-      return 'Agrega al menos un perfil de comprador.';
+    if (formState.moneda !== 'PEN') {
+      return 'La moneda del evento debe ser siempre soles peruanos (PEN).';
     }
 
-    if (ticketSectors.length === 0) {
-      return 'Agrega al menos un sector de tickets.';
+    const impuestosValor = Number(formState.impuestos.valor);
+    const comisionesValor = Number(formState.comisiones.valor);
+
+    if (Number.isNaN(impuestosValor) || impuestosValor < 0) {
+      return 'Define un valor válido para los impuestos del evento.';
     }
 
-    const invalidSector = ticketSectors.find((sector) => Number(sector.capacity) <= 0);
-
-    if (invalidSector !== undefined) {
-      return `Define una capacidad válida para el sector "${invalidSector.name || 'Sin nombre'}".`;
+    if (Number.isNaN(comisionesValor) || comisionesValor < 0) {
+      return 'Define un valor válido para las comisiones del evento.';
     }
 
-    if (ticketPhases.length === 0) {
-      return 'Configura al menos una fase o tipo de ticket.';
+    const validProfiles = buyerProfiles.filter((profile) => profile.nombre.trim() !== '');
+
+    if (validProfiles.length === 0) {
+      return 'Agrega al menos un perfil de comprador con nombre.';
     }
 
-    for (const phase of ticketPhases) {
-      if (phase.ticketType.trim() === '') {
-        return 'Cada fase debe tener un tipo de ticket identificable.';
+    const validSectors = ticketSectors.filter(
+      (sector) => sector.nombre.trim() !== '' && Number(sector.capacidad) > 0
+    );
+
+    if (validSectors.length === 0) {
+      return 'Define al menos un sector con capacidad mayor a cero.';
+    }
+
+    const validPhases = ticketPhases.filter((phase) => {
+      if (
+        phase.nombre.trim() === '' ||
+        phase.fechaInicio === '' ||
+        phase.fechaFin === '' ||
+        new Date(phase.fechaFin) <= new Date(phase.fechaInicio)
+      ) {
+        return false;
       }
 
-      if (phase.startDate === '' || phase.endDate === '') {
-        return `Completa las fechas de la fase "${phase.name}".`;
+      if (phase.visibilidad === 'BLOQUEADO' && phase.bloqueadoHasta.trim() === '') {
+        return false;
       }
 
-      const start = new Date(phase.startDate);
-      const end = new Date(phase.endDate);
+      return true;
+    });
 
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        return `Las fechas definidas para la fase "${phase.name}" no son válidas.`;
-      }
+    if (validPhases.length === 0) {
+      return 'Configura al menos una fase de venta con rango de fechas válido.';
+    }
 
-      if (end <= start) {
-        return `La fecha de fin debe ser posterior a la fecha de inicio en la fase "${phase.name}".`;
-      }
+    const groupedByName = new Map<string, PhaseDraft[]>();
 
-      const validCombination = phase.combinations.find((combination) => {
-        const basePriceNumber = Number(combination.basePrice) || 0;
-        const allocationNumber = Number(combination.allocation) || 0;
+    validPhases.forEach((phase) => {
+      const key = phase.nombre.trim().toLowerCase();
+      const current = groupedByName.get(key) ?? [];
+      current.push(phase);
+      groupedByName.set(key, current);
+    });
 
-        return basePriceNumber > 0 && allocationNumber > 0;
-      });
+    for (const phases of groupedByName.values()) {
+      const sorted = phases
+        .map((phase) => ({
+          ...phase,
+          start: new Date(phase.fechaInicio).getTime(),
+          end: new Date(phase.fechaFin).getTime(),
+        }))
+        .sort((a, b) => a.start - b.start);
 
-      if (validCombination === undefined) {
-        return `Define al menos una combinación con precio y cupos válidos en la fase "${phase.name}".`;
+      for (let index = 1; index < sorted.length; index += 1) {
+        if (sorted[index].start < sorted[index - 1].end) {
+          return `Revisa las fechas de la fase "${sorted[index].nombre}". No puede solaparse con fases del mismo tipo.`;
+        }
       }
     }
 
-    const overlapMessage = validatePhaseOverlaps();
+    if (priceMatrix.length === 0) {
+      return 'Genera al menos una combinación de sector, perfil y fase.';
+    }
 
-    if (overlapMessage !== null) {
-      return overlapMessage;
+    const hasActivePrice = priceMatrix.some(
+      (combination) => combination.disponible && Number(combination.precio) > 0
+    );
+
+    if (!hasActivePrice) {
+      return 'Debes tener al menos una combinación disponible con precio mayor a cero.';
+    }
+
+    const waitlistWithoutMessage = priceMatrix.some(
+      (combination) =>
+        combination.disponible &&
+        combination.accionAgotado === 'LISTA_ESPERA' &&
+        combination.mensajeAgotado.trim() === ''
+    );
+
+    if (waitlistWithoutMessage) {
+      return 'Indica un mensaje para las combinaciones que habiliten lista de espera.';
     }
 
     return null;
   };
 
   const toPayload = (status: EventStatus): AdminEventPayload => {
+    const payloadProfiles = buyerProfiles
+      .filter((profile) => profile.nombre.trim() !== '')
+      .map((profile) => ({
+        id: profile.id,
+        nombre: profile.nombre,
+        descripcion: profile.descripcion.trim() || undefined,
+      }));
+
+    const payloadSectors = ticketSectors
+      .filter((sector) => sector.nombre.trim() !== '' && Number(sector.capacidad) > 0)
+      .map((sector) => ({
+        id: sector.id,
+        nombre: sector.nombre,
+        capacidad: Number(sector.capacidad) || 0,
+        accesibilidad: {
+          sillaRuedas: sector.accesibilidad.sillaRuedas,
+          acompaniamientoPermitido: sector.accesibilidad.acompaniamientoPermitido,
+          acompaniamientoObligatorio: sector.accesibilidad.acompaniamientoObligatorio,
+          sectorVinculadoId: sector.accesibilidad.sectorVinculadoId || undefined,
+        },
+      }));
+
+    const payloadPhases = ticketPhases
+      .filter(
+        (phase) =>
+          phase.nombre.trim() !== '' &&
+          phase.fechaInicio !== '' &&
+          phase.fechaFin !== '' &&
+          new Date(phase.fechaFin) > new Date(phase.fechaInicio)
+      )
+      .map((phase) => ({
+        id: phase.id,
+        nombre: phase.nombre,
+        fechaInicio: phase.fechaInicio,
+        fechaFin: phase.fechaFin,
+        visibilidad: phase.visibilidad,
+        bloqueadoHasta:
+          phase.visibilidad === 'BLOQUEADO' ? phase.bloqueadoHasta || undefined : undefined,
+        estado: phase.estado,
+      }));
+
+    const payloadPrices = priceMatrix
+      .filter(
+        (combination) =>
+          payloadSectors.some((sector) => sector.id === combination.sectorId) &&
+          payloadProfiles.some((profile) => profile.id === combination.perfilId) &&
+          payloadPhases.some((phase) => phase.id === combination.faseId)
+      )
+      .map((combination) => ({
+        id: combination.id,
+        sectorId: combination.sectorId,
+        perfilId: combination.perfilId,
+        faseId: combination.faseId,
+        disponible: combination.disponible,
+        precio: Number(combination.precio) || 0,
+        accionAgotado: combination.accionAgotado,
+        mensajeAgotado: combination.mensajeAgotado.trim() || undefined,
+      }));
+
+    const payloadCoupons = coupons
+      .filter((coupon) => coupon.codigo.trim() !== '' && Number(coupon.valor) > 0)
+      .map((coupon) => ({
+        id: coupon.id,
+        codigo: coupon.codigo,
+        tipo: coupon.tipo,
+        valor: Number(coupon.valor) || 0,
+        requisito: coupon.requisito.trim() || undefined,
+        descripcion: coupon.descripcion.trim() || undefined,
+      }));
+
     return {
-      ...formState,
+      titulo: formState.titulo,
+      descripcion: formState.descripcion,
+      lugar: formState.lugar,
+      fechaHoraInicio: formState.fechaHoraInicio,
+      fechaHoraFin: formState.fechaHoraFin,
+      idOrganizador: formState.idOrganizador,
+      idCategoria: formState.idCategoria,
       estado: status,
       like: 0,
       noInteres: 0,
       comentario: [],
-      currency: 'PEN',
-      buyerProfiles: buyerProfiles.map((profile) => ({
-        id: profile.id,
-        name: profile.name,
-        description: profile.description.trim() || undefined,
-        requirement: profile.requirement.trim() || undefined,
-      })),
-      ticketSectors: ticketSectors.map((sector) => ({
-        id: sector.id,
-        name: sector.name,
-        capacity: Number(sector.capacity) || 0,
-      })),
-      ticketPhases: ticketPhases.map((phase) => ({
-        id: phase.id,
-        name: phase.name,
-        ticketType: phase.ticketType,
-        startDate: phase.startDate,
-        endDate: phase.endDate,
-        state: phase.state,
-        combinations: phase.combinations.map((combination) => ({
-          id: combination.id,
-          sectorId: combination.sectorId,
-          profileId: combination.profileId,
-          basePrice: Number(combination.basePrice) || 0,
-          allocation: Number(combination.allocation) || 0,
-        })),
-      })),
-      discounts: discounts
-        .filter((discount) => discount.code.trim() !== '')
-        .map((discount) => ({
-          id: discount.id,
-          code: discount.code.trim().toUpperCase(),
-          type: discount.type,
-          value: Number(discount.value) || 0,
-          usageLimitPerUser: Number(discount.usageLimitPerUser) || 0,
-          isActive: discount.isActive,
-        })),
-      taxConfig: {
-        currency: 'PEN',
-        taxType: taxConfig.taxType,
-        taxValue: Number(taxConfig.taxValue) || 0,
-        feeType: taxConfig.feeType,
-        feeValue: Number(taxConfig.feeValue) || 0,
+      moneda: 'PEN',
+      impuestos: {
+        tipo: formState.impuestos.tipo,
+        valor: Number(formState.impuestos.valor) || 0,
       },
+      comisiones: {
+        tipo: formState.comisiones.tipo,
+        valor: Number(formState.comisiones.valor) || 0,
+      },
+      perfilesComprador: payloadProfiles,
+      sectores: payloadSectors,
+      fases: payloadPhases,
+      precios: payloadPrices,
+      cupones: payloadCoupons,
       imagenDestacada: undefined,
     };
   };
-
-  const resetForm = (): void => {
-    const initialProfile = createBuyerProfileDraft('Adulto');
-    const initialSector = createTicketSectorDraft('General');
-    const initialPhase = createTicketPhaseDraft([initialProfile], [initialSector]);
-
-    setFormState({
-      titulo: '',
-      descripcion: '',
-      lugar: '',
-      fechaHoraInicio: '',
-      fechaHoraFin: '',
-      idOrganizador: organizers[0]?.idOrganizador ?? 0,
-      idCategoria: eventCategories[0]?.idCategoria ?? 0,
-    });
-    setBuyerProfiles([initialProfile]);
-    setTicketSectors([initialSector]);
-    setTicketPhases([initialPhase]);
-    setSelectedPhaseId(initialPhase.id);
-    setDiscounts([]);
-    setTaxConfig(defaultTaxConfig());
-  };
-
   const handleSave = async (status: EventStatus): Promise<void> => {
     hideAlert();
 
@@ -859,7 +1037,7 @@ const EventCreator: FC = () => {
         type: 'success',
         text:
           status === 'PUBLICADO'
-            ? 'Evento publicado correctamente. Las fases están listas para activarse.'
+            ? 'Evento publicado correctamente para organizadores.'
             : 'Borrador guardado. Podrás continuar editando cuando lo necesites.',
       });
       resetForm();
@@ -883,7 +1061,7 @@ const EventCreator: FC = () => {
         showAlert({ type: 'error', text: 'El evento ya no existe en la bandeja.' });
       } else {
         setEvents((prev) => prev.map((event) => (event.idEvento === idEvento ? updated : event)));
-        showAlert({ type: 'success', text: `Estado actualizado a ${statusLabels[status]}.` });
+        showAlert({ type: 'success', text: `Estado actualizado a ${eventStatusLabels[status]}.` });
       }
     } catch {
       showAlert({ type: 'error', text: 'No se pudo actualizar el estado. Inténtalo nuevamente.' });
@@ -894,23 +1072,21 @@ const EventCreator: FC = () => {
 
   const previewStatus: EventStatus = 'BORRADOR';
   return (
-    <div className='admin-event-grid'>
+    <div className='admin-event-grid organizer-grid'>
       <div>
         <div className='admin-card'>
           <Heading type={3} color='white' text='Información general' />
-          <p className='gray'>
-            Define la información base del evento. Estos campos serán visibles para el público.
-          </p>
+          <p className='gray'>Define la información base del evento y su responsable.</p>
           <div className='admin-field'>
             <label htmlFor='titulo'>Título del evento</label>
             <Input
               type='text'
               name='titulo'
               value={formState.titulo}
-              maxLength={100}
+              maxLength={120}
               placeholder='Ej: Festival de verano Nexivent'
               required
-              onChange={handleInputChange}
+              onChange={handleGeneralInputChange}
             />
           </div>
           <div className='admin-field'>
@@ -919,9 +1095,9 @@ const EventCreator: FC = () => {
               id='descripcion'
               name='descripcion'
               value={formState.descripcion}
-              onChange={handleTextAreaChange}
+              onChange={handleGeneralInputChange}
               className='admin-input'
-              placeholder='Describe la experiencia, artistas invitados y servicios incluidos.'
+              placeholder='Describe la experiencia, beneficios y servicios.'
               rows={6}
             />
           </div>
@@ -931,10 +1107,10 @@ const EventCreator: FC = () => {
               type='text'
               name='lugar'
               value={formState.lugar}
-              maxLength={120}
+              maxLength={140}
               placeholder='Ingresa el recinto o dirección del evento'
               required
-              onChange={handleInputChange}
+              onChange={handleGeneralInputChange}
             />
           </div>
           <div className='admin-field admin-field-grid'>
@@ -945,7 +1121,7 @@ const EventCreator: FC = () => {
                 name='idOrganizador'
                 className='select admin-select'
                 value={formState.idOrganizador}
-                onChange={handleSelectChange}
+                onChange={handleGeneralSelectChange}
               >
                 {organizers.map((organizer) => (
                   <option key={organizer.idOrganizador} value={organizer.idOrganizador}>
@@ -961,7 +1137,7 @@ const EventCreator: FC = () => {
                 name='idCategoria'
                 className='select admin-select'
                 value={formState.idCategoria}
-                onChange={handleSelectChange}
+                onChange={handleGeneralSelectChange}
               >
                 {eventCategories.map((category) => (
                   <option key={category.idCategoria} value={category.idCategoria}>
@@ -980,7 +1156,7 @@ const EventCreator: FC = () => {
                 type='datetime-local'
                 className='input-text admin-input'
                 value={formState.fechaHoraInicio}
-                onChange={handleInputChange}
+                onChange={handleGeneralInputChange}
               />
             </div>
             <div>
@@ -991,561 +1167,681 @@ const EventCreator: FC = () => {
                 type='datetime-local'
                 className='input-text admin-input'
                 value={formState.fechaHoraFin}
-                onChange={handleInputChange}
+                onChange={handleGeneralInputChange}
               />
+            </div>
+          </div>
+          <div className='admin-field admin-field-grid organizer-adjustments'>
+            <div>
+              <label>Moneda</label>
+              <div className='admin-input readonly'>PEN · Sol peruano</div>
+              <small className='gray'>Los eventos de Nexivent se cobran siempre en soles.</small>
+            </div>
+            <div>
+              <label>Impuestos</label>
+              <div className='admin-field-grid organizer-adjustment-controls'>
+                <select
+                  value={formState.impuestos.tipo}
+                  onChange={(event) => {
+                    handleAdjustmentChange('impuestos', 'tipo', event.target.value);
+                  }}
+                  className='select admin-select'
+                >
+                  {Object.entries(adjustmentLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type='number'
+                  min='0'
+                  className='input-text admin-input'
+                  value={formState.impuestos.valor}
+                  onChange={(event) => {
+                    handleAdjustmentChange('impuestos', 'valor', event.target.value);
+                  }}
+                  placeholder={formState.impuestos.tipo === 'PORCENTAJE' ? 'Ej: 18' : 'Ej: 5.90'}
+                />
+              </div>
+            </div>
+            <div>
+              <label>Comisiones y fees</label>
+              <div className='admin-field-grid organizer-adjustment-controls'>
+                <select
+                  value={formState.comisiones.tipo}
+                  onChange={(event) => {
+                    handleAdjustmentChange('comisiones', 'tipo', event.target.value);
+                  }}
+                  className='select admin-select'
+                >
+                  {Object.entries(adjustmentLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type='number'
+                  min='0'
+                  className='input-text admin-input'
+                  value={formState.comisiones.valor}
+                  onChange={(event) => {
+                    handleAdjustmentChange('comisiones', 'valor', event.target.value);
+                  }}
+                  placeholder={formState.comisiones.tipo === 'PORCENTAJE' ? 'Ej: 7' : 'Ej: 12.50'}
+                />
+              </div>
             </div>
           </div>
         </div>
 
         <div className='admin-card'>
           <Heading type={3} color='white' text='Perfiles de comprador' />
-          <p className='gray'>
-            Crea perfiles personalizados (adulto, niño, CONADIS) y define requisitos para acceder a
-            cada tarifa.
-          </p>
-          <div className='admin-dynamic-list'>
+          <p className='gray'>Configura los perfiles admitidos (debe existir al menos uno).</p>
+          <div className='organizer-collection'>
             {buyerProfiles.map((profile) => (
-              <div key={profile.id} className='admin-dynamic-list__item'>
-                <div className='admin-field'>
-                  <label>Nombre del perfil</label>
-                  <input
-                    type='text'
-                    className='input-text admin-input'
-                    value={profile.name}
-                    placeholder='Ej: Adulto, Niño, CONADIS'
-                    onChange={(event) => {
-                      updateBuyerProfile(profile.id, 'name', event.target.value);
+              <div key={profile.id} className='organizer-collection-card'>
+                <div className='organizer-collection-header'>
+                  <strong>Perfil</strong>
+                  <button
+                    type='button'
+                    className='icon-button'
+                    onClick={() => {
+                      removeBuyerProfile(profile.id);
                     }}
-                  />
+                    disabled={buyerProfiles.length === 1}
+                    title='Eliminar perfil'
+                  >
+                    <span className='material-symbols-outlined'>delete</span>
+                  </button>
                 </div>
-                <div className='admin-field'>
-                  <label>Descripción</label>
-                  <input
-                    type='text'
-                    className='input-text admin-input'
-                    value={profile.description}
-                    placeholder='Información adicional opcional'
-                    onChange={(event) => {
-                      updateBuyerProfile(profile.id, 'description', event.target.value);
-                    }}
-                  />
+                <div className='organizer-collection-grid'>
+                  <div>
+                    <label htmlFor={`perfil-nombre-${profile.id}`}>Nombre</label>
+                    <input
+                      id={`perfil-nombre-${profile.id}`}
+                      type='text'
+                      className='input-text admin-input'
+                      value={profile.nombre}
+                      onChange={(event) => {
+                        handleBuyerProfileChange(profile.id, 'nombre', event.target.value);
+                      }}
+                      placeholder='Ej: Adulto, Niño, CONADIS'
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`perfil-descripcion-${profile.id}`}>Descripción interna</label>
+                    <input
+                      id={`perfil-descripcion-${profile.id}`}
+                      type='text'
+                      className='input-text admin-input'
+                      value={profile.descripcion}
+                      onChange={(event) => {
+                        handleBuyerProfileChange(profile.id, 'descripcion', event.target.value);
+                      }}
+                      placeholder='Requisitos o notas operativas'
+                    />
+                  </div>
                 </div>
-                <div className='admin-field'>
-                  <label>Requisito</label>
-                  <input
-                    type='text'
-                    className='input-text admin-input'
-                    value={profile.requirement}
-                    placeholder='Documento o condición necesaria'
-                    onChange={(event) => {
-                      updateBuyerProfile(profile.id, 'requirement', event.target.value);
-                    }}
-                  />
-                </div>
-                <button
-                  type='button'
-                  className='admin-remove-button'
-                  onClick={() => {
-                    removeBuyerProfile(profile.id);
-                  }}
-                >
-                  <span className='material-symbols-outlined'>delete</span>
-                </button>
               </div>
             ))}
           </div>
-          <button type='button' className='button gray-overlay' onClick={addBuyerProfile}>
+          <button type='button' className='button gray-outline' onClick={addBuyerProfile}>
             <span className='material-symbols-outlined left-icon'>add</span>
             Agregar perfil
           </button>
         </div>
 
         <div className='admin-card'>
-          <Heading type={3} color='white' text='Sectores de tickets' />
-          <p className='gray'>Define las zonas de venta y su capacidad total disponible.</p>
-          <div className='admin-dynamic-list'>
+          <Heading type={3} color='white' text='Sectores del evento' />
+          <p className='gray'>Determina el aforo y accesibilidad de cada sector disponible.</p>
+          <div className='organizer-collection'>
             {ticketSectors.map((sector) => (
-              <div key={sector.id} className='admin-dynamic-list__item'>
-                <div className='admin-field'>
-                  <label>Nombre del sector</label>
-                  <input
-                    type='text'
-                    className='input-text admin-input'
-                    value={sector.name}
-                    placeholder='Ej: VIP, Platea, General'
-                    onChange={(event) => {
-                      updateTicketSector(sector.id, 'name', event.target.value);
+              <div key={sector.id} className='organizer-collection-card'>
+                <div className='organizer-collection-header'>
+                  <strong>Sector</strong>
+                  <button
+                    type='button'
+                    className='icon-button'
+                    onClick={() => {
+                      removeSector(sector.id);
                     }}
-                  />
+                    disabled={ticketSectors.length === 1}
+                    title='Eliminar sector'
+                  >
+                    <span className='material-symbols-outlined'>delete</span>
+                  </button>
                 </div>
-                <div className='admin-field'>
-                  <label>Capacidad disponible</label>
-                  <input
-                    type='number'
-                    min='0'
-                    className='input-text admin-input'
-                    value={sector.capacity}
-                    placeholder='Cantidad de cupos'
-                    onChange={(event) => {
-                      updateTicketSector(sector.id, 'capacity', event.target.value);
-                    }}
-                  />
+                <div className='organizer-collection-grid organizer-sector-grid'>
+                  <div>
+                    <label htmlFor={`sector-nombre-${sector.id}`}>Nombre</label>
+                    <input
+                      id={`sector-nombre-${sector.id}`}
+                      type='text'
+                      className='input-text admin-input'
+                      value={sector.nombre}
+                      onChange={(event) => {
+                        handleSectorChange(sector.id, 'nombre', event.target.value);
+                      }}
+                      placeholder='Ej: VIP, Platea, Campo'
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`sector-capacidad-${sector.id}`}>Capacidad</label>
+                    <input
+                      id={`sector-capacidad-${sector.id}`}
+                      type='number'
+                      min='0'
+                      className='input-text admin-input'
+                      value={sector.capacidad}
+                      onChange={(event) => {
+                        handleSectorChange(sector.id, 'capacidad', event.target.value);
+                      }}
+                      placeholder='Ej: 500'
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`sector-vinculo-${sector.id}`}>Sector vinculado</label>
+                    <select
+                      id={`sector-vinculo-${sector.id}`}
+                      className='select admin-select'
+                      value={sector.accesibilidad.sectorVinculadoId}
+                      onChange={(event) => {
+                        handleSectorAccessibilityChange(
+                          sector.id,
+                          'sectorVinculadoId',
+                          event.target.value
+                        );
+                      }}
+                    >
+                      <option value=''>Sin vincular</option>
+                      {ticketSectors
+                        .filter((current) => current.id !== sector.id)
+                        .map((current) => (
+                          <option key={current.id} value={current.id}>
+                            {current.nombre || 'Sector'}
+                          </option>
+                        ))}
+                    </select>
+                    <small className='gray'>Ideal para acompañantes o cupos compartidos.</small>
+                  </div>
                 </div>
-                <button
-                  type='button'
-                  className='admin-remove-button'
-                  onClick={() => {
-                    removeTicketSector(sector.id);
-                  }}
-                >
-                  <span className='material-symbols-outlined'>delete</span>
-                </button>
+                <div className='organizer-accessibility'>
+                  <label>Accesibilidad</label>
+                  <div className='organizer-accessibility-controls'>
+                    <label className='organizer-checkbox'>
+                      <input
+                        type='checkbox'
+                        checked={sector.accesibilidad.sillaRuedas}
+                        onChange={(event) => {
+                          handleSectorAccessibilityChange(
+                            sector.id,
+                            'sillaRuedas',
+                            event.target.checked
+                          );
+                        }}
+                      />
+                      <span>Espacios para silla de ruedas</span>
+                    </label>
+                    <label className='organizer-checkbox'>
+                      <input
+                        type='checkbox'
+                        checked={sector.accesibilidad.acompaniamientoPermitido}
+                        onChange={(event) => {
+                          handleSectorAccessibilityChange(
+                            sector.id,
+                            'acompaniamientoPermitido',
+                            event.target.checked
+                          );
+                        }}
+                      />
+                      <span>Acompañante permitido</span>
+                    </label>
+                    <label className='organizer-checkbox'>
+                      <input
+                        type='checkbox'
+                        checked={sector.accesibilidad.acompaniamientoObligatorio}
+                        onChange={(event) => {
+                          handleSectorAccessibilityChange(
+                            sector.id,
+                            'acompaniamientoObligatorio',
+                            event.target.checked
+                          );
+                        }}
+                      />
+                      <span>Acompañante obligatorio</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
-          <button type='button' className='button gray-overlay' onClick={addTicketSector}>
-            <span className='material-symbols-outlined left-icon'>add</span>
+          <button type='button' className='button gray-outline' onClick={addSector}>
+            <span className='material-symbols-outlined left-icon'>add_business</span>
             Agregar sector
           </button>
         </div>
 
         <div className='admin-card'>
-          <Heading type={3} color='white' text='Impuestos, comisiones y moneda' />
-          <p className='gray'>
-            La moneda del evento es siempre Soles (PEN). Ajusta impuestos y comisiones para calcular
-            el precio final.
-          </p>
-          <div className='admin-tax-grid'>
-            <div className='admin-field'>
-              <label>Moneda</label>
-              <div className='admin-badge'>PEN</div>
-            </div>
-            <div className='admin-field'>
-              <label>Tipo de impuesto</label>
-              <select
-                className='select admin-select'
-                value={taxConfig.taxType}
-                onChange={(event) => {
-                  handleTaxConfigChange('taxType', event.target.value as DiscountType);
-                }}
-              >
-                <option value='PORCENTAJE'>Porcentaje</option>
-                <option value='MONTO'>Monto fijo</option>
-              </select>
-            </div>
-            <div className='admin-field'>
-              <label>Valor del impuesto</label>
-              <input
-                type='number'
-                min='0'
-                className='input-text admin-input'
-                value={taxConfig.taxValue}
-                onChange={(event) => {
-                  handleTaxConfigChange('taxValue', event.target.value);
-                }}
-              />
-            </div>
-            <div className='admin-field'>
-              <label>Tipo de comisión</label>
-              <select
-                className='select admin-select'
-                value={taxConfig.feeType}
-                onChange={(event) => {
-                  handleTaxConfigChange('feeType', event.target.value as DiscountType);
-                }}
-              >
-                <option value='PORCENTAJE'>Porcentaje</option>
-                <option value='MONTO'>Monto fijo</option>
-              </select>
-            </div>
-            <div className='admin-field'>
-              <label>Valor de la comisión</label>
-              <input
-                type='number'
-                min='0'
-                className='input-text admin-input'
-                value={taxConfig.feeValue}
-                onChange={(event) => {
-                  handleTaxConfigChange('feeValue', event.target.value);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className='admin-card'>
-          <Heading type={3} color='white' text='Descuentos y cupones' />
-          <p className='gray'>
-            Configura descuentos porcentuales o montos fijos y define el límite de uso por
-            comprador.
-          </p>
-          <div className='admin-discount-list'>
-            {discounts.map((discount) => (
-              <div key={discount.id} className='admin-discount-item'>
-                <div className='admin-field'>
-                  <label>Código</label>
-                  <input
-                    type='text'
-                    className='input-text admin-input'
-                    value={discount.code}
-                    placeholder='Ej: PREVENTA20'
-                    onChange={(event) => {
-                      updateDiscount(discount.id, 'code', event.target.value);
-                    }}
-                  />
-                </div>
-                <div className='admin-field'>
-                  <label>Tipo</label>
-                  <select
-                    className='select admin-select'
-                    value={discount.type}
-                    onChange={(event) => {
-                      updateDiscount(discount.id, 'type', event.target.value as DiscountType);
-                    }}
-                  >
-                    <option value='PORCENTAJE'>Porcentaje</option>
-                    <option value='MONTO'>Monto fijo</option>
-                  </select>
-                </div>
-                <div className='admin-field'>
-                  <label>Valor</label>
-                  <input
-                    type='number'
-                    min='0'
-                    className='input-text admin-input'
-                    value={discount.value}
-                    placeholder='Ej: 10 o 30'
-                    onChange={(event) => {
-                      updateDiscount(discount.id, 'value', event.target.value);
-                    }}
-                  />
-                </div>
-                <div className='admin-field'>
-                  <label>Límite por usuario</label>
-                  <input
-                    type='text'
-                    className='input-text admin-input'
-                    value={discount.usageLimitPerUser}
-                    placeholder='Número de usos permitidos'
-                    onChange={(event) => {
-                      updateDiscount(discount.id, 'usageLimitPerUser', event.target.value);
-                    }}
-                  />
-                </div>
-                <button
-                  type='button'
-                  className='admin-remove-button'
-                  onClick={() => {
-                    removeDiscount(discount.id);
-                  }}
-                >
-                  <span className='material-symbols-outlined'>delete</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className='admin-card'>
-          <Heading type={3} color='white' text='Gestión de cupones' />
-          <p className='gray'>
-            Activa o desactiva cupones en tiempo real y genera nuevos códigos para campañas
-            especiales.
-          </p>
-          <div className='admin-coupon-actions'>
-            <button type='button' className='button gray-overlay' onClick={addDiscount}>
-              <span className='material-symbols-outlined left-icon'>add</span>
-              Crear nuevo cupón
-            </button>
-          </div>
-          {discounts.length > 0 ? (
-            <table className='admin-coupon-table'>
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Tipo</th>
-                  <th>Valor</th>
-                  <th>Límite usuario</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {discounts.map((discount) => (
-                  <tr key={`manage-${discount.id}`}>
-                    <td>{discount.code || 'Sin definir'}</td>
-                    <td>{discount.type === 'PORCENTAJE' ? 'Porcentaje' : 'Monto fijo'}</td>
-                    <td>
-                      {discount.type === 'PORCENTAJE'
-                        ? `${discount.value || '0'}%`
-                        : `PEN ${discount.value || '0'}`}
-                    </td>
-                    <td>{discount.usageLimitPerUser || 'Sin límite'}</td>
-                    <td>
-                      <label className='admin-switch'>
-                        <input
-                          type='checkbox'
-                          checked={discount.isActive}
-                          onChange={(event) => {
-                            updateDiscount(discount.id, 'isActive', event.target.checked);
-                          }}
-                        />
-                        <span>{discount.isActive ? 'Activo' : 'Inactivo'}</span>
-                      </label>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className='gray'>Agrega un cupón para comenzar a gestionarlo.</p>
-          )}
-        </div>
-
-        <div className='admin-card'>
           <Heading type={3} color='white' text='Fases y tipos de ticket' />
-          <p className='gray'>
-            Define rangos de fechas y precios por combinación de sector y perfil.
-          </p>
-          <div className='admin-phase-layout'>
-            <aside className='admin-phase-sidebar'>
-              <button type='button' className='button gray-overlay' onClick={addPhase}>
-                <span className='material-symbols-outlined left-icon'>add</span>
-                Nueva fase
-              </button>
-              <div className='admin-phase-list'>
-                {ticketPhases.map((phase) => (
-                  <button
-                    key={phase.id}
-                    type='button'
-                    className={`admin-phase-list__item ${selectedPhaseId === phase.id ? 'is-active' : ''}`}
-                    onClick={() => {
-                      setSelectedPhaseId(phase.id);
-                    }}
-                  >
-                    <div>
-                      <span className='admin-phase-list__title'>
-                        {phase.ticketType || 'Tipo sin nombre'}
-                      </span>
-                      <span className='admin-phase-list__subtitle'>{phase.name}</span>
-                    </div>
-                    <span className={`admin-status admin-status--${phase.state.toLowerCase()}`}>
-                      {phaseStateLabels[phase.state]}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {selectedPhase !== null && (
-                <div className='admin-phase-actions'>
-                  <button
-                    type='button'
-                    className='button gray-outline'
-                    onClick={() => {
-                      duplicatePhase(selectedPhase.id);
-                    }}
-                  >
-                    <span className='material-symbols-outlined left-icon'>content_copy</span>
-                    Duplicar fase
-                  </button>
-                  <button
-                    type='button'
-                    className='button gray-outline'
-                    onClick={() => {
-                      saveTemplateFromPhase(selectedPhase.id);
-                    }}
-                  >
-                    <span className='material-symbols-outlined left-icon'>save</span>
-                    Guardar como plantilla
-                  </button>
-                  {phaseTemplates.length > 0 && (
-                    <div className='admin-field'>
-                      <label>Aplicar plantilla</label>
-                      <select
-                        className='select admin-select'
-                        onChange={(event) => {
-                          if (event.target.value !== '') {
-                            applyTemplateToPhase(selectedPhase.id, event.target.value);
-                            event.target.value = '';
-                          }
-                        }}
-                      >
-                        <option value=''>Selecciona una plantilla</option>
-                        {phaseTemplates.map((template) => (
-                          <option key={template.id} value={template.id}>
-                            {template.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <button
-                    type='button'
-                    className='button red-outline'
-                    onClick={() => {
-                      removePhase(selectedPhase.id);
-                    }}
-                  >
-                    <span className='material-symbols-outlined left-icon'>delete</span>
-                    Eliminar fase
-                  </button>
+          <p className='gray'>Define los tipos de tickets y su vigencia sin solaparse.</p>
+          <div className='organizer-collection'>
+            {ticketPhases.map((phase) => (
+              <div key={phase.id} className='organizer-collection-card'>
+                <div className='organizer-collection-header'>
+                  <strong>{phase.nombre || 'Nueva fase'}</strong>
+                  <div className='organizer-phase-actions'>
+                    <button
+                      type='button'
+                      className='icon-button'
+                      onClick={() => {
+                        setTicketPhases((prev) => [...prev, { ...phase, id: generateId() }]);
+                      }}
+                      title='Duplicar fase'
+                    >
+                      <span className='material-symbols-outlined'>content_copy</span>
+                    </button>
+                    <button
+                      type='button'
+                      className='icon-button'
+                      onClick={() => {
+                        removePhase(phase.id);
+                      }}
+                      disabled={ticketPhases.length === 1}
+                      title='Eliminar fase'
+                    >
+                      <span className='material-symbols-outlined'>delete</span>
+                    </button>
+                  </div>
                 </div>
-              )}
-            </aside>
-            <section className='admin-phase-editor'>
-              {selectedPhase === null ? (
-                <p className='gray'>Selecciona una fase para editar sus detalles.</p>
-              ) : (
-                <>
-                  <div className='admin-field admin-field-grid'>
-                    <div>
-                      <label>Nombre interno</label>
-                      <input
-                        type='text'
-                        className='input-text admin-input'
-                        value={selectedPhase.name}
-                        onChange={(event) => {
-                          updatePhase(selectedPhase.id, 'name', event.target.value);
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label>Tipo de ticket</label>
-                      <input
-                        type='text'
-                        className='input-text admin-input'
-                        value={selectedPhase.ticketType}
-                        placeholder='Ej: Preventa, Regular, CONADIS'
-                        onChange={(event) => {
-                          updatePhase(selectedPhase.id, 'ticketType', event.target.value);
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className='admin-field admin-field-grid'>
-                    <div>
-                      <label>Inicio de venta</label>
-                      <input
-                        type='datetime-local'
-                        className='input-text admin-input'
-                        value={selectedPhase.startDate}
-                        onChange={(event) => {
-                          updatePhase(selectedPhase.id, 'startDate', event.target.value);
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label>Fin de venta</label>
-                      <input
-                        type='datetime-local'
-                        className='input-text admin-input'
-                        value={selectedPhase.endDate}
-                        onChange={(event) => {
-                          updatePhase(selectedPhase.id, 'endDate', event.target.value);
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className='admin-field'>
-                    <label>Estado de la fase</label>
-                    <select
-                      className='select admin-select'
-                      value={selectedPhase.state}
+                <div className='organizer-collection-grid organizer-phase-grid'>
+                  <div>
+                    <label htmlFor={`fase-nombre-${phase.id}`}>Nombre</label>
+                    <input
+                      id={`fase-nombre-${phase.id}`}
+                      type='text'
+                      className='input-text admin-input'
+                      value={phase.nombre}
                       onChange={(event) => {
-                        updatePhase(
-                          selectedPhase.id,
-                          'state',
-                          event.target.value as TicketPhaseState
+                        handlePhaseChange(phase.id, 'nombre', event.target.value);
+                      }}
+                      placeholder='Ej: Preventa, Regular, Último minuto'
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`fase-estado-${phase.id}`}>Estado</label>
+                    <select
+                      id={`fase-estado-${phase.id}`}
+                      className='select admin-select'
+                      value={phase.estado}
+                      onChange={(event) => {
+                        handlePhaseSelectChange(
+                          phase.id,
+                          'estado',
+                          event.target.value as TicketPhaseStatus
                         );
                       }}
                     >
-                      {Object.entries(phaseStateLabels).map(([value, label]) => (
+                      {Object.entries(phaseStatusLabels).map(([value, label]) => (
                         <option key={value} value={value}>
                           {label}
                         </option>
                       ))}
                     </select>
                   </div>
-
-                  <div className='admin-phase-toolbar'>
-                    <button
-                      type='button'
-                      className='button gray-outline'
-                      onClick={handleExportMatrix}
+                  <div>
+                    <label htmlFor={`fase-visibilidad-${phase.id}`}>Visibilidad</label>
+                    <select
+                      id={`fase-visibilidad-${phase.id}`}
+                      className='select admin-select'
+                      value={phase.visibilidad}
+                      onChange={(event) => {
+                        handlePhaseSelectChange(
+                          phase.id,
+                          'visibilidad',
+                          event.target.value as TicketPhaseVisibility
+                        );
+                      }}
                     >
-                      <span className='material-symbols-outlined left-icon'>download</span>
-                      Exportar matriz
-                    </button>
-                    <button
-                      type='button'
-                      className='button gray-outline'
-                      onClick={handleImportMatrix}
-                    >
-                      <span className='material-symbols-outlined left-icon'>upload</span>
-                      Importar matriz
-                    </button>
+                      {Object.entries(visibilityLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-
-                  <div className='admin-combination-table-wrapper'>
-                    <table className='admin-combination-table'>
-                      <thead>
-                        <tr>
-                          <th>Perfil</th>
-                          <th>Sector</th>
-                          <th>Precio base (PEN)</th>
-                          <th>Cupos asignados</th>
-                          <th>Precio final (impuestos y comisiones)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {combinationSummaries.map((combination) => (
-                          <tr key={combination.id}>
-                            <td>{combination.profileName}</td>
-                            <td>{combination.sectorName}</td>
-                            <td>
-                              <input
-                                type='number'
-                                min='0'
-                                className='input-text admin-input'
-                                value={combination.basePrice}
-                                onChange={(event) => {
-                                  updateCombination(
-                                    selectedPhase.id,
-                                    combination.id,
-                                    'basePrice',
-                                    event.target.value
-                                  );
-                                }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type='number'
-                                min='0'
-                                className='input-text admin-input'
-                                value={combination.allocation}
-                                onChange={(event) => {
-                                  updateCombination(
-                                    selectedPhase.id,
-                                    combination.id,
-                                    'allocation',
-                                    event.target.value
-                                  );
-                                }}
-                              />
-                            </td>
-                            <td>
-                              {`PEN ${combination.finalPrice.toLocaleString('es-PE', {
-                                minimumFractionDigits: 2,
-                              })}`}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                </div>
+                <div className='organizer-collection-grid organizer-phase-grid'>
+                  <div>
+                    <label htmlFor={`fase-inicio-${phase.id}`}>Desde</label>
+                    <input
+                      id={`fase-inicio-${phase.id}`}
+                      type='datetime-local'
+                      className='input-text admin-input'
+                      value={phase.fechaInicio}
+                      onChange={(event) => {
+                        handlePhaseChange(phase.id, 'fechaInicio', event.target.value);
+                      }}
+                    />
                   </div>
-                </>
-              )}
-            </section>
+                  <div>
+                    <label htmlFor={`fase-fin-${phase.id}`}>Hasta</label>
+                    <input
+                      id={`fase-fin-${phase.id}`}
+                      type='datetime-local'
+                      className='input-text admin-input'
+                      value={phase.fechaFin}
+                      onChange={(event) => {
+                        handlePhaseChange(phase.id, 'fechaFin', event.target.value);
+                      }}
+                    />
+                  </div>
+                  {phase.visibilidad === 'BLOQUEADO' ? (
+                    <div>
+                      <label htmlFor={`fase-bloqueo-${phase.id}`}>Bloqueado hasta</label>
+                      <input
+                        id={`fase-bloqueo-${phase.id}`}
+                        type='datetime-local'
+                        className='input-text admin-input'
+                        value={phase.bloqueadoHasta}
+                        onChange={(event) => {
+                          handlePhaseChange(phase.id, 'bloqueadoHasta', event.target.value);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ))}
           </div>
+          <button type='button' className='button gray-outline' onClick={addPhase}>
+            <span className='material-symbols-outlined left-icon'>add_alarm</span>
+            Agregar fase
+          </button>
+        </div>
+        <div className='admin-card'>
+          <Heading type={3} color='white' text='Matriz de precios' />
+          <p className='gray'>
+            Asigna precios por sector, perfil y fase. Marca combinaciones como no disponibles cuando
+            corresponda.
+          </p>
+          <div className='organizer-template-controls'>
+            <div>
+              <label>Plantilla seleccionada</label>
+              <div className='organizer-template-actions'>
+                <select
+                  value={templateCombinationId ?? ''}
+                  onChange={(event) => {
+                    setTemplateCombinationId(event.target.value || null);
+                  }}
+                  className='select admin-select'
+                >
+                  <option value=''>Sin plantilla</option>
+                  {pricePreview.map((combination) => (
+                    <option key={combination.id} value={combination.id}>
+                      {`${combination.sectorNombre} · ${combination.perfilNombre} · ${combination.faseNombre}`}
+                    </option>
+                  ))}
+                </select>
+                <div className='organizer-template-buttons'>
+                  <button
+                    type='button'
+                    className='button gray-outline'
+                    onClick={() => applyTemplate('ALL')}
+                  >
+                    Aplicar a todos
+                  </button>
+                  <button
+                    type='button'
+                    className='button gray-outline'
+                    onClick={() => applyTemplate('SECTOR')}
+                  >
+                    Mismo sector
+                  </button>
+                  <button
+                    type='button'
+                    className='button gray-outline'
+                    onClick={() => applyTemplate('PERFIL')}
+                  >
+                    Mismo perfil
+                  </button>
+                  <button
+                    type='button'
+                    className='button gray-outline'
+                    onClick={() => applyTemplate('FASE')}
+                  >
+                    Misma fase
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className='organizer-import-export'>
+              <button type='button' className='button gray-outline' onClick={exportMatrix}>
+                <span className='material-symbols-outlined left-icon'>download</span>
+                Exportar CSV
+              </button>
+              <label className='button gray-outline organizer-import-label'>
+                <span className='material-symbols-outlined left-icon'>upload</span>
+                Importar CSV
+                <input type='file' accept='.csv' onChange={importMatrix} />
+              </label>
+            </div>
+          </div>
+          {priceMatrix.length === 0 ? (
+            <p className='organizer-empty'>
+              Crea perfiles, sectores y fases válidos para generar la matriz.
+            </p>
+          ) : (
+            <div className='organizer-matrix'>
+              {pricePreview.map((combination) => (
+                <div key={combination.id} className='organizer-matrix-row'>
+                  <div className='organizer-matrix-header'>
+                    <span className='organizer-pill'>{combination.sectorNombre}</span>
+                    <span className='organizer-pill'>{combination.perfilNombre}</span>
+                    <span className='organizer-pill'>{combination.faseNombre}</span>
+                  </div>
+                  <div className='organizer-matrix-body'>
+                    <div>
+                      <label htmlFor={`precio-${combination.id}`}>Precio base (PEN)</label>
+                      <input
+                        id={`precio-${combination.id}`}
+                        type='number'
+                        min='0'
+                        className='input-text admin-input'
+                        value={combination.precio}
+                        onChange={(event) => {
+                          handlePriceDraftChange(combination.id, 'precio', event.target.value);
+                        }}
+                        disabled={!combination.disponible}
+                        placeholder='Ej: 150.00'
+                      />
+                    </div>
+                    <div>
+                      <label>Disponibilidad</label>
+                      <div className='organizer-toggle'>
+                        <button
+                          type='button'
+                          className={`button ${combination.disponible ? 'yellow-filled' : 'gray-outline'}`}
+                          onClick={() => {
+                            handlePriceToggle(combination.id, true);
+                          }}
+                        >
+                          Disponible
+                        </button>
+                        <button
+                          type='button'
+                          className={`button ${!combination.disponible ? 'gray-filled' : 'gray-outline'}`}
+                          onClick={() => {
+                            handlePriceToggle(combination.id, false);
+                          }}
+                        >
+                          No disponible
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor={`agotado-${combination.id}`}>Acción al agotar stock</label>
+                      <select
+                        id={`agotado-${combination.id}`}
+                        className='select admin-select'
+                        value={combination.accionAgotado}
+                        onChange={(event) => {
+                          handleSoldOutActionChange(
+                            combination.id,
+                            event.target.value as SoldOutAction
+                          );
+                        }}
+                      >
+                        {Object.entries(soldOutActionLabels).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor={`mensaje-agotado-${combination.id}`}>
+                        Mensaje por agotamiento
+                      </label>
+                      <input
+                        id={`mensaje-agotado-${combination.id}`}
+                        type='text'
+                        className='input-text admin-input'
+                        value={combination.mensajeAgotado}
+                        onChange={(event) => {
+                          handlePriceDraftChange(
+                            combination.id,
+                            'mensajeAgotado',
+                            event.target.value
+                          );
+                        }}
+                        placeholder='Ej: Únete a la lista de espera completando tus datos.'
+                      />
+                    </div>
+                    <div>
+                      <label>Precio final estimado</label>
+                      <div className='admin-input readonly'>
+                        {combination.disponible
+                          ? `PEN ${combination.finalPrice.toFixed(2)}`
+                          : 'No disponible'}
+                      </div>
+                      <small className='gray'>Incluye impuestos y comisiones configuradas.</small>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className='admin-card'>
+          <Heading type={3} color='white' text='Cupones y descuentos' />
+          <p className='gray'>
+            Gestiona promociones con requisitos específicos (porcentaje o monto fijo).
+          </p>
+          {coupons.length === 0 ? (
+            <p className='organizer-empty'>No hay cupones configurados por el momento.</p>
+          ) : (
+            <div className='organizer-collection'>
+              {coupons.map((coupon) => (
+                <div key={coupon.id} className='organizer-collection-card'>
+                  <div className='organizer-collection-header'>
+                    <strong>Cupón</strong>
+                    <button
+                      type='button'
+                      className='icon-button'
+                      onClick={() => {
+                        removeCoupon(coupon.id);
+                      }}
+                      title='Eliminar cupón'
+                    >
+                      <span className='material-symbols-outlined'>delete</span>
+                    </button>
+                  </div>
+                  <div className='organizer-collection-grid organizer-coupon-grid'>
+                    <div>
+                      <label htmlFor={`cupon-codigo-${coupon.id}`}>Código</label>
+                      <input
+                        id={`cupon-codigo-${coupon.id}`}
+                        type='text'
+                        className='input-text admin-input'
+                        value={coupon.codigo}
+                        onChange={(event) => {
+                          handleCouponChange(coupon.id, 'codigo', event.target.value.toUpperCase());
+                        }}
+                        placeholder='Ej: CONADIS50'
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`cupon-tipo-${coupon.id}`}>Tipo de descuento</label>
+                      <select
+                        id={`cupon-tipo-${coupon.id}`}
+                        className='select admin-select'
+                        value={coupon.tipo}
+                        onChange={(event) => {
+                          handleCouponChange(
+                            coupon.id,
+                            'tipo',
+                            event.target.value as CouponDraft['tipo']
+                          );
+                        }}
+                      >
+                        <option value='PORCENTAJE'>Porcentaje</option>
+                        <option value='FIJO'>Monto fijo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor={`cupon-valor-${coupon.id}`}>
+                        {coupon.tipo === 'PORCENTAJE' ? 'Porcentaje %' : 'Monto PEN'}
+                      </label>
+                      <input
+                        id={`cupon-valor-${coupon.id}`}
+                        type='number'
+                        min='0'
+                        className='input-text admin-input'
+                        value={coupon.valor}
+                        onChange={(event) => {
+                          handleCouponChange(coupon.id, 'valor', event.target.value);
+                        }}
+                        placeholder={coupon.tipo === 'PORCENTAJE' ? 'Ej: 50' : 'Ej: 30.00'}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`cupon-requisito-${coupon.id}`}>Requisito</label>
+                      <input
+                        id={`cupon-requisito-${coupon.id}`}
+                        type='text'
+                        className='input-text admin-input'
+                        value={coupon.requisito}
+                        onChange={(event) => {
+                          handleCouponChange(coupon.id, 'requisito', event.target.value);
+                        }}
+                        placeholder='Ej: Presentar documento CONADIS'
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`cupon-descripcion-${coupon.id}`}>Descripción interna</label>
+                      <input
+                        id={`cupon-descripcion-${coupon.id}`}
+                        type='text'
+                        className='input-text admin-input'
+                        value={coupon.descripcion}
+                        onChange={(event) => {
+                          handleCouponChange(coupon.id, 'descripcion', event.target.value);
+                        }}
+                        placeholder='Visible para el equipo operativo'
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <button type='button' className='button gray-outline' onClick={addCoupon}>
+            <span className='material-symbols-outlined left-icon'>confirmation_number</span>
+            Agregar cupón
+          </button>
         </div>
 
         <div className='admin-actions'>
@@ -1577,14 +1873,13 @@ const EventCreator: FC = () => {
           </button>
         </div>
       </div>
-
       <div className='admin-preview-column'>
         <div className='admin-card sticky'>
-          <Heading type={4} color='white' text='Vista previa para organizadores' />
+          <Heading type={4} color='white' text='Vista previa para asistentes' />
           <div className='admin-preview-card'>
             <div className='admin-preview-card__header'>
               <span className={`admin-status admin-status--${previewStatus.toLowerCase()}`}>
-                {statusLabels[previewStatus]}
+                {eventStatusLabels[previewStatus]}
               </span>
               <span className='admin-preview-card__category'>
                 {eventCategories.find((category) => category.idCategoria === formState.idCategoria)
@@ -1598,143 +1893,100 @@ const EventCreator: FC = () => {
             </p>
             <p className='admin-preview-card__datetime'>
               <span className='material-symbols-outlined'>event</span>
-              {formState.fechaHoraInicio !== ''
-                ? new Intl.DateTimeFormat('es-PE', {
-                    dateStyle: 'full',
-                    timeStyle: 'short',
-                  }).format(new Date(formState.fechaHoraInicio))
-                : 'Inicio por definir'}
+              {formatDateTimePreview(formState.fechaHoraInicio)}
               <span className='admin-preview-card__separator'>→</span>
-              {formState.fechaHoraFin !== ''
-                ? new Intl.DateTimeFormat('es-PE', {
-                    dateStyle: 'full',
-                    timeStyle: 'short',
-                  }).format(new Date(formState.fechaHoraFin))
-                : 'Fin por definir'}
+              {formatDateTimePreview(formState.fechaHoraFin)}
             </p>
             <p className='admin-preview-card__description'>
               {formState.descripcion !== ''
                 ? formState.descripcion
                 : 'Comparte aquí los highlights del evento, servicios incluidos y horarios especiales.'}
             </p>
-            <div className='admin-preview-card__section'>
+            <div className='organizer-preview-section'>
               <h4>Perfiles y sectores</h4>
-              <ul className='admin-preview-list'>
-                {buyerProfiles.map((profile) => (
-                  <li key={profile.id}>
-                    <strong>{profile.name || 'Perfil sin nombre'}</strong>
-                    {profile.requirement && <span> · Requisito: {profile.requirement}</span>}
-                  </li>
-                ))}
-              </ul>
-              <ul className='admin-preview-list'>
+              <p className='gray'>
+                Capacidad total planificada: {totalCapacity.toLocaleString('es-PE')}
+              </p>
+              <ul>
                 {ticketSectors.map((sector) => (
                   <li key={sector.id}>
-                    <strong>{sector.name || 'Sector sin nombre'}</strong>
-                    <span> · Capacidad: {sector.capacity || '0'}</span>
+                    {sector.nombre || 'Sector'} · {Number(sector.capacidad) || 0} lugares ·{' '}
+                    {sector.accesibilidad.sillaRuedas ? '♿' : '—'} accesible
+                  </li>
+                ))}
+              </ul>
+              <ul>
+                {buyerProfiles.map((profile) => (
+                  <li key={profile.id}>
+                    {profile.nombre || 'Perfil'}
+                    {profile.descripcion ? ` · ${profile.descripcion}` : ''}
                   </li>
                 ))}
               </ul>
             </div>
-            <div className='admin-preview-card__section'>
-              <h4>Fases configuradas</h4>
-              {ticketPhases.map((phase) => (
-                <div key={phase.id} className='admin-preview-phase'>
-                  <div className='admin-preview-phase__header'>
-                    <strong>{phase.ticketType || 'Sin tipo'}</strong>
-                    <span className={`admin-status admin-status--${phase.state.toLowerCase()}`}>
-                      {phaseStateLabels[phase.state]}
-                    </span>
-                  </div>
-                  <p>
-                    {phase.startDate !== ''
-                      ? new Intl.DateTimeFormat('es-PE', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        }).format(new Date(phase.startDate))
-                      : 'Inicio no definido'}{' '}
-                    →{' '}
-                    {phase.endDate !== ''
-                      ? new Intl.DateTimeFormat('es-PE', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        }).format(new Date(phase.endDate))
-                      : 'Fin no definido'}
-                  </p>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Perfil</th>
-                        <th>Sector</th>
-                        <th>Precio base</th>
-                        <th>Cupos</th>
-                        <th>Precio final</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {phase.combinations.map((combination) => {
-                        const sector = ticketSectors.find(
-                          (item) => item.id === combination.sectorId
-                        );
-                        const profile = buyerProfiles.find(
-                          (item) => item.id === combination.profileId
-                        );
-                        const basePriceNumber = Number(combination.basePrice) || 0;
-                        const finalPrice = calculateFinalPrice(basePriceNumber, taxConfig);
-
-                        return (
-                          <tr key={combination.id}>
-                            <td>{profile?.name ?? 'Perfil'}</td>
-                            <td>{sector?.name ?? 'Sector'}</td>
-                            <td>PEN {basePriceNumber.toLocaleString('es-PE')}</td>
-                            <td>{combination.allocation}</td>
-                            <td>{`PEN ${finalPrice.toLocaleString('es-PE', {
-                              minimumFractionDigits: 2,
-                            })}`}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
+            <div className='organizer-preview-section'>
+              <h4>Fases activas</h4>
+              <ul>
+                {ticketPhases.map((phase) => (
+                  <li key={phase.id}>
+                    <strong>{phase.nombre || 'Fase'}</strong> · {phaseStatusLabels[phase.estado]} ·{' '}
+                    {visibilityLabels[phase.visibilidad]}
+                    <br />
+                    {formatDateTimePreview(phase.fechaInicio)} →{' '}
+                    {formatDateTimePreview(phase.fechaFin)}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className='admin-preview-card__section'>
-              <h4>Cupones configurados</h4>
-              {discounts.length > 0 ? (
-                <ul className='admin-preview-list'>
-                  {discounts.map((discount) => (
-                    <li key={discount.id}>
-                      <strong>{discount.code || 'Cupón sin código'}</strong> ·{' '}
-                      {discount.type === 'PORCENTAJE'
-                        ? `${discount.value || '0'}%`
-                        : `PEN ${discount.value || '0'}`}
-                      <span> · Límite: {discount.usageLimitPerUser || 'Sin definir'}</span>
-                      <span> · Estado: {discount.isActive ? 'Activo' : 'Inactivo'}</span>
+            <div className='admin-preview-card__tickets organizer-preview-table'>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Sector</th>
+                    <th>Perfil</th>
+                    <th>Fase</th>
+                    <th>Base</th>
+                    <th>Final</th>
+                    <th>Acción agotado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricePreview.map((combination) => (
+                    <tr key={combination.id}>
+                      <td>{combination.sectorNombre}</td>
+                      <td>{combination.perfilNombre}</td>
+                      <td>{combination.faseNombre}</td>
+                      <td>
+                        {combination.disponible
+                          ? `PEN ${(Number(combination.precio) || 0).toFixed(2)}`
+                          : '—'}
+                      </td>
+                      <td>
+                        {combination.disponible
+                          ? `PEN ${combination.finalPrice.toFixed(2)}`
+                          : 'No disponible'}
+                      </td>
+                      <td>{soldOutActionLabels[combination.accionAgotado]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className='organizer-preview-section'>
+              <h4>Cupones habilitados</h4>
+              {coupons.length === 0 ? (
+                <p className='gray'>Sin descuentos activos.</p>
+              ) : (
+                <ul>
+                  {coupons.map((coupon) => (
+                    <li key={coupon.id}>
+                      <strong>{coupon.codigo}</strong> ·{' '}
+                      {coupon.tipo === 'PORCENTAJE' ? `${coupon.valor}%` : `PEN ${coupon.valor}`}
+                      {coupon.requisito ? ` · ${coupon.requisito}` : ''}
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className='gray'>Aún no has agregado cupones.</p>
               )}
-            </div>
-            <div className='admin-preview-card__footer'>
-              <div>
-                <span className='material-symbols-outlined'>paid</span>
-                Ingreso potencial estimado:{' '}
-                <strong>
-                  PEN {estimatedRevenue.toLocaleString('es-PE', { minimumFractionDigits: 0 })}
-                </strong>
-              </div>
-              <div>
-                <span className='material-symbols-outlined'>group</span>
-                Capacidad planificada por sectores:{' '}
-                <strong>
-                  {totalPlannedCapacity > 0
-                    ? totalPlannedCapacity.toLocaleString('es-PE')
-                    : 'Por definir'}
-                </strong>
-              </div>
             </div>
           </div>
         </div>
@@ -1750,101 +2002,42 @@ const EventCreator: FC = () => {
                 <div>
                   <p className='admin-event-list__title'>{event.titulo}</p>
                   <p className='admin-event-list__meta'>
-                    {new Intl.DateTimeFormat('es-PE', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    }).format(new Date(event.fechaHoraInicio))}{' '}
-                    · {event.lugar}
+                    {formatDateTimePreview(event.fechaHoraInicio)} · {event.lugar}
                   </p>
                   <p className='admin-event-list__meta'>
-                    {event.ticketPhases.length} fases · {event.buyerProfiles.length} perfiles ·{' '}
-                    {event.ticketSectors.length} sectores
+                    {event.sectores.length} sectores · {event.perfilesComprador.length} perfiles ·{' '}
+                    {event.fases.length} fases
                   </p>
                 </div>
                 <div className='admin-event-list__actions'>
                   <span className={`admin-status admin-status--${event.estado.toLowerCase()}`}>
-                    {statusLabels[event.estado]}
+                    {eventStatusLabels[event.estado]}
                   </span>
-                  <div className='admin-event-list__buttons'>
-                    {event.estado !== 'PUBLICADO' && (
-                      <button
-                        type='button'
-                        className='admin-status-button admin-status-button--publish'
-                        disabled={loading}
-                        onClick={() => {
-                          handleStatusUpdate(event.idEvento, 'PUBLICADO').catch(() => {});
-                        }}
-                      >
-                        <span className='material-symbols-outlined'>done</span>
-                      </button>
-                    )}
-                    {event.estado !== 'BORRADOR' && (
-                      <button
-                        type='button'
-                        className='admin-status-button admin-status-button--draft'
-                        disabled={loading}
-                        onClick={() => {
-                          handleStatusUpdate(event.idEvento, 'BORRADOR').catch(() => {});
-                        }}
-                      >
-                        <span className='material-symbols-outlined'>edit_note</span>
-                      </button>
-                    )}
-                    {event.estado !== 'CANCELADO' && (
-                      <button
-                        type='button'
-                        className='admin-status-button admin-status-button--cancel'
-                        disabled={loading}
-                        onClick={() => {
-                          handleStatusUpdate(event.idEvento, 'CANCELADO').catch(() => {});
-                        }}
-                      >
-                        <span className='material-symbols-outlined'>close</span>
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    type='button'
+                    className='button gray-outline'
+                    onClick={() => {
+                      handleStatusUpdate(
+                        event.idEvento,
+                        event.estado === 'PUBLICADO' ? 'BORRADOR' : 'PUBLICADO'
+                      ).catch(() => {});
+                    }}
+                  >
+                    {event.estado === 'PUBLICADO' ? 'Pasar a borrador' : 'Publicar'}
+                  </button>
+                  <button
+                    type='button'
+                    className='button gray-outline'
+                    onClick={() => {
+                      handleStatusUpdate(event.idEvento, 'CANCELADO').catch(() => {});
+                    }}
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </li>
             ))}
           </ul>
-        </div>
-
-        <div className='admin-card'>
-          <Heading type={4} color='white' text='Reportes de desempeño' />
-          <p className='gray'>
-            Consulta métricas clave de ventas, ocupación y conversión para optimizar tus
-            estrategias.
-          </p>
-          {reports.length > 0 ? (
-            <table className='admin-report-table'>
-              <thead>
-                <tr>
-                  <th>Evento</th>
-                  <th>Vendidos</th>
-                  <th>Ocupación</th>
-                  <th>Ingreso (PEN)</th>
-                  <th>Perfil destacado</th>
-                  <th>Sector líder</th>
-                  <th>Conversión</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.map((report) => (
-                  <tr key={report.eventId}>
-                    <td>{report.eventName}</td>
-                    <td>{report.soldTickets.toLocaleString('es-PE')}</td>
-                    <td>{`${report.occupancy}%`}</td>
-                    <td>{report.revenue.toLocaleString('es-PE')}</td>
-                    <td>{report.topBuyerProfile}</td>
-                    <td>{report.topSector}</td>
-                    <td>{`${report.conversionRate}%`}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className='gray'>Aún no hay reportes disponibles para tus eventos.</p>
-          )}
         </div>
       </div>
     </div>

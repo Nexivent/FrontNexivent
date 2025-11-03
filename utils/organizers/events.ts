@@ -1,58 +1,76 @@
-export type EventStatus = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
+type EventStatus = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
 
-export type DiscountType = 'PORCENTAJE' | 'MONTO';
+type TicketPhaseStatus =
+  | 'BORRADOR'
+  | 'ACTIVO'
+  | 'PAUSADO'
+  | 'AGOTADO'
+  | 'FINALIZADO';
 
-export type TicketPhaseState = 'BORRADOR' | 'ACTIVO' | 'PAUSADO' | 'AGOTADO' | 'FINALIZADO';
+type TicketPhaseVisibility = 'PUBLICO' | 'OCULTO' | 'BLOQUEADO';
 
-export interface BuyerProfile {
+type DiscountType = 'PORCENTAJE' | 'FIJO';
+
+type AdjustmentType = 'PORCENTAJE' | 'FIJO';
+
+type SoldOutAction = 'DETENER' | 'LISTA_ESPERA';
+
+interface BuyerProfile {
   id: string;
-  name: string;
-  description?: string;
-  requirement?: string;
+  nombre: string;
+  descripcion?: string;
 }
 
-export interface TicketSector {
+interface TicketSectorAccessibility {
+  sillaRuedas: boolean;
+  acompaniamientoPermitido: boolean;
+  acompaniamientoObligatorio: boolean;
+  sectorVinculadoId?: string;
+}
+
+interface TicketSector {
   id: string;
-  name: string;
-  capacity: number;
+  nombre: string;
+  capacidad: number;
+  accesibilidad: TicketSectorAccessibility;
 }
 
-export interface DiscountCoupon {
+interface TicketPhase {
   id: string;
-  code: string;
-  type: DiscountType;
-  value: number;
-  usageLimitPerUser: number;
-  isActive: boolean;
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  visibilidad: TicketPhaseVisibility;
+  bloqueadoHasta?: string;
+  estado: TicketPhaseStatus;
 }
 
-export interface TaxConfig {
-  currency: 'PEN';
-  taxType: DiscountType;
-  taxValue: number;
-  feeType: DiscountType;
-  feeValue: number;
-}
-
-export interface TicketPhaseCombination {
+interface TicketPriceCombination {
   id: string;
   sectorId: string;
-  profileId: string;
-  basePrice: number;
-  allocation: number;
+  perfilId: string;
+  faseId: string;
+  disponible: boolean;
+  precio: number;
+  mensajeAgotado?: string;
+  accionAgotado: SoldOutAction;
 }
 
-export interface TicketPhase {
+interface CouponConfig {
   id: string;
-  name: string;
-  ticketType: string;
-  startDate: string;
-  endDate: string;
-  state: TicketPhaseState;
-  combinations: TicketPhaseCombination[];
+  codigo: string;
+  tipo: DiscountType;
+  valor: number;
+  requisito?: string;
+  descripcion?: string;
 }
 
-export interface AdminEventBase {
+interface PriceAdjustmentConfig {
+  tipo: AdjustmentType;
+  valor: number;
+}
+
+interface AdminEventBase {
   idOrganizador: number;
   idCategoria: number;
   titulo: string;
@@ -64,40 +82,30 @@ export interface AdminEventBase {
   like: number;
   noInteres: number;
   comentario: string[];
-  currency: 'PEN';
-  buyerProfiles: BuyerProfile[];
-  ticketSectors: TicketSector[];
-  ticketPhases: TicketPhase[];
-  discounts: DiscountCoupon[];
-  taxConfig: TaxConfig;
+  moneda: 'PEN';
+  impuestos: PriceAdjustmentConfig;
+  comisiones: PriceAdjustmentConfig;
+  perfilesComprador: BuyerProfile[];
+  sectores: TicketSector[];
+  fases: TicketPhase[];
+  precios: TicketPriceCombination[];
+  cupones: CouponConfig[];
   imagenDestacada?: string;
 }
 
-export interface AdminEvent extends AdminEventBase {
+interface AdminEvent extends AdminEventBase {
   idEvento: number;
 }
 
-export type AdminEventPayload = AdminEventBase;
+type AdminEventPayload = AdminEventBase;
 
-export interface OrganizerReport {
-  eventId: number;
-  eventName: string;
-  totalTickets: number;
-  soldTickets: number;
-  revenue: number;
-  occupancy: number;
-  conversionRate: number;
-  topBuyerProfile: string;
-  topSector: string;
-}
-
-export interface AdminEventCategory {
+interface AdminEventCategory {
   idCategoria: number;
   nombre: string;
   descripcion: string;
 }
 
-export interface AdminOrganizer {
+interface AdminOrganizer {
   idOrganizador: number;
   nombre: string;
   contacto: string;
@@ -159,119 +167,108 @@ let eventsDb: AdminEvent[] = [
     like: 2410,
     noInteres: 62,
     comentario: [],
-    currency: 'PEN',
-    buyerProfiles: [
-      { id: 'adulto', name: 'Adulto', description: 'Mayores de 18 años' },
-      { id: 'conadis', name: 'CONADIS', requirement: 'Documento válido de CONADIS' },
+    moneda: 'PEN',
+    impuestos: {
+      tipo: 'PORCENTAJE',
+      valor: 18,
+    },
+    comisiones: {
+      tipo: 'PORCENTAJE',
+      valor: 6,
+    },
+    perfilesComprador: [
+      { id: 'adulto', nombre: 'Adulto' },
+      { id: 'vip-corporate', nombre: 'Corporativo', descripcion: 'Paquetes empresariales.' },
     ],
-    ticketSectors: [
-      { id: 'backstage', name: 'Backstage', capacity: 90 },
-      { id: 'lounge', name: 'Zona Lounge', capacity: 340 },
-      { id: 'general', name: 'Acceso General', capacity: 850 },
+    sectores: [
+      {
+        id: 'vip',
+        nombre: 'VIP',
+        capacidad: 450,
+        accesibilidad: {
+          sillaRuedas: true,
+          acompaniamientoPermitido: true,
+          acompaniamientoObligatorio: false,
+        },
+      },
+      {
+        id: 'general',
+        nombre: 'General',
+        capacidad: 1200,
+        accesibilidad: {
+          sillaRuedas: true,
+          acompaniamientoPermitido: true,
+          acompaniamientoObligatorio: true,
+        },
+      },
     ],
-    ticketPhases: [
+    fases: [
       {
         id: 'preventavip',
-        name: 'Fase 1',
-        ticketType: 'Preventa',
-        startDate: '2024-07-01T10:00',
-        endDate: '2024-09-01T23:59',
-        state: 'ACTIVO',
-        combinations: [
-          {
-            id: 'backstage-adulto-preventa',
-            sectorId: 'backstage',
-            profileId: 'adulto',
-            basePrice: 520,
-            allocation: 60,
-          },
-          {
-            id: 'lounge-adulto-preventa',
-            sectorId: 'lounge',
-            profileId: 'adulto',
-            basePrice: 320,
-            allocation: 280,
-          },
-          {
-            id: 'general-adulto-preventa',
-            sectorId: 'general',
-            profileId: 'adulto',
-            basePrice: 150,
-            allocation: 700,
-          },
-          {
-            id: 'general-conadis-preventa',
-            sectorId: 'general',
-            profileId: 'conadis',
-            basePrice: 90,
-            allocation: 60,
-          },
-        ],
+        nombre: 'Preventa',
+        fechaInicio: '2024-07-01T09:00',
+        fechaFin: '2024-08-15T23:59',
+        visibilidad: 'PUBLICO',
+        estado: 'ACTIVO',
       },
       {
-        id: 'regularvip',
-        name: 'Fase 2',
-        ticketType: 'Regular',
-        startDate: '2024-09-02T00:00',
-        endDate: '2024-11-14T23:59',
-        state: 'BORRADOR',
-        combinations: [
-          {
-            id: 'backstage-adulto-regular',
-            sectorId: 'backstage',
-            profileId: 'adulto',
-            basePrice: 580,
-            allocation: 90,
-          },
-          {
-            id: 'lounge-adulto-regular',
-            sectorId: 'lounge',
-            profileId: 'adulto',
-            basePrice: 360,
-            allocation: 340,
-          },
-          {
-            id: 'general-adulto-regular',
-            sectorId: 'general',
-            profileId: 'adulto',
-            basePrice: 190,
-            allocation: 850,
-          },
-          {
-            id: 'general-conadis-regular',
-            sectorId: 'general',
-            profileId: 'conadis',
-            basePrice: 110,
-            allocation: 80,
-          },
-        ],
+        id: 'generalnight',
+        nombre: 'Regular',
+        fechaInicio: '2024-08-16T00:00',
+        fechaFin: '2024-11-14T23:59',
+        visibilidad: 'PUBLICO',
+        estado: 'BORRADOR',
       },
     ],
-    discounts: [
+    precios: [
       {
-        id: 'fan10',
-        code: 'FAN10',
-        type: 'PORCENTAJE',
-        value: 10,
-        usageLimitPerUser: 2,
-        isActive: true,
+        id: 'vip-adulto-preventa',
+        sectorId: 'vip',
+        perfilId: 'adulto',
+        faseId: 'preventavip',
+        disponible: true,
+        precio: 420,
+        accionAgotado: 'LISTA_ESPERA',
+        mensajeAgotado: 'Únete a la lista de espera para nuevas liberaciones.',
       },
       {
-        id: 'vip-30',
-        code: 'VIP30',
-        type: 'MONTO',
-        value: 30,
-        usageLimitPerUser: 1,
-        isActive: false,
+        id: 'vip-adulto-regular',
+        sectorId: 'vip',
+        perfilId: 'adulto',
+        faseId: 'generalnight',
+        disponible: true,
+        precio: 520,
+        accionAgotado: 'DETENER',
+      },
+      {
+        id: 'general-adulto-preventa',
+        sectorId: 'general',
+        perfilId: 'adulto',
+        faseId: 'preventavip',
+        disponible: true,
+        precio: 160,
+        accionAgotado: 'LISTA_ESPERA',
+      },
+      {
+        id: 'general-corporativo-regular',
+        sectorId: 'general',
+        perfilId: 'vip-corporate',
+        faseId: 'generalnight',
+        disponible: false,
+        precio: 0,
+        accionAgotado: 'DETENER',
       },
     ],
-    taxConfig: {
-      currency: 'PEN',
-      taxType: 'PORCENTAJE',
-      taxValue: 18,
-      feeType: 'PORCENTAJE',
-      feeValue: 6,
-    },
+    cupones: [
+      {
+        id: 'conadis',
+        codigo: 'CONADIS',
+        tipo: 'PORCENTAJE',
+        valor: 50,
+        requisito: 'Presentar documento CONADIS al ingresar.',
+        descripcion: 'Descuento especial para personas con discapacidad.',
+      },
+    ],
     imagenDestacada: '/images/events/sunset-electro.jpg',
   },
   {
@@ -288,113 +285,116 @@ let eventsDb: AdminEvent[] = [
     like: 185,
     noInteres: 12,
     comentario: [],
-    currency: 'PEN',
-    buyerProfiles: [
-      { id: 'ejecutivo', name: 'Ejecutivo', description: 'Acceso completo a conferencias y workshops' },
-      { id: 'startup', name: 'Startup', requirement: 'Constancia de empresa inscrita' },
-    ],
-    ticketSectors: [
-      { id: 'auditorio', name: 'Auditorio Principal', capacity: 500 },
-      { id: 'workshop', name: 'Salas Workshop', capacity: 160 },
-    ],
-    ticketPhases: [
-      {
-        id: 'preventa-summit',
-        name: 'Lanzamiento',
-        ticketType: 'Preventa',
-        startDate: '2024-05-15T09:00',
-        endDate: '2024-07-31T23:59',
-        state: 'ACTIVO',
-        combinations: [
-          {
-            id: 'auditorio-ejecutivo-preventa',
-            sectorId: 'auditorio',
-            profileId: 'ejecutivo',
-            basePrice: 820,
-            allocation: 320,
-          },
-          {
-            id: 'auditorio-startup-preventa',
-            sectorId: 'auditorio',
-            profileId: 'startup',
-            basePrice: 540,
-            allocation: 120,
-          },
-          {
-            id: 'workshop-ejecutivo-preventa',
-            sectorId: 'workshop',
-            profileId: 'ejecutivo',
-            basePrice: 650,
-            allocation: 120,
-          },
-          {
-            id: 'workshop-startup-preventa',
-            sectorId: 'workshop',
-            profileId: 'startup',
-            basePrice: 430,
-            allocation: 40,
-          },
-        ],
-      },
-    ],
-    discounts: [
-      {
-        id: 'team5',
-        code: 'TEAM5',
-        type: 'PORCENTAJE',
-        value: 5,
-        usageLimitPerUser: 4,
-        isActive: true,
-      },
-    ],
-    taxConfig: {
-      currency: 'PEN',
-      taxType: 'PORCENTAJE',
-      taxValue: 18,
-      feeType: 'MONTO',
-      feeValue: 15,
+    moneda: 'PEN',
+    impuestos: {
+      tipo: 'FIJO',
+      valor: 12,
     },
+    comisiones: {
+      tipo: 'PORCENTAJE',
+      valor: 4,
+    },
+    perfilesComprador: [
+      { id: 'corporativo', nombre: 'Corporativo' },
+      { id: 'startup', nombre: 'Startup', descripcion: 'Equipos pequeños y emprendedores.' },
+    ],
+    sectores: [
+      {
+        id: 'auditorio',
+        nombre: 'Auditorio Principal',
+        capacidad: 900,
+        accesibilidad: {
+          sillaRuedas: true,
+          acompaniamientoPermitido: true,
+          acompaniamientoObligatorio: false,
+        },
+      },
+      {
+        id: 'workshop',
+        nombre: 'Salas Workshop',
+        capacidad: 250,
+        accesibilidad: {
+          sillaRuedas: true,
+          acompaniamientoPermitido: true,
+          acompaniamientoObligatorio: false,
+          sectorVinculadoId: 'auditorio',
+        },
+      },
+    ],
+    fases: [
+      {
+        id: 'temprana',
+        nombre: 'Preventas',
+        fechaInicio: '2024-05-01T09:00',
+        fechaFin: '2024-06-15T23:59',
+        visibilidad: 'PUBLICO',
+        estado: 'ACTIVO',
+      },
+      {
+        id: 'regular',
+        nombre: 'Regular',
+        fechaInicio: '2024-06-16T00:00',
+        fechaFin: '2024-09-04T23:59',
+        visibilidad: 'BLOQUEADO',
+        bloqueadoHasta: '2024-06-16T00:00',
+        estado: 'BORRADOR',
+      },
+    ],
+    precios: [
+      {
+        id: 'auditorio-corporativo-temprana',
+        sectorId: 'auditorio',
+        perfilId: 'corporativo',
+        faseId: 'temprana',
+        disponible: true,
+        precio: 620,
+        accionAgotado: 'DETENER',
+      },
+      {
+        id: 'auditorio-startup-temprana',
+        sectorId: 'auditorio',
+        perfilId: 'startup',
+        faseId: 'temprana',
+        disponible: true,
+        precio: 320,
+        accionAgotado: 'LISTA_ESPERA',
+        mensajeAgotado: 'Únete a la lista de espera corporativa.',
+      },
+      {
+        id: 'workshop-corporativo-regular',
+        sectorId: 'workshop',
+        perfilId: 'corporativo',
+        faseId: 'regular',
+        disponible: false,
+        precio: 0,
+        accionAgotado: 'DETENER',
+      },
+    ],
+    cupones: [
+      {
+        id: 'allystart',
+        codigo: 'ALLYSTART',
+        tipo: 'FIJO',
+        valor: 120,
+        requisito: 'Disponible solo para startups invitadas.',
+      },
+    ],
     imagenDestacada: '/images/events/innovation-summit.jpg',
-  },
-];
-
-const reportsDb: OrganizerReport[] = [
-  {
-    eventId: 501,
-    eventName: 'Sunset Electro Night',
-    totalTickets: 1280,
-    soldTickets: 1142,
-    revenue: 452380,
-    occupancy: 89,
-    conversionRate: 4.2,
-    topBuyerProfile: 'Adulto',
-    topSector: 'Zona Lounge',
-  },
-  {
-    eventId: 502,
-    eventName: 'Summit Innovación 2024',
-    totalTickets: 660,
-    soldTickets: 418,
-    revenue: 268540,
-    occupancy: 63,
-    conversionRate: 3.1,
-    topBuyerProfile: 'Ejecutivo',
-    topSector: 'Auditorio Principal',
   },
 ];
 
 const cloneEvents = (events: AdminEvent[]): AdminEvent[] => {
   return events.map((event) => ({
     ...event,
-    comentario: [...event.comentario],
-    buyerProfiles: event.buyerProfiles.map((profile) => ({ ...profile })),
-    ticketSectors: event.ticketSectors.map((sector) => ({ ...sector })),
-    ticketPhases: event.ticketPhases.map((phase) => ({
-      ...phase,
-      combinations: phase.combinations.map((combination) => ({ ...combination })),
+    perfilesComprador: event.perfilesComprador.map((perfil) => ({ ...perfil })),
+    sectores: event.sectores.map((sector) => ({
+      ...sector,
+      accesibilidad: { ...sector.accesibilidad },
     })),
-    discounts: event.discounts.map((discount) => ({ ...discount })),
-    taxConfig: { ...event.taxConfig },
+    fases: event.fases.map((fase) => ({ ...fase })),
+    precios: event.precios.map((precio) => ({ ...precio })),
+    cupones: event.cupones.map((cupon) => ({ ...cupon })),
+    comentario: [...event.comentario],
   }));
 };
 
@@ -413,22 +413,29 @@ const createEvent = async (payload: AdminEventPayload): Promise<AdminEvent> => {
         ...payload,
         idEvento: Date.now(),
         comentario: [...payload.comentario],
-        buyerProfiles: payload.buyerProfiles.map((profile) => ({ ...profile })),
-        ticketSectors: payload.ticketSectors.map((sector) => ({ ...sector })),
-        ticketPhases: payload.ticketPhases.map((phase) => ({
-          ...phase,
-          combinations: phase.combinations.map((combination) => ({ ...combination })),
+        perfilesComprador: payload.perfilesComprador.map((perfil) => ({ ...perfil })),
+        sectores: payload.sectores.map((sector) => ({
+          ...sector,
+          accesibilidad: { ...sector.accesibilidad },
         })),
-        discounts: payload.discounts.map((discount) => ({ ...discount })),
-        taxConfig: { ...payload.taxConfig },
+        fases: payload.fases.map((fase) => ({ ...fase })),
+        precios: payload.precios.map((precio) => ({ ...precio })),
+        cupones: payload.cupones.map((cupon) => ({ ...cupon })),
       };
 
       eventsDb = [newEvent, ...eventsDb];
 
-      resolve({ ...newEvent, ticketPhases: newEvent.ticketPhases.map((phase) => ({
-        ...phase,
-        combinations: phase.combinations.map((combination) => ({ ...combination })),
-      })) });
+      resolve({
+        ...newEvent,
+        perfilesComprador: newEvent.perfilesComprador.map((perfil) => ({ ...perfil })),
+        sectores: newEvent.sectores.map((sector) => ({
+          ...sector,
+          accesibilidad: { ...sector.accesibilidad },
+        })),
+        fases: newEvent.fases.map((fase) => ({ ...fase })),
+        precios: newEvent.precios.map((precio) => ({ ...precio })),
+        cupones: newEvent.cupones.map((cupon) => ({ ...cupon })),
+      });
     }, 420);
   });
 };
@@ -451,20 +458,16 @@ const updateEventStatus = async (idEvento: number, estado: EventStatus): Promise
 
       resolve({
         ...eventsDb[index],
-        ticketPhases: eventsDb[index].ticketPhases.map((phase) => ({
-          ...phase,
-          combinations: phase.combinations.map((combination) => ({ ...combination })),
+        perfilesComprador: eventsDb[index].perfilesComprador.map((perfil) => ({ ...perfil })),
+        sectores: eventsDb[index].sectores.map((sector) => ({
+          ...sector,
+          accesibilidad: { ...sector.accesibilidad },
         })),
+        fases: eventsDb[index].fases.map((fase) => ({ ...fase })),
+        precios: eventsDb[index].precios.map((precio) => ({ ...precio })),
+        cupones: eventsDb[index].cupones.map((cupon) => ({ ...cupon })),
       });
     }, 320);
-  });
-};
-
-const listReports = async (): Promise<OrganizerReport[]> => {
-  return await new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(reportsDb.map((report) => ({ ...report })));
-    }, 280);
   });
 };
 
@@ -472,7 +475,25 @@ const adminEventApi = {
   listEvents,
   createEvent,
   updateEventStatus,
-  listReports,
 };
 
-export { adminEventApi, eventCategories, organizers };
+export {
+  adminEventApi,
+  eventCategories,
+  organizers,
+  type AdjustmentType,
+  type AdminEvent,
+  type AdminEventPayload,
+  type BuyerProfile,
+  type CouponConfig,
+  type DiscountType,
+  type EventStatus,
+  type PriceAdjustmentConfig,
+  type SoldOutAction,
+  type TicketPhase,
+  type TicketPhaseStatus,
+  type TicketPhaseVisibility,
+  type TicketPriceCombination,
+  type TicketSector,
+  type TicketSectorAccessibility,
+};
