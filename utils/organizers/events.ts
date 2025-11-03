@@ -1,41 +1,41 @@
-export type EventStatus = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
+type EventStatus = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
 
-export type TicketPhaseStatus =
+type TicketPhaseStatus =
   | 'BORRADOR'
   | 'ACTIVO'
   | 'PAUSADO'
   | 'AGOTADO'
   | 'FINALIZADO';
 
-export type TicketPhaseVisibility = 'PUBLICO' | 'OCULTO' | 'BLOQUEADO';
+type TicketPhaseVisibility = 'PUBLICO' | 'OCULTO' | 'BLOQUEADO';
 
-export type DiscountType = 'PORCENTAJE' | 'FIJO';
+type DiscountType = 'PORCENTAJE' | 'FIJO';
 
-export type AdjustmentType = 'PORCENTAJE' | 'FIJO';
+type AdjustmentType = 'PORCENTAJE' | 'FIJO';
 
-export type SoldOutAction = 'DETENER' | 'LISTA_ESPERA';
+type SoldOutAction = 'DETENER' | 'LISTA_ESPERA';
 
-export interface BuyerProfile {
+interface BuyerProfile {
   id: string;
   nombre: string;
   descripcion?: string;
 }
 
-export interface TicketSectorAccessibility {
+interface TicketSectorAccessibility {
   sillaRuedas: boolean;
   acompaniamientoPermitido: boolean;
   acompaniamientoObligatorio: boolean;
   sectorVinculadoId?: string;
 }
 
-export interface TicketSector {
+interface TicketSector {
   id: string;
   nombre: string;
   capacidad: number;
   accesibilidad: TicketSectorAccessibility;
 }
 
-export interface TicketPhase {
+interface TicketPhase {
   id: string;
   nombre: string;
   fechaInicio: string;
@@ -45,7 +45,7 @@ export interface TicketPhase {
   estado: TicketPhaseStatus;
 }
 
-export interface TicketPriceCombination {
+interface TicketPriceCombination {
   id: string;
   sectorId: string;
   perfilId: string;
@@ -56,7 +56,7 @@ export interface TicketPriceCombination {
   accionAgotado: SoldOutAction;
 }
 
-export interface CouponConfig {
+interface CouponConfig {
   id: string;
   codigo: string;
   tipo: DiscountType;
@@ -65,12 +65,12 @@ export interface CouponConfig {
   descripcion?: string;
 }
 
-export interface PriceAdjustmentConfig {
+interface PriceAdjustmentConfig {
   tipo: AdjustmentType;
   valor: number;
 }
 
-export interface AdminEventBase {
+interface AdminEventBase {
   idOrganizador: number;
   idCategoria: number;
   titulo: string;
@@ -93,19 +93,19 @@ export interface AdminEventBase {
   imagenDestacada?: string;
 }
 
-export interface AdminEvent extends AdminEventBase {
+interface AdminEvent extends AdminEventBase {
   idEvento: number;
 }
 
-export type AdminEventPayload = AdminEventBase;
+type AdminEventPayload = AdminEventBase;
 
-export interface AdminEventCategory {
+interface AdminEventCategory {
   idCategoria: number;
   nombre: string;
   descripcion: string;
 }
 
-export interface AdminOrganizer {
+interface AdminOrganizer {
   idOrganizador: number;
   nombre: string;
   contacto: string;
