@@ -1,21 +1,24 @@
 'use client';
 
-import { type FC } from 'react';
-
 import { useUser } from '@contexts/UserContext';
-
 import FormPhoto from './components/FormPhoto';
 import FormMain from './components/FormMain';
 
-const ProfileClient: FC = () => {
-  const { user } = useUser();
+export default function ProfileClient() {
+  const { user, setUser } = useUser();
+
+  const handlePhotoChange = (newPhotoUrl: string) => {
+    setUser({ ...user, foto: newPhotoUrl });
+  };
 
   return (
     <>
+      {/* 🔹 Foto dinámica */}
       <div className='padding-top'>
         <FormPhoto />
       </div>
 
+      {/* 🔹 Datos dinámicos */}
       <FormMain
         data={{
           name: user.nombre || 'Mario',
@@ -25,6 +28,4 @@ const ProfileClient: FC = () => {
       />
     </>
   );
-};
-
-export default ProfileClient;
+}
