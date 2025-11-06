@@ -44,7 +44,7 @@ const EventCard: React.FC<IProps> = ({ url, from, when, name, venue, image, colo
     </Link>
     <div className='card-buttons'>
       <ButtonLink
-        color={`${color}-overlay`}
+        color={`${color}-filled`}
         text='Detalles'
         rightIcon='arrow_forward'
         url={`event/${url}`}

@@ -13,6 +13,8 @@ import {
   DollarSign,
 } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+
 interface Evento {
   id: number;
   titulo: string;
@@ -88,6 +90,7 @@ const NexiventFeed: React.FC = () => {
   const touchStartY = useRef<number>(0);
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+  const router = useRouter();
 
   const handleTouchStart = (e: any): void => {
     touchStartY.current = e.touches[0].clientY;
@@ -546,7 +549,10 @@ const NexiventFeed: React.FC = () => {
                     )}
                   </div>
 
-                  <button className='flex flex-col items-center gap-1 group'>
+                  <button
+                    className='flex flex-col items-center gap-1 group'
+                    onClick={() => void router.push(`/event/${evento.id.toString()}`)}
+                  >
                     <div className='w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-all'>
                       <Ticket size={22} className='text-white' />
                     </div>

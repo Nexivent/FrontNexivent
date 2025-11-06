@@ -174,6 +174,24 @@ const Page: React.FC = () => (
         venue='o2 Arena'
         image='https://images.unsplash.com/photo-1472691681358-fdf00a4bfcfe?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
       />
+      <EventCard
+        url='1'
+        from='20'
+        color='blue'
+        when='Tue, Sep 21, 2024 19:00'
+        name='Event name goes here'
+        venue='Royal Albert Hall'
+        image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+      />
+      <EventCard
+        url='2'
+        from='59'
+        color='yellow'
+        when='Sun, Sep 26, 2025 15:00'
+        name='JAZE - QUIZAS NO ES PARA TANTO'
+        venue='Costa 21'
+        image='https://images.unsplash.com/photo-1561489396-888724a1543d?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+      />
     </CardGroup>
   </Master>
 );
