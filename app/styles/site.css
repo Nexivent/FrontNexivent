@@ -1744,3 +1744,90 @@ button.button.blue-filled {
 .hero-offset {
   padding-top: calc(var(--site-header-height, 84px) + 12px);
 }
+
+.organizer-panel__header.stack {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.coupon-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.field-grid.three-columns {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.organizer-grid.coupons-grid {
+  grid-template-columns: 1.2fr 1fr;
+  align-items: flex-start;
+}
+
+.organizer-builder.coupons .organizer-panel {
+  min-height: 0;
+}
+
+.organizer-builder.coupons .organizer-panel__header {
+  align-items: flex-start;
+}
+
+.coupon-table-panel {
+  overflow: auto;
+}
+
+.coupon-form-panel .organizer-chip {
+  font-size: 0.75em;
+}
+
+.coupon-form .button-row {
+  justify-content: flex-end;
+}
+
+.coupon-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.coupon-table th,
+.coupon-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 8px;
+  text-align: left;
+}
+
+.coupon-table tbody tr {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.coupon-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.coupon-table tbody tr.selected {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.coupon-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.coupon-placeholder span.material-symbols-outlined {
+  font-size: 36px;
+  margin-bottom: 10px;
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
