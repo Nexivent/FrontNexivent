@@ -4,12 +4,8 @@ import { useUser } from '@contexts/UserContext';
 import FormPhoto from './components/FormPhoto';
 import FormMain from './components/FormMain';
 
-export default function ProfileClient() {
-  const { user, setUser } = useUser();
-
-  const handlePhotoChange = (newPhotoUrl: string) => {
-    setUser({ ...user, foto: newPhotoUrl });
-  };
+const ProfileClient: React.FC = () => {
+  const { user } = useUser();
 
   return (
     <>
@@ -28,4 +24,6 @@ export default function ProfileClient() {
       />
     </>
   );
-}
+};
+
+export default ProfileClient;

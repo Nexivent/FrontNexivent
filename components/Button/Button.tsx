@@ -7,13 +7,26 @@ interface IProps {
   color: string;
   leftIcon?: string;
   rightIcon?: string;
+  disabled?: boolean;
+  dataIntent?: string;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
 }
 
-const Button: React.FC<IProps> = ({ type, text, color, leftIcon, rightIcon, onClick }) => (
+const Button: React.FC<IProps> = ({
+  type,
+  text,
+  color,
+  leftIcon,
+  rightIcon,
+  disabled,
+  dataIntent,
+  onClick,
+}) => (
   <button
     type={type === 'submit' ? 'submit' : 'button'}
     className={`button ${color}`}
+    disabled={disabled}
+    data-intent={dataIntent}
     onClick={onClick}
   >
     {leftIcon !== undefined && (
