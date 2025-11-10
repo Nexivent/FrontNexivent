@@ -1,28 +1,28 @@
-﻿import { type Metadata } from 'next';
+import { type Metadata } from 'next';
 
 import Master from '@components/Layout/Master';
 import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
 import ButtonLink from '@components/Button/ButtonLink';
 
-import CouponManager from '../components/CouponManager';
+import EventCreator from '../components/EventCreator';
 
 const Page: React.FC = () => (
   <Master>
     <Section className='organizer-hero hero-offset'>
       <div className='container'>
         <div className='organizer-hero__content'>
-          <Heading type={1} color='white' text='Cupones del organizador' />
+          <Heading type={1} color='white' text='Crear y editar eventos' />
           <p className='gray'>
-            Diseña campañas promocionales, ajusta su vigencia y monitoriza el rendimiento de cada
-            código en tiempo real.
+            Construye experiencias completas, gestiona sectores, perfiles y precios desde un solo
+            lugar antes de publicar en Nexivent.
           </p>
           <div className='organizer-cta-row'>
             <ButtonLink
-              color='yellow-overlay'
-              text='Ir al creador de eventos'
-              leftIcon='chevron_left'
-              url='organizer/events'
+              color='yellow-filled'
+              text='Gestionar cupones'
+              rightIcon='arrow_forward'
+              url='organizer/coupons'
             />
           </div>
         </div>
@@ -30,21 +30,21 @@ const Page: React.FC = () => (
     </Section>
     <Section>
       <div className='container'>
-        <CouponManager />
+        <EventCreator />
       </div>
     </Section>
   </Master>
 );
 
-const title = 'Organizador | Cupones';
-const canonical = 'https://modern-ticketing.com/organizer/coupons';
+const title = 'Organizador | Eventos';
+const canonical = 'https://modern-ticketing.com/organizer/events';
 const description =
-  'Gestiona cupones por evento, define valores y estados, y monitorea su uso en Nexivent.';
+  'Crea eventos, maneja inventario y define reglas de precios antes de publicarlos.';
 
 export const metadata: Metadata = {
   title,
   description,
-  keywords: 'cupones, organizador, nexivent',
+  keywords: 'organizador, nexivent, crear eventos',
   alternates: { canonical },
   openGraph: {
     title,

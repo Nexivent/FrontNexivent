@@ -1,39 +1,77 @@
 import { type Metadata } from 'next';
+
 import Master from '@components/Layout/Master';
 import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
-import EventCreator from './components/EventCreator';
+import ButtonLink from '@components/Button/ButtonLink';
 
 const Page: React.FC = () => (
   <Master>
     <Section className='organizer-hero hero-offset'>
       <div className='container'>
         <div className='organizer-hero__content'>
-          <Heading type={1} color='white' text='Panel del organizador' />
+          <Heading type={1} color='white' text='Inicio del organizador' />
           <p className='gray'>
-            Diseñado para que puedas crear y iterar tus eventos con la misma experiencia visual que
-            tus compradores ya conocen en Nexivent.
+            Accede rápidamente a la creación de eventos, campañas promocionales y futuros reportes
+            desde un mismo panel.
           </p>
         </div>
       </div>
     </Section>
     <Section>
       <div className='container'>
-        <EventCreator />
+        <div className='organizer-hub-grid'>
+          <div className='organizer-hub-card'>
+            <span className='material-symbols-outlined'>event</span>
+            <h3>Creación de eventos</h3>
+            <p>
+              Diseña experiencias completas, administra sectores y configura precios antes de
+              publicar en Nexivent.
+            </p>
+            <ButtonLink
+              color='yellow-filled'
+              text='Ir al creador'
+              rightIcon='arrow_forward'
+              url='organizer/events'
+            />
+          </div>
+          <div className='organizer-hub-card'>
+            <span className='material-symbols-outlined'>confirmation_number</span>
+            <h3>Cupones y promociones</h3>
+            <p>
+              Activa códigos, controla vigencias y filtra por evento para medir el impacto real de
+              tus incentivos.
+            </p>
+            <ButtonLink
+              color='gray-overlay'
+              text='Administrar cupones'
+              rightIcon='arrow_forward'
+              url='organizer/coupons'
+            />
+          </div>
+          <div className='organizer-hub-card muted'>
+            <span className='material-symbols-outlined'>insights</span>
+            <h3>Reportes y analytics</h3>
+            <p>
+              Muy pronto podrás visualizar conversiones, asistencia y ventas en un solo tablero.
+            </p>
+            <ButtonLink color='disabled' text='Disponible pronto' url='#' />
+          </div>
+        </div>
       </div>
     </Section>
   </Master>
 );
 
-const title = 'Organizador | Nexivent';
+const title = 'Organizador | Inicio';
 const canonical = 'https://modern-ticketing.com/organizer';
 const description =
-  'Configura eventos, define stock por sector y establece precios por perfil y tipo de ticket.';
+  'Panel principal del organizador para acceder a creación de eventos, cupones y herramientas clave.';
 
 export const metadata: Metadata = {
   title,
   description,
-  keywords: 'organizador, nexivent, crear eventos',
+  keywords: 'organizador, nexivent, panel',
   alternates: { canonical },
   openGraph: {
     title,
