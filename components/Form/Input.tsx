@@ -1,39 +1,33 @@
+import React, { forwardRef, InputHTMLAttributes } from 'react';
 // interfaces
-interface IProps {
+interface IProps extends InputHTMLAttributes<HTMLInputElement> {
   name: string;
-  type: string;
-  value?: string;
-  maxLength: number;
-  disabled?: boolean;
-  required?: boolean;
-  placeholder: string;
-  onChange?: React.ChangeEventHandler<HTMLInputElement> | undefined;
+  label?: string;
+  error?: string;
 }
 
-const Input: React.FC<IProps> = ({
-  name,
-  type,
-  value,
-  maxLength,
-  disabled,
-  required,
-  placeholder,
-  onChange,
-}) => (
-  <input
-    id={name}
-    type={type}
-    name={name}
-    autoComplete='off'
-    readOnly={disabled}
-    disabled={disabled}
-    required={required}
-    value={value}
-    maxLength={maxLength}
-    className='input-text'
-    placeholder={placeholder}
-    onChange={onChange}
-  />
-);
+const Input = forwardRef<HTMLInputElement, IProps>(({ name, label, error, ...rest }, ref) => {
+  return (
+    <div className='form-group'>
+      {' '}
+      {label && (
+        <div className='label-line'>
+          <label htmlFor={name}>{label}</label>
+        </div>
+      )}
+      <input
+        id={name}
+        name={name}
+        ref={ref}
+        autoComplete='off'
+        className={`input-text ${error ? 'input-error' : ''}`}
+        {...rest}
+      />
+      {error && <p className='form-error'>{error}</p>}
+    </div>
+  );
+});
+
+Input.displayName = 'Input';
 
 export default Input;

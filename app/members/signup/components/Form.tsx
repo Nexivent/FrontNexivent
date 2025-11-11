@@ -1,6 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+import { registerSchema } from '@components/Form/validationSchemas';
+import { DOCUMENTS_TYPES } from '@utils/Constants';
+import api from '@utils/api';
 
 import Link from 'next/link';
 
@@ -13,115 +21,52 @@ import Switch from '@components/Form/Switch';
 import Button from '@components/Button/Button';
 import Loader from '@components/Loader/Loader';
 
-// utils
-import Request, { type IRequest, type IResponse } from '@utils/Request';
-
-// interfaces
-interface IFormProps {
-  tos: boolean;
-  name: string;
-  email: string;
-  lastname: string;
-  password: string;
-}
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Form: React.FC = () => {
   const { showAlert, hideAlert } = useAlert();
+  const router = useRouter();
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [formValues, setFormValues] = useState<IFormProps>({
-    name: '',
-    email: '',
-    lastname: '',
-    password: '',
-    tos: false,
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      nombre: '',
+      ndocumento: '',
+      telefono: '',
+      correo: '',
+      contraseña: '',
+      tos: false,
+    },
   });
 
-  /**
-   * Handles the change event for input fields in the form.
-   *
-   * This function is called when the value of an input field in the form changes. It updates the state of the form values with the new value.
-   *
-   * @param {React.ChangeEvent<HTMLInputElement>} e - The change event.
-   */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const { name, value } = e.target;
+  const onSubmit = async (data: RegisterFormData) => {
+    setApiError(null);
+    try {
+      await api.post('/api/auth/register', data);
 
-    setFormValues({
-      ...formValues,
-      [name]: value,
-    });
-  };
-
-  /**
-   * Handles the change event for checkbox fields in the form.
-   *
-   * This function is called when the value of a checkbox field in the form changes. It updates the state of the form values with the new value.
-   *
-   * @param {React.ChangeEvent<HTMLInputElement>} e - The change event.
-   */
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const { name, checked } = e.target;
-
-    setFormValues({
-      ...formValues,
-      [name]: checked,
-    });
-  };
-
-  /**
-   * Handles the form submission event.
-   *
-   * This function is called when the form is submitted. It prevents the default form submission behavior,
-   * hides any existing alert, sets the loading state to true, sends a POST request to the signin/password endpoint,
-   * and handles the response. If the response status is 200, it redirects the user to the account activation page.
-   * If the status is not 200, it shows an error alert. Finally, it sets the loading state back to false.
-   *
-   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
-   * @returns {Promise<any>} A promise that resolves when the request is complete.
-   */
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<any> => {
-    e.preventDefault();
-
-    hideAlert();
-
-    setLoading(true);
-
-    const parameters: IRequest = {
-      url: 'v1/signin/password',
-      method: 'POST',
-      postData: {
-        email: formValues.email,
-        password: formValues.password,
-      },
-    };
-
-    const req: IResponse = await Request.getResponse(parameters);
-
-    const { status, data } = req;
-
-    if (status === 200) {
-      window.location.href = '/members/activate/account';
-    } else {
-      showAlert({ type: 'error', text: data.title ?? '' });
+      showAlert({ type: 'success', text: '¡Registro exitoso! Por favor, inicia sesión.' });
+      router.push('/members/signin');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || 'Ocurrió un error inesperado.';
+      setApiError(errorMessage);
+      showAlert({ type: 'error', text: errorMessage });
     }
-
-    setLoading(false);
   };
 
-  if (loading) {
-    return <Loader type='inline' color='gray' text='Cargando...' />;
+  if (isSubmitting) {
+    return <Loader type='inline' color='gray' text='Creando cuenta...' />;
   }
 
   return (
-    <form
-      className='form shrink'
-      noValidate
-      onSubmit={(e) => {
-        void handleSubmit(e);
-      }}
-    >
+    <form className='form shrink' noValidate onSubmit={handleSubmit(onSubmit)}>
       <div className='form-elements'>
+        {/*SVG de Google*/}
         <div className='form-line'>
           <div className='one-line'>
             <button type='button' className='google-button'>
@@ -159,85 +104,117 @@ const Form: React.FC = () => {
         <div className='or-line'>
           <hr />
         </div>
+        {/*Campo nombre*/}
         <div className='form-line'>
           <div className='one-line'>
-            <div className='label-line'>
-              <label htmlFor='name'>Nombre</label>
-            </div>
             <Input
+              label='Nombre'
               type='text'
-              name='name'
-              value={formValues.name}
-              maxLength={64}
               placeholder='Ingresa tu nombre'
               required
-              onChange={handleChange}
+              error={errors.nombre?.message}
+              {...register('nombre')}
             />
           </div>
         </div>
-        <div className='form-line'>
-          <div className='one-line'>
+        {/*Campo documento*/}
+        <div className='form-line' style={{ display: 'flex', gap: '1rem' }}>
+          <div className='one-line' style={{ flex: 1 }}>
             <div className='label-line'>
-              <label htmlFor='lastname'>Apellido</label>
+              <label htmlFor='tipo_documento'>Tipo de Documento</label>
             </div>
+            <select
+              id='tipo_documento'
+              {...register('tipo_documento')}
+              style={{ width: '100%', padding: '0.5rem' }}
+            >
+              <option value=''>Seleccionar...</option>
+              {DOCUMENTS_TYPES.map((doc) => (
+                <option key={doc.value} value={doc.value}>
+                  {doc.label}
+                </option>
+              ))}
+            </select>
+            {errors.tipo_documento && <p className='form-error'>{errors.tipo_documento.message}</p>}
+          </div>
+          <div className='one-line' style={{ flex: 2 }}>
             <Input
+              label='N° de Documento'
               type='text'
-              name='lastname'
-              value={formValues.lastname}
-              maxLength={64}
-              placeholder='Ingresa tu apellido'
+              placeholder='12345678'
               required
-              onChange={handleChange}
+              error={errors.ndocumento?.message}
+              {...register('ndocumento')}
             />
           </div>
         </div>
+        {/*Campo teléfono*/}
         <div className='form-line'>
           <div className='one-line'>
-            <div className='label-line'>
-              <label htmlFor='email'>Correo electrónico</label>
-            </div>
             <Input
+              label='Teléfono'
+              type='tel'
+              placeholder='987654321'
+              required
+              error={errors.telefono?.message}
+              {...register('telefono')}
+            />
+          </div>
+        </div>
+        {/*Campo correo electrónico*/}
+        <div className='form-line'>
+          <div className='one-line'>
+            <Input
+              label='Correo electrónico'
               type='email'
-              name='email'
-              value={formValues.email}
-              maxLength={128}
               placeholder='Ingresa tu correo electrónico'
               required
-              onChange={handleChange}
+              error={errors.correo?.message}
+              {...register('correo')}
             />
           </div>
         </div>
+        {/*Campo contraseña*/}
         <div className='form-line'>
-          <div className='label-line'>
-            <label htmlFor='password'>Contraseña</label>
-          </div>
           <Input
+            label='Contraseña'
             type='password'
-            name='password'
-            value={formValues.password}
-            maxLength={64}
             placeholder='Ingresa tu contraseña'
             required
-            onChange={handleChange}
+            error={errors.contraseña?.message}
+            {...register('contraseña')}
           />
         </div>
+        {/*Checkbox TOS*/}
         <div className='form-line'>
           <div className='label-line'>
-            <label htmlFor='tos'>Acuerdos</label>
+            <label htmlFor='tos'>Términos y Condiciones</label>
           </div>
-          <Switch name='tos' color='blue' onChange={handleCheckboxChange}>
-            Acepto la{' '}
-            <Link href='/legal/privacy-policy' className='blue'>
-              Política de privacidad
-            </Link>{' '}
-            y{' '}
-            <Link href='/legal/terms-of-service' className='blue'>
-              Términos de servicio
-            </Link>
-          </Switch>
+          <Controller
+            name='tos'
+            control={control}
+            render={({ field }) => (
+              <Switch
+                color='blue'
+                checked={field.value}
+                onChange={(e) => field.onChange(e.target.checked)}
+                name={''}
+              >
+                Acepto la{' '}
+                <Link href='/legal/privacy-policy' className='blue'>
+                  Política de privacidad
+                </Link>{' '}
+                y{' '}
+                <Link href='/legal/terms-of-service' className='blue'>
+                  Términos de servicio
+                </Link>
+              </Switch>
+            )}
+          />
         </div>
+        {apiError && <p className='form-error api-error'>{apiError}</p>}
         <div className='form-buttons'>
-          <Button type='submit' color='yellow-filled' text='Registrarse' />
+          <Button type='submit' color='yellow-filled' text='Registrarse' disabled={isSubmitting} />
         </div>
       </div>
     </form>
