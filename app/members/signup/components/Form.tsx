@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 
 import { registerSchema } from '@components/Form/validationSchemas';
@@ -20,6 +21,7 @@ import Input from '@components/Form/Input';
 import Switch from '@components/Form/Switch';
 import Button from '@components/Button/Button';
 import Loader from '@components/Loader/Loader';
+import Select from '@components/Form/Select';
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
@@ -31,10 +33,12 @@ const Form: React.FC = () => {
   const {
     register,
     handleSubmit,
+    watch,
     control,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
+    mode: 'onChange',
     defaultValues: {
       nombre: '',
       ndocumento: '',
@@ -44,6 +48,23 @@ const Form: React.FC = () => {
       tos: false,
     },
   });
+
+  const watchedDocumentType = watch('tipo_documento');
+  const currentDocRule = DOCUMENTS_TYPES.find((doc) => doc.value === watchedDocumentType);
+  const docNumberMaxLength = currentDocRule ? currentDocRule.length : 12;
+  const passwordValue = watch('contraseña', '');
+
+  const passwordRequirements = useMemo(() => {
+    return [
+      { text: 'Al menos 8 caracteres', met: passwordValue.length >= 8 },
+      { text: 'Al menos una mayúscula (A-Z)', met: /[A-Z]/.test(passwordValue) },
+      { text: 'Al menos un número (0-9)', met: /[0-9]/.test(passwordValue) },
+      { text: 'Al menos un carácter especial (!@#$...)', met: /[^A-Za-z0-9]/.test(passwordValue) },
+    ];
+  }, [passwordValue]);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onSubmit = async (data: RegisterFormData) => {
     setApiError(null);
@@ -120,22 +141,12 @@ const Form: React.FC = () => {
         {/*Campo documento*/}
         <div className='form-line' style={{ display: 'flex', gap: '1rem' }}>
           <div className='one-line' style={{ flex: 1 }}>
-            <div className='label-line'>
-              <label htmlFor='tipo_documento'>Tipo de Documento</label>
-            </div>
-            <select
-              id='tipo_documento'
+            <Select
+              label='Tipo de Documento'
+              options={DOCUMENTS_TYPES}
+              error={errors.tipo_documento?.message}
               {...register('tipo_documento')}
-              style={{ width: '100%', padding: '0.5rem' }}
-            >
-              <option value=''>Seleccionar...</option>
-              {DOCUMENTS_TYPES.map((doc) => (
-                <option key={doc.value} value={doc.value}>
-                  {doc.label}
-                </option>
-              ))}
-            </select>
-            {errors.tipo_documento && <p className='form-error'>{errors.tipo_documento.message}</p>}
+            />
           </div>
           <div className='one-line' style={{ flex: 2 }}>
             <Input
@@ -144,6 +155,7 @@ const Form: React.FC = () => {
               placeholder='12345678'
               required
               error={errors.ndocumento?.message}
+              maxLength={docNumberMaxLength}
               {...register('ndocumento')}
             />
           </div>
@@ -178,11 +190,27 @@ const Form: React.FC = () => {
         <div className='form-line'>
           <Input
             label='Contraseña'
-            type='password'
+            isPassword
             placeholder='Ingresa tu contraseña'
             required
-            error={errors.contraseña?.message}
             {...register('contraseña')}
+          />
+          <div className='password-requirements'>
+            {passwordRequirements.map((req, index) => (
+              <p key={index} style={{ color: req.met ? 'green' : '#888', fontSize: '0.95rem' }}>
+                {req.met ? '✓' : '○'} {req.text}
+              </p>
+            ))}
+          </div>
+        </div>
+        {/*Campo confirmar contraseña*/}
+        <div className='form-line'>
+          <Input
+            label='Confirmar Contraseña'
+            isPassword
+            placeholder='Vuelve a escribir tu contraseña'
+            error={errors.confirmarContraseña?.message}
+            {...register('confirmarContraseña')}
           />
         </div>
         {/*Checkbox TOS*/}
