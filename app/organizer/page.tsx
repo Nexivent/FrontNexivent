@@ -43,7 +43,7 @@ const Page: React.FC = () => (
               tus incentivos.
             </p>
             <ButtonLink
-              color='gray-overlay'
+              color='yellow-filled'
               text='Administrar cupones'
               rightIcon='arrow_forward'
               url='organizer/coupons'
