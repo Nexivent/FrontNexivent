@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 
 import { registerSchema } from '@components/Form/validationSchemas';
@@ -62,9 +61,6 @@ const Form: React.FC = () => {
       { text: 'Al menos un carácter especial (!@#$...)', met: /[^A-Za-z0-9]/.test(passwordValue) },
     ];
   }, [passwordValue]);
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onSubmit = async (data: RegisterFormData) => {
     setApiError(null);
@@ -213,21 +209,14 @@ const Form: React.FC = () => {
             {...register('confirmarContraseña')}
           />
         </div>
-        {/*Checkbox TOS*/}
+        {/*Toggle TOS*/}
         <div className='form-line'>
-          <div className='label-line'>
-            <label htmlFor='tos'>Términos y Condiciones</label>
-          </div>
+          <div style={{ height: '3rem' }}></div>
           <Controller
             name='tos'
             control={control}
             render={({ field }) => (
-              <Switch
-                color='blue'
-                checked={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-                name={''}
-              >
+              <Switch {...field} checked={field.value} error={errors.tos?.message}>
                 Acepto la{' '}
                 <Link href='/legal/privacy-policy' className='blue'>
                   Política de privacidad

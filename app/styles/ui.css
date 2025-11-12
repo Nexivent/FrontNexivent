@@ -334,13 +334,56 @@ select {
 }
 
 .switch-container {
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.switch-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch-input-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  width: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
 }
 
 .switch-description {
   font-size: 0.9em;
   margin-left: 7px;
   vertical-align: middle;
+}
+
+.switch-visual {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: #444;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease-in-out;
+  margin-right: 12px;
+}
+
+.switch-toggle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease-in-out;
 }
 
 .switch .slider {
@@ -363,6 +406,22 @@ select {
   transition: 0.4s;
   position: absolute;
   background-color: #ffffff;
+}
+
+.switch-visual.checked {
+  background-color: #ffd700;
+}
+
+.switch-visual.checked .switch-toggle {
+  transform: translateX(20px);
+}
+
+.switch-text {
+  color: #a0a0a0;
+}
+
+.switch-error {
+  margin-top: 0.5rem;
 }
 
 .switch input:checked + .slider:before {
@@ -1608,6 +1667,38 @@ input[type='range' i]::-webkit-slider-thumb {
   color: #a0a0a0;
 }
 
-.password-toggle-button:hover {
+.input-group .password-toggle-button:hover {
   color: #ffd700;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+
+.input-group .input-text {
+  flex-grow: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0.75rem 1rem;
+  color: #fff;
+  font-size: 1rem;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.input-group .password-toggle-button {
+  flex-shrink: 0;
+  padding: 0 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #a0a0a0;
+  display: flex;
 }
