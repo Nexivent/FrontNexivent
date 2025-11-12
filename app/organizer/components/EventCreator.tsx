@@ -738,30 +738,33 @@ const EventCreator: React.FC = () => {
 
   return (
     <div className='organizer-builder'>
-      <header className='organizer-header'>
-        <div>
-          <p className='eyebrow'>Panel de organizadores</p>
-          <h2>Nuevo evento</h2>
-          <p className='gray'>
-            Carga tus medios, define perfiles y tipos de tickets y controla el stock por sector
-            antes de publicar en Nexivent.
-          </p>
-        </div>
-        <div className='organizer-header__stats'>
-          <div>
-            <span>Capacidad total</span>
-            <strong>{stats.totalCapacity.toLocaleString()} tickets</strong>
+      <header className="header">
+          <div className="header-content">
+            <div className="header-top">
+              <div className="header-title">
+                <p className="eyebrow">Panel de organizadores</p>
+                <h1>Crear Nuevo Evento</h1>
+                <p className="header-subtitle">
+                  Configura todos los detalles de tu evento, define precios y prepáralo para publicar en Nexivent
+                </p>
+              </div>
+            </div>
+            <div className="stats-grid">
+              <div className="stat-card">
+                <span className="stat-label">Capacidad Total</span>
+                <strong className="stat-value">{stats.totalCapacity.toLocaleString()}</strong>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Recaudación Potencial</span>
+                <strong className="stat-value">{formatCurrency(stats.potentialRevenue)}</strong>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Estado</span>
+                <strong className="stat-value">{form.estado}</strong>
+              </div>
+            </div>
           </div>
-          <div>
-            <span>Recaudación potencial</span>
-            <strong>{formatCurrency(stats.potentialRevenue)}</strong>
-          </div>
-          <div>
-            <span>Estado</span>
-            <strong>{form.estado}</strong>
-          </div>
-        </div>
-      </header>
+        </header>
 
       <form className='organizer-form' onSubmit={(event) => void handleSubmit(event)}>
         <div className='organizer-grid'>
@@ -1236,24 +1239,28 @@ const EventCreator: React.FC = () => {
               <div className='organizer-panel__header'>
                 <h3>Resumen</h3>
               </div>
-              <div className='summary-grid'>
-                <div>
-                  <span className='summary-label'>Capacidad total</span>
-                  <strong>{stats.totalCapacity.toLocaleString()}</strong>
-                </div>
-                <div>
-                  <span className='summary-label'>Tarifa mínima</span>
-                  <strong>{formatCurrency(stats.minPrice)}</strong>
-                </div>
-                <div>
-                  <span className='summary-label'>Tarifa máxima</span>
-                  <strong>{formatCurrency(stats.maxPrice)}</strong>
-                </div>
-                <div>
-                  <span className='summary-label'>Recaudación potencial</span>
-                  <strong>{formatCurrency(stats.potentialRevenue)}</strong>
-                </div>
-              </div>
+              <table className="summary-table">
+              <tbody>
+                <tr>
+                  <th>Capacidad total</th>
+                  <td><strong>{stats.totalCapacity.toLocaleString()}</strong></td>
+                </tr>
+                <tr>
+                  <th>Tarifa mínima</th>
+                  <td><strong>{formatCurrency(stats.minPrice)}</strong></td>
+                </tr>
+                <tr>
+                  <th>Tarifa máxima</th>
+                  <td><strong>{formatCurrency(stats.maxPrice)}</strong></td>
+                </tr>
+                <tr>
+                  <th>Recaudación potencial</th>
+                  <td><strong>{formatCurrency(stats.potentialRevenue)}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+
+
               <div className='organizer-tags'>
                 <span className='organizer-chip'>
                   <span className='material-symbols-outlined'>groups</span>
