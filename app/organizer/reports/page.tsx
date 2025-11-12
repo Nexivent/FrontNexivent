@@ -1,13 +1,19 @@
-'use client';
+﻿'use client';
 
-import React,{ useCallback, useEffect, useMemo, useState } from 'react';
-import { type Metadata } from 'next';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Master from '@components/Layout/Master';
 import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
 import ButtonLink from '@components/Button/ButtonLink';
 import Button from '@components/Button/Button';
+
+type EventDateRange = {
+  idFechaEvento: number;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+};
 
 type ReportSummary = {
   eventosActivos: number;
@@ -19,13 +25,13 @@ type ReportSummary = {
 type EventReport = {
   idEvento: number;
   nombre: string;
-  fecha: string;
   ubicacion: string;
   capacidad: number;
   estado: 'EN_VENTA' | 'AGOTADO' | 'FINALIZADO' | 'CANCELADO';
   ingresosTotales: number;
   ticketsVendidos: number;
   ventasPorTipo: Array<{ tipo: string; vendidos: number; ingresos: number }>;
+  fechas: EventDateRange[];
   cargosServicio: number;
   comisiones: number;
 };
@@ -63,13 +69,13 @@ const ReportsDashboard: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
   const fetchReports = useCallback(
-    async (start?: string, end?: string, eventId?: number | 'all') => {
+    async (start?: string, end?: string, eventId: 'all' | number = 'all') => {
       try {
         setStatus('loading');
         const params = new URLSearchParams();
         if (start) params.set('start', start);
         if (end) params.set('end', end);
-        if (eventId !== undefined && eventId !== 'all') params.set('eventId', String(eventId));
+        if (eventId !== 'all') params.set('eventId', String(eventId));
         const response = await fetch(
           `/api/organizer/reports${params.size > 0 ? `?${params.toString()}` : ''}`
         );
@@ -107,21 +113,6 @@ const ReportsDashboard: React.FC = () => {
     const totalVendidos = events.reduce((sum, current) => sum + current.ticketsVendidos, 0);
     return totalCapacidad === 0 ? 0 : Math.round((totalVendidos / totalCapacidad) * 100);
   }, [events]);
-
-  const [expandedEvents, setExpandedEvents] = React.useState<Set<number>>(new Set());
-
-// Función para toggle del evento (después de los estados, antes del return)
-const toggleEventExpansion = (eventId: number) => {
-  setExpandedEvents(prev => {
-    const newSet = new Set(prev);
-    if (newSet.has(eventId)) {
-      newSet.delete(eventId);
-    } else {
-      newSet.add(eventId);
-    }
-    return newSet;
-  });
-};
 
   return (
     <Master>
@@ -167,7 +158,9 @@ const toggleEventExpansion = (eventId: number) => {
                   className='input-text'
                   type='date'
                   value={filters.start}
-                  onChange={(event) => setFilters({ ...filters, start: event.target.value })}
+                  onChange={(event) =>
+                    setFilters((previous) => ({ ...previous, start: event.target.value }))
+                  }
                 />
               </label>
               <label className='field'>
@@ -176,7 +169,9 @@ const toggleEventExpansion = (eventId: number) => {
                   className='input-text'
                   type='date'
                   value={filters.end}
-                  onChange={(event) => setFilters({ ...filters, end: event.target.value })}
+                  onChange={(event) =>
+                    setFilters((previous) => ({ ...previous, end: event.target.value }))
+                  }
                 />
               </label>
               <label className='field'>
@@ -185,10 +180,10 @@ const toggleEventExpansion = (eventId: number) => {
                   className='input-text'
                   value={filters.event === 'all' ? 'all' : filters.event}
                   onChange={(event) =>
-                    setFilters({
-                      ...filters,
+                    setFilters((previous) => ({
+                      ...previous,
                       event: event.target.value === 'all' ? 'all' : Number(event.target.value),
-                    })
+                    }))
                   }
                 >
                   <option value='all'>Todos los eventos</option>
@@ -247,106 +242,115 @@ const toggleEventExpansion = (eventId: number) => {
           )}
 
           {events.map((event) => {
-          const isExpanded = expandedEvents.has(event.idEvento);
-          
-          return (
-            <div key={event.idEvento} className='event-report'>
-              <div className='event-header'>
-                <div className='event-header-content'>
-                  <div className='event-header-info'>
+            const primaryDate = event.fechas[0];
+            const dateLabel =
+              primaryDate !== undefined
+                ? `${new Date(primaryDate.fecha).toLocaleDateString('es-PE')} · ${primaryDate.horaInicio} - ${primaryDate.horaFin}`
+                : 'Fechas por definir';
+
+            return (
+              <div key={event.idEvento} className='event-report'>
+                <div className='event-header'>
+                  <div>
                     <h3>{event.nombre}</h3>
                     <p className='gray'>
-                      {new Date(event.fecha).toLocaleDateString()} · {event.ubicacion} · Capacidad:{' '}
-                      {event.capacidad}
+                      {dateLabel} · {event.ubicacion} · Capacidad:{' '}
+                      {event.capacidad.toLocaleString()}
                     </p>
                   </div>
                   <span className={`status-pill ${statusColor[event.estado]}`}>
                     {statusCopy[event.estado]}
                   </span>
                 </div>
-                <button
-                  className={`icon-button ${isExpanded ? 'expanded' : ''}`}
-                  onClick={() => toggleEventExpansion(event.idEvento)}
-                  aria-label={isExpanded ? 'Ocultar detalles' : 'Ver detalles'}
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 7.5L10 12.5L15 7.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
 
-              <div className='event-summary-grid'>
-                <div>
-                  <span className='label'>Ingresos totales</span>
-                  <strong>{formatCurrency(event.ingresosTotales)}</strong>
+                <div className='event-summary-grid'>
+                  <div>
+                    <span className='label'>Ingresos totales</span>
+                    <strong>{formatCurrency(event.ingresosTotales)}</strong>
+                  </div>
+                  <div>
+                    <span className='label'>Tickets vendidos</span>
+                    <strong>{event.ticketsVendidos.toLocaleString()}</strong>
+                  </div>
+                  <div>
+                    <span className='label'>Cargos de servicio</span>
+                    <strong>{formatCurrency(event.cargosServicio)}</strong>
+                  </div>
+                  <div>
+                    <span className='label'>Comisiones</span>
+                    <strong>{formatCurrency(event.comisiones)}</strong>
+                  </div>
                 </div>
-                <div>
-                  <span className='label'>Tickets vendidos</span>
-                  <strong>{event.ticketsVendidos.toLocaleString()}</strong>
-                </div>
-                <div>
-                  <span className='label'>Cargos de servicio</span>
-                  <strong>{formatCurrency(event.cargosServicio)}</strong>
-                </div>
-                <div>
-                  <span className='label'>Comisiones</span>
-                  <strong>{formatCurrency(event.comisiones)}</strong>
-                </div>
-              </div>
 
-              <div className={`event-details-grid ${isExpanded ? 'expanded' : 'collapsed'}`}>
-                <div className='event-card'>
-                  <h4>Ventas por tipo</h4>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Tipo</th>
-                        <th>Vendidos</th>
-                        <th>Ingresos</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {event.ventasPorTipo.map((ticket) => (
-                        <tr key={ticket.tipo}>
-                          <td>{ticket.tipo}</td>
-                          <td>{ticket.vendidos.toLocaleString()}</td>
-                          <td>{formatCurrency(ticket.ingresos)}</td>
+                <div className='event-details-grid'>
+                  <div className='event-card'>
+                    <h4>Ventas por tipo</h4>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Tipo</th>
+                          <th>Vendidos</th>
+                          <th>Ingresos</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {event.ventasPorTipo.map((ticket) => (
+                          <tr key={ticket.tipo}>
+                            <td>{ticket.tipo}</td>
+                            <td>{ticket.vendidos.toLocaleString()}</td>
+                            <td>{formatCurrency(ticket.ingresos)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                <div className='event-card'>
-                  <h4>Distribución vs capacidad</h4>
-                  <div className='ticket-share'>
-                    {event.ventasPorTipo.map((ticket) => {
-                      const percent = Math.min(
-                        100,
-                        Math.round((ticket.vendidos / event.capacidad) * 100)
-                      );
-                      return (
-                        <div key={ticket.tipo} className='ticket-share__item'>
-                          <div className='ticket-share__label'>
-                            <span>{ticket.tipo}</span>
-                            <strong>
-                              {ticket.vendidos.toLocaleString()} /{' '}
-                              {event.capacidad.toLocaleString()}
-                            </strong>
+                  <div className='event-card'>
+                    <h4>Calendario</h4>
+                    <ul className='event-date-list'>
+                      {event.fechas.map((date) => (
+                        <li key={date.idFechaEvento}>
+                          <div>
+                            <strong>{new Date(date.fecha).toLocaleDateString('es-PE')}</strong>
+                            <span>
+                              {date.horaInicio} - {date.horaFin}
+                            </span>
                           </div>
-                          <div className='ticket-share__bar'>
-                            <div style={{ width: `${percent}%` }} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className='event-card'>
+                    <h4>Distribución vs capacidad</h4>
+                    <div className='ticket-share'>
+                      {event.ventasPorTipo.map((ticket) => {
+                        const percent = Math.min(
+                          100,
+                          Math.round((ticket.vendidos / event.capacidad) * 100)
+                        );
+                        return (
+                          <div key={ticket.tipo} className='ticket-share__item'>
+                            <div className='ticket-share__label'>
+                              <span>{ticket.tipo}</span>
+                              <strong>
+                                {ticket.vendidos.toLocaleString()} /{' '}
+                                {event.capacidad.toLocaleString()}
+                              </strong>
+                            </div>
+                            <div className='ticket-share__bar'>
+                              <div style={{ width: `${percent}%` }} />
+                            </div>
+                            <small>{percent}% de la capacidad total</small>
                           </div>
-                          <small>{percent}% de la capacidad total</small>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       </Section>
     </Master>
@@ -354,7 +358,5 @@ const toggleEventExpansion = (eventId: number) => {
 };
 
 const ReportsPage: React.FC = () => <ReportsDashboard />;
-
-
 
 export default ReportsPage;

@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+type EventDateRange = {
+  idFechaEvento: number;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+};
+
 export type EventReport = {
   idEvento: number;
   nombre: string;
-  fecha: string;
   ubicacion: string;
   capacidad: number;
   estado: 'EN_VENTA' | 'AGOTADO' | 'FINALIZADO' | 'CANCELADO';
   ingresosTotales: number;
   ticketsVendidos: number;
   ventasPorTipo: Array<{ tipo: string; vendidos: number; ingresos: number }>;
+  fechas: EventDateRange[];
   cargosServicio: number;
   comisiones: number;
 };
@@ -28,7 +35,6 @@ const mockReports: EventReport[] = [
   {
     idEvento: 1024,
     nombre: 'Showcase de bandas indie',
-    fecha: '2025-03-21',
     ubicacion: 'Teatro Canout',
     capacidad: 800,
     estado: 'EN_VENTA',
@@ -40,13 +46,16 @@ const mockReports: EventReport[] = [
       { tipo: 'Preventa', vendidos: 110, ingresos: 14300 },
       { tipo: 'Cortesía', vendidos: 30, ingresos: 0 },
     ],
+    fechas: [
+      { idFechaEvento: 1, fecha: '2025-03-21', horaInicio: '18:00', horaFin: '22:30' },
+      { idFechaEvento: 2, fecha: '2025-03-22', horaInicio: '18:00', horaFin: '22:30' },
+    ],
     cargosServicio: 5200,
     comisiones: 3600,
   },
   {
     idEvento: 2048,
     nombre: 'Festival gastronómico Lima Fusión',
-    fecha: '2025-04-12',
     ubicacion: 'Parque de la Exposición',
     capacidad: 1200,
     estado: 'AGOTADO',
@@ -58,13 +67,16 @@ const mockReports: EventReport[] = [
       { tipo: 'Preventa', vendidos: 150, ingresos: 19500 },
       { tipo: 'Cortesía', vendidos: 50, ingresos: 0 },
     ],
+    fechas: [
+      { idFechaEvento: 3, fecha: '2025-04-12', horaInicio: '12:00', horaFin: '23:30' },
+      { idFechaEvento: 4, fecha: '2025-04-13', horaInicio: '12:00', horaFin: '23:30' },
+    ],
     cargosServicio: 8200,
     comisiones: 6100,
   },
   {
     idEvento: 4096,
     nombre: 'Conferencia de tecnología FutureStack',
-    fecha: '2025-05-05',
     ubicacion: 'Centro de Convenciones de Lima',
     capacidad: 1500,
     estado: 'EN_VENTA',
@@ -75,6 +87,11 @@ const mockReports: EventReport[] = [
       { tipo: 'VIP', vendidos: 90, ingresos: 22500 },
       { tipo: 'Early-bird', vendidos: 120, ingresos: 11000 },
       { tipo: 'Cortesía', vendidos: 20, ingresos: 0 },
+    ],
+    fechas: [
+      { idFechaEvento: 5, fecha: '2025-05-05', horaInicio: '09:00', horaFin: '18:00' },
+      { idFechaEvento: 6, fecha: '2025-05-06', horaInicio: '09:00', horaFin: '18:00' },
+      { idFechaEvento: 7, fecha: '2025-05-07', horaInicio: '09:00', horaFin: '18:00' },
     ],
     cargosServicio: 3800,
     comisiones: 2700,
@@ -93,10 +110,13 @@ export function GET(request: NextRequest) {
 
   if (start !== null || end !== null) {
     eventos = eventos.filter((event) => {
-      const eventDate = new Date(event.fecha).getTime();
-      const afterStart = start === null ? true : eventDate >= new Date(start).getTime();
-      const beforeEnd = end === null ? true : eventDate <= new Date(end).getTime();
-      return afterStart && beforeEnd;
+      const matchesRange = event.fechas.some((date) => {
+        const dateValue = new Date(date.fecha).getTime();
+        const afterStart = start === null ? true : dateValue >= new Date(start).getTime();
+        const beforeEnd = end === null ? true : dateValue <= new Date(end).getTime();
+        return afterStart && beforeEnd;
+      });
+      return matchesRange;
     });
   }
 

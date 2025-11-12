@@ -2,14 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 type EventState = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
 
-type EventDate = {
-  idFechaEvento: number;
-  idFecha: number;
-  fecha: string;
-  horaInicio: string;
-  horaFin: string;
-};
-
 export type OrganizerEvent = {
   idEvento: number;
   idOrganizador: number;
@@ -18,14 +10,11 @@ export type OrganizerEvent = {
   descripcion: string;
   lugar: string;
   estado: EventState;
-  likes: number;
-  noInteres: number;
   cantVendidasTotal: number;
   totalRecaudado: number;
   imagenPortada: string;
   imagenLugar: string;
   videoUrl: string;
-  fechas: EventDate[];
   perfiles: Array<{ id: string; label: string }>;
   sectores: Array<{ id: string; nombre: string; capacidad: number }>;
   tiposTicket: Array<{ id: string; label: string }>;
@@ -45,8 +34,6 @@ const baseEvent: OrganizerEvent = {
     'Una noche para presentar proyectos emergentes en Lima con experiencias inmersivas y visuales.',
   lugar: 'Teatro Canout',
   estado: 'BORRADOR',
-  likes: 120,
-  noInteres: 12,
   cantVendidasTotal: 0,
   totalRecaudado: 0,
   imagenPortada:
@@ -54,22 +41,6 @@ const baseEvent: OrganizerEvent = {
   imagenLugar:
     'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?w=900&auto=format&fit=crop&q=80',
   videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-  fechas: [
-    {
-      idFechaEvento: 1,
-      idFecha: 1,
-      fecha: '2025-03-21',
-      horaInicio: '18:00',
-      horaFin: '22:30',
-    },
-    {
-      idFechaEvento: 2,
-      idFecha: 2,
-      fecha: '2025-03-22',
-      horaInicio: '18:00',
-      horaFin: '22:30',
-    },
-  ],
   perfiles: [
     { id: 'adulto', label: 'Adulto' },
     { id: 'nino', label: 'Niño' },
@@ -125,14 +96,6 @@ export async function POST(request: NextRequest) {
   const normalized: OrganizerEvent = {
     ...payload,
     idEvento: payload.idEvento ?? Date.now(),
-    likes: payload.likes ?? 0,
-    noInteres: payload.noInteres ?? 0,
-    fechas:
-      payload.fechas?.map((fecha) => ({
-        ...fecha,
-        idFechaEvento: fecha.idFechaEvento ?? Date.now(),
-        idFecha: fecha.idFecha ?? Date.now(),
-      })) ?? [],
     metadata: {
       version: payload.metadata?.version ?? 'v1',
       lastUpdated: now,
@@ -149,3 +112,4 @@ export async function POST(request: NextRequest) {
     { status: 201 }
   );
 }
+

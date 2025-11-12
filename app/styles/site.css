@@ -1641,17 +1641,17 @@ button.button.blue-filled {
 }
 
 .report-summary-card .label {
-  display: block;               
+  display: block;
   font-size: 0.8em;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--yellow);
   margin-bottom: 4px;
-  font-weight: bolder; 
+  font-weight: bolder;
 }
 
 .report-summary-card strong {
-  display: block;              
+  display: block;
   font-size: 1.4em;
   color: var(--white);
   font-weight: 600;
@@ -1809,12 +1809,56 @@ button.button.blue-filled {
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.event-date-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-date-list li div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9em;
+  color: var(--gray);
+}
+
 .entity-card__header {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.event-dates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.event-date-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.event-date-card .label {
+  text-transform: capitalize;
+  color: var(--gray);
+  font-size: 0.9em;
+}
+
+.new-date {
+  margin-top: 10px;
 }
 
 .icon-button {
@@ -1937,6 +1981,22 @@ button.button.blue-filled {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.validation-errors {
+  border: 1px solid rgba(255, 118, 117, 0.4);
+  background: rgba(255, 118, 117, 0.08);
+  color: var(--white);
+  padding: 14px 18px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+.validation-errors ul {
+  margin: 8px 0 0 16px;
+  padding: 0;
+  color: var(--white);
+  font-size: 0.95em;
 }
 
 .status-pill {

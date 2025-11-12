@@ -12,8 +12,8 @@ const Page: React.FC = () => (
         <div className='organizer-hero__content'>
           <Heading type={1} color='white' text='Inicio del organizador' />
           <p className='gray'>
-            Accede rápidamente a la creación de eventos, campañas promocionales y futuros reportes
-            desde un mismo panel.
+            Accede rápidamente a la creación de eventos, campañas promocionales y reportes desde un
+            mismo panel.
           </p>
         </div>
       </div>
@@ -25,8 +25,8 @@ const Page: React.FC = () => (
             <span className='material-symbols-outlined'>event</span>
             <h3>Creación de eventos</h3>
             <p>
-              Diseña experiencias completas, administra sectores y configura precios antes de
-              publicar en Nexivent.
+              Diseña experiencias completas, administra sectores, fechas y configura precios antes
+              de publicar en Nexivent.
             </p>
             <ButtonLink
               color='yellow-filled'
@@ -43,7 +43,7 @@ const Page: React.FC = () => (
               tus incentivos.
             </p>
             <ButtonLink
-              color='yellow-filled'
+              color='gray-overlay'
               text='Administrar cupones'
               rightIcon='arrow_forward'
               url='organizer/coupons'
@@ -53,11 +53,12 @@ const Page: React.FC = () => (
             <span className='material-symbols-outlined'>insights</span>
             <h3>Reportes y analytics</h3>
             <p>
-              Revisa ventas, ingresos y comportamiento de asistentes de los eventos que has creado en Nextivent.
+              Revisa ventas, ingresos y el comportamiento de tus asistentes con el nuevo módulo de
+              reportes en Nexivent.
             </p>
             <ButtonLink
-              color='yellow-filled'
-              text='Administrar cupones'
+              color='yellow-overlay'
+              text='Ver reportes'
               rightIcon='arrow_forward'
               url='organizer/reports'
             />

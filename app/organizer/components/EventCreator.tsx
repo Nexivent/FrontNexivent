@@ -19,6 +19,13 @@ type EventState = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
 type PriceMatrix = Record<string, Record<string, Record<string, number>>>;
 type MediaKey = 'imagenPortada' | 'imagenLugar' | 'videoUrl';
 type MediaMeta = { name: string | null; size: number | null };
+type EventDate = {
+  idFechaEvento: number;
+  idFecha: number;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+};
 
 type OrganizerEventForm = {
   idEvento: number;
@@ -28,11 +35,14 @@ type OrganizerEventForm = {
   descripcion: string;
   lugar: string;
   estado: EventState;
+  likes: number;
+  noInteres: number;
   cantVendidasTotal: number;
   totalRecaudado: number;
   imagenPortada: string;
   imagenLugar: string;
   videoUrl: string;
+  eventDates: EventDate[];
   perfiles: Profile[];
   sectores: Sector[];
   tiposTicket: TicketType[];
@@ -99,11 +109,14 @@ const createInitialForm = (): OrganizerEventForm => ({
   descripcion: '',
   lugar: '',
   estado: 'BORRADOR',
+  likes: 0,
+  noInteres: 0,
   cantVendidasTotal: 0,
   totalRecaudado: 0,
   imagenPortada: '',
   imagenLugar: '',
   videoUrl: '',
+  eventDates: [],
   perfiles: defaultProfiles,
   sectores: defaultSectors,
   tiposTicket: defaultTicketTypes,
@@ -179,6 +192,17 @@ const EventCreator: React.FC = () => {
 
   const [newTicketLabel, setNewTicketLabel] = useState('');
   const [ticketMessage, setTicketMessage] = useState<string | null>(null);
+  const [newEventDate, setNewEventDate] = useState<{
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+  }>({
+    fecha: '',
+    horaInicio: '',
+    horaFin: '',
+  });
+  const [dateMessage, setDateMessage] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const [mediaMeta, setMediaMeta] = useState<Record<MediaKey, MediaMeta>>({
     imagenPortada: { name: null, size: null },
@@ -265,8 +289,21 @@ const EventCreator: React.FC = () => {
         )
       );
 
+    const datesComplete =
+      form.eventDates.length > 0 &&
+      form.eventDates.every(
+        (date) =>
+          date.fecha.trim().length > 0 &&
+          date.horaInicio.trim().length > 0 &&
+          date.horaFin.trim().length > 0
+      );
+
     const publishReady =
-      infoComplete && mediaComplete && ticketMatrixComplete && form.estado !== 'BORRADOR';
+      infoComplete &&
+      mediaComplete &&
+      ticketMatrixComplete &&
+      datesComplete &&
+      form.estado !== 'BORRADOR';
 
     return {
       totalCapacity,
@@ -277,6 +314,7 @@ const EventCreator: React.FC = () => {
       mediaComplete,
       ticketMatrixComplete,
       entitiesReady,
+      datesComplete,
       publishReady,
     };
   }, [form]);
@@ -287,6 +325,12 @@ const EventCreator: React.FC = () => {
       label: 'Información básica',
       description: 'Título, categoría, descripción y lugar.',
       completed: stats.infoComplete,
+    },
+    {
+      id: 'dates',
+      label: 'Fechas configuradas',
+      description: 'Agrega al menos una fecha con horario definido.',
+      completed: stats.datesComplete,
     },
     {
       id: 'media',
@@ -545,6 +589,49 @@ const EventCreator: React.FC = () => {
     });
   };
 
+  const handleAddEventDate = () => {
+    setDateMessage(null);
+    const { fecha, horaInicio, horaFin } = newEventDate;
+    if (
+      fecha.trim().length === 0 ||
+      horaInicio.trim().length === 0 ||
+      horaFin.trim().length === 0
+    ) {
+      setDateMessage('Completa la fecha y las horas de inicio y fin.');
+      return;
+    }
+    const idTimestamp = Date.now();
+    setForm((previous) => ({
+      ...previous,
+      eventDates: [
+        ...previous.eventDates,
+        {
+          idFechaEvento: idTimestamp,
+          idFecha: idTimestamp,
+          fecha,
+          horaInicio,
+          horaFin,
+        },
+      ],
+    }));
+    setNewEventDate({ fecha: '', horaInicio: '', horaFin: '' });
+    setDateMessage('Fecha agregada correctamente.');
+  };
+
+  const handleRemoveEventDate = (idFechaEvento: number) => {
+    setDateMessage(null);
+    setForm((previous) => {
+      if (previous.eventDates.length === 1) {
+        setDateMessage('Debes mantener al menos una fecha.');
+        return previous;
+      }
+      return {
+        ...previous,
+        eventDates: previous.eventDates.filter((date) => date.idFechaEvento !== idFechaEvento),
+      };
+    });
+  };
+
   const handleMediaUpload = async (key: MediaKey, file: File | null | undefined) => {
     if (!file) return;
     setMediaUploading((previous) => ({ ...previous, [key]: true }));
@@ -578,6 +665,41 @@ const EventCreator: React.FC = () => {
     const nativeEvent = event.nativeEvent as Event & { submitter?: EventTarget | null };
     const submitter = (nativeEvent.submitter as HTMLButtonElement | null) ?? null;
     const intentState = submitter?.dataset.intent as EventState | undefined;
+    const errors: string[] = [];
+    if (form.idCategoria === 0) errors.push('Selecciona una categoría para el evento.');
+    if (form.titulo.trim().length === 0) errors.push('El título es obligatorio.');
+    if (form.descripcion.trim().length === 0) errors.push('La descripción es obligatoria.');
+    if (form.lugar.trim().length === 0) errors.push('El lugar del evento es obligatorio.');
+    if (form.eventDates.length === 0) {
+      errors.push('Agrega al menos una fecha para el evento.');
+    } else if (
+      form.eventDates.some(
+        (date) =>
+          date.fecha.trim().length === 0 ||
+          date.horaInicio.trim().length === 0 ||
+          date.horaFin.trim().length === 0
+      )
+    ) {
+      errors.push('Completa fecha y horarios para cada fecha agregada.');
+    }
+
+    if (!stats.entitiesReady) {
+      errors.push('Debes mantener al menos un perfil y un tipo de ticket.');
+    }
+    if (!stats.ticketMatrixComplete) {
+      errors.push('Configura los precios para todas las combinaciones de perfil, sector y tipo.');
+    }
+    if (!stats.mediaComplete) {
+      errors.push('Carga la imagen de portada, del lugar y un video promocional.');
+    }
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    setValidationErrors([]);
+
     const payload: OrganizerEventForm = {
       ...form,
       estado: intentState ?? form.estado,
@@ -642,6 +764,16 @@ const EventCreator: React.FC = () => {
       </header>
 
       <form className='organizer-form' onSubmit={(event) => void handleSubmit(event)}>
+        {validationErrors.length > 0 && (
+          <div className='validation-errors'>
+            <p>Por favor corrige los siguientes campos:</p>
+            <ul>
+              {validationErrors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className='organizer-grid'>
           <div className='organizer-main'>
             <section className='organizer-panel'>
@@ -650,23 +782,13 @@ const EventCreator: React.FC = () => {
                 <span className={`status-pill ${form.estado.toLowerCase()}`}>{form.estado}</span>
               </div>
               <div className='field-grid two-columns'>
-                <label className='field'>
-                  <span className='field-label'>Estado</span>
-                  <select
-                    className='input-text'
-                    value={form.estado}
-                    onChange={(event) =>
-                      setForm((previous) => ({
-                        ...previous,
-                        estado: event.target.value as EventState,
-                      }))
-                    }
-                  >
-                    <option value='BORRADOR'>Borrador</option>
-                    <option value='PUBLICADO'>Publicado</option>
-                    <option value='CANCELADO'>Cancelado</option>
-                  </select>
-                </label>
+                <div className='field'>
+                  <span className='field-label'>Estado actual</span>
+                  <div className={`status-pill ${form.estado.toLowerCase()}`}>{form.estado}</div>
+                  <span className='field-hint'>
+                    Se actualiza automáticamente al guardar o publicar.
+                  </span>
+                </div>
                 <label className='field'>
                   <span className='field-label'>Categoría</span>
                   <select
@@ -737,6 +859,89 @@ const EventCreator: React.FC = () => {
                   }
                 />
               </label>
+            </section>
+
+            <section className='organizer-panel'>
+              <div className='organizer-panel__header'>
+                <h3>Fechas del evento</h3>
+              </div>
+              {form.eventDates.length === 0 ? (
+                <p className='field-hint'>Aún no has agregado fechas para este evento.</p>
+              ) : (
+                <div className='event-dates-grid'>
+                  {form.eventDates.map((date) => (
+                    <div key={date.idFechaEvento} className='event-date-card'>
+                      <div>
+                        <p className='label'>
+                          {new Date(date.fecha).toLocaleDateString('es-PE', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </p>
+                        <strong>
+                          {date.horaInicio} - {date.horaFin}
+                        </strong>
+                      </div>
+                      <button
+                        type='button'
+                        className='icon-button danger'
+                        onClick={() => handleRemoveEventDate(date.idFechaEvento)}
+                        disabled={form.eventDates.length === 1}
+                      >
+                        <span className='material-symbols-outlined'>close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className='field-grid three-columns new-date'>
+                <label className='field'>
+                  <span className='field-label'>Fecha</span>
+                  <input
+                    className='input-text'
+                    type='date'
+                    value={newEventDate.fecha}
+                    onChange={(event) =>
+                      setNewEventDate((previous) => ({ ...previous, fecha: event.target.value }))
+                    }
+                  />
+                </label>
+                <label className='field'>
+                  <span className='field-label'>Hora inicio</span>
+                  <input
+                    className='input-text'
+                    type='time'
+                    value={newEventDate.horaInicio}
+                    onChange={(event) =>
+                      setNewEventDate((previous) => ({
+                        ...previous,
+                        horaInicio: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className='field'>
+                  <span className='field-label'>Hora fin</span>
+                  <input
+                    className='input-text'
+                    type='time'
+                    value={newEventDate.horaFin}
+                    onChange={(event) =>
+                      setNewEventDate((previous) => ({ ...previous, horaFin: event.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+              <Button
+                type='button'
+                color='gray-overlay'
+                text='Agregar fecha'
+                leftIcon='event_available'
+                onClick={() => handleAddEventDate()}
+              />
+              {dateMessage !== null && <p className='field-hint'>{dateMessage}</p>}
             </section>
 
             <section className='organizer-panel'>
