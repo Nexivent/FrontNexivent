@@ -13,33 +13,44 @@ const Input = forwardRef<HTMLInputElement, IProps>(
     const [showPassword, setShowPassword] = useState(false);
     const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
     return (
-      <div className='form-group'>
+      <div className='input-field-container'>
         {label && (
           <div className='label-line'>
             <label htmlFor={name}>{label}</label>
           </div>
         )}
-        <div className='input-wrapper'>
-          <input
-            id={name}
-            name={name}
-            ref={ref}
-            type={inputType}
-            autoComplete='off'
-            className={`input-text ${error ? 'input-error' : ''}`}
-            {...rest}
-          />
-          {isPassword && (
+        {isPassword ? (
+          <div className='input-group'>
+            <input
+              id={name}
+              name={name}
+              ref={ref}
+              type={inputType}
+              autoComplete='off'
+              className={`input-text ${error ? 'input-error' : ''}`}
+              {...rest}
+            />
             <button
               type='button'
               className='password-toggle-button'
               onClick={() => setShowPassword(!showPassword)}
               aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
             </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <input
+            id={name}
+            name={name}
+            ref={ref}
+            type={type}
+            autoComplete='off'
+            className={`input-text ${error ? 'input-error' : ''}`}
+            {...rest}
+          />
+        )}
+
         {error && <p className='form-error'>{error}</p>}
       </div>
     );

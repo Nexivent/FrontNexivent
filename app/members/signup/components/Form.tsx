@@ -209,21 +209,14 @@ const Form: React.FC = () => {
             {...register('confirmarContraseña')}
           />
         </div>
-        {/*Checkbox TOS*/}
+        {/*Toggle TOS*/}
         <div className='form-line'>
-          <div className='label-line'>
-            <label htmlFor='tos'>Términos y Condiciones</label>
-          </div>
+          <div style={{ height: '3rem' }}></div>
           <Controller
             name='tos'
             control={control}
             render={({ field }) => (
-              <Switch
-                color='blue'
-                checked={field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-                name={''}
-              >
+              <Switch {...field} checked={field.value} error={errors.tos?.message}>
                 Acepto la{' '}
                 <Link href='/legal/privacy-policy' className='blue'>
                   Política de privacidad
