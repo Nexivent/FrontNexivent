@@ -1620,7 +1620,9 @@ button.button.blue-filled {
 .report-filter-actions {
   display: flex;
   gap: 10px;
-  align-items: end;
+  align-items: center;
+  flex-direction: row;
+  justify-content: flex-start;
 }
 
 .report-summary-grid {
@@ -1635,13 +1637,24 @@ button.button.blue-filled {
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.02);
+  text-align: center;
 }
 
 .report-summary-card .label {
+  display: block;               
   font-size: 0.8em;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--gray);
+  color: var(--yellow);
+  margin-bottom: 4px;
+  font-weight: bolder; 
+}
+
+.report-summary-card strong {
+  display: block;              
+  font-size: 1.4em;
+  color: var(--white);
+  font-weight: 600;
 }
 
 .event-report {
@@ -1668,8 +1681,8 @@ button.button.blue-filled {
 }
 
 .event-summary-grid .label {
-  font-size: 0.8em;
-  color: var(--gray);
+  font-size: 1em;
+  color: var(--yellow);
 }
 
 .event-details-grid {

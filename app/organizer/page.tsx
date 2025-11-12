@@ -49,13 +49,18 @@ const Page: React.FC = () => (
               url='organizer/coupons'
             />
           </div>
-          <div className='organizer-hub-card muted'>
+          <div className='organizer-hub-card'>
             <span className='material-symbols-outlined'>insights</span>
             <h3>Reportes y analytics</h3>
             <p>
-              Muy pronto podrás visualizar conversiones, asistencia y ventas en un solo tablero.
+              Revisa ventas, ingresos y comportamiento de asistentes de los eventos que has creado en Nextivent.
             </p>
-            <ButtonLink color='disabled' text='Disponible pronto' url='#' />
+            <ButtonLink
+              color='yellow-filled'
+              text='Administrar cupones'
+              rightIcon='arrow_forward'
+              url='organizer/reports'
+            />
           </div>
         </div>
       </div>

@@ -129,19 +129,20 @@ a.button {
 
 .button.gray-overlay {
   color: var(--gray);
-  background-color: var(--white);
+  background-color: var(--black);
   border: 2px solid var(--gray);
+  margin: 0 5px;
 }
 
 .button.gray-overlay:hover {
-  color: var(--white);
+  color: var(--black) !important;
   background-color: var(--gray);
 }
 
 .button.yellow-filled {
   background-color: var(--primary);
   color: var(--primary-contrast);
-  border: 2px solid var(--yellow);
+  border: 2px solid var(--black) !important;
 }
 
 .button.yellow-filled:hover {

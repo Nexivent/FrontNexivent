@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 
 import { registerSchema } from '@components/Form/validationSchemas';
@@ -26,7 +25,7 @@ import Select from '@components/Form/Select';
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Form: React.FC = () => {
-  const { showAlert, hideAlert } = useAlert();
+  const { showAlert } = useAlert();
   const router = useRouter();
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -62,9 +61,6 @@ const Form: React.FC = () => {
       { text: 'Al menos un carácter especial (!@#$...)', met: /[^A-Za-z0-9]/.test(passwordValue) },
     ];
   }, [passwordValue]);
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onSubmit = async (data: RegisterFormData) => {
     setApiError(null);

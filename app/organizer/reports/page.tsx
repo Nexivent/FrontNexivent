@@ -248,20 +248,20 @@ const ReportsDashboard: React.FC = () => {
 
               <div className='event-summary-grid'>
                 <div>
-                  <span className='label'>Ingresos totales</span>
-                  <strong>{formatCurrency(event.ingresosTotales)}</strong>
+                  <span className='label'>Ingresos totales: </span>
+                  <strong> {formatCurrency(event.ingresosTotales)}</strong>
                 </div>
                 <div>
-                  <span className='label'>Tickets vendidos</span>
-                  <strong>{event.ticketsVendidos.toLocaleString()}</strong>
+                  <span className='label'>Tickets vendidos: </span>
+                  <strong> {event.ticketsVendidos.toLocaleString()}</strong>
                 </div>
                 <div>
-                  <span className='label'>Cargos de servicio</span>
-                  <strong>{formatCurrency(event.cargosServicio)}</strong>
+                  <span className='label'>Cargos de servicio: </span>
+                  <strong> {formatCurrency(event.cargosServicio)}</strong>
                 </div>
                 <div>
-                  <span className='label'>Comisiones</span>
-                  <strong>{formatCurrency(event.comisiones)}</strong>
+                  <span className='label'>Comisiones: </span>
+                  <strong> {formatCurrency(event.comisiones)}</strong>
                 </div>
               </div>
 
