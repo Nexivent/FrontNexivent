@@ -764,16 +764,6 @@ const EventCreator: React.FC = () => {
       </header>
 
       <form className='organizer-form' onSubmit={(event) => void handleSubmit(event)}>
-        {validationErrors.length > 0 && (
-          <div className='validation-errors'>
-            <p>Por favor corrige los siguientes campos:</p>
-            <ul>
-              {validationErrors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
         <div className='organizer-grid'>
           <div className='organizer-main'>
             <section className='organizer-panel'>
@@ -1209,7 +1199,16 @@ const EventCreator: React.FC = () => {
                 ))}
               </div>
             </section>
-
+            {validationErrors.length > 0 && (
+          <div className='validation-errors'>
+            <p>Por favor corrige los siguientes campos:</p>
+            <ul>
+              {validationErrors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
             <section className='organizer-panel organizer-actions'>
               <div className='button-row'>
                 <Button
