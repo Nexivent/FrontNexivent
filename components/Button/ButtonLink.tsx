@@ -7,10 +7,11 @@ interface IProps {
   color: string;
   leftIcon?: string;
   rightIcon?: string;
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>;
 }
 
-const ButtonLink: React.FC<IProps> = ({ url, text, color, leftIcon, rightIcon }) => (
-  <Link className={`button ${color}`} href={`/${url}`}>
+const ButtonLink: React.FC<IProps> = ({ url, text, color, leftIcon, rightIcon, onClick }) => (
+  <Link className={`button ${color}`} href={`/${url}`} onClick={onClick}>
     {leftIcon !== undefined && (
       <span className='material-symbols-outlined left-icon'>{leftIcon}</span>
     )}
