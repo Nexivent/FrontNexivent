@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React,{ useCallback, useEffect, useMemo, useState } from 'react';
 import { type Metadata } from 'next';
 
 import Master from '@components/Layout/Master';
@@ -107,6 +107,21 @@ const ReportsDashboard: React.FC = () => {
     const totalVendidos = events.reduce((sum, current) => sum + current.ticketsVendidos, 0);
     return totalCapacidad === 0 ? 0 : Math.round((totalVendidos / totalCapacidad) * 100);
   }, [events]);
+
+  const [expandedEvents, setExpandedEvents] = React.useState<Set<number>>(new Set());
+
+// Función para toggle del evento (después de los estados, antes del return)
+const toggleEventExpansion = (eventId: number) => {
+  setExpandedEvents(prev => {
+    const newSet = new Set(prev);
+    if (newSet.has(eventId)) {
+      newSet.delete(eventId);
+    } else {
+      newSet.add(eventId);
+    }
+    return newSet;
+  });
+};
 
   return (
     <Master>
@@ -231,41 +246,55 @@ const ReportsDashboard: React.FC = () => {
             </div>
           )}
 
-          {events.map((event) => (
+          {events.map((event) => {
+          const isExpanded = expandedEvents.has(event.idEvento);
+          
+          return (
             <div key={event.idEvento} className='event-report'>
               <div className='event-header'>
-                <div>
-                  <h3>{event.nombre}</h3>
-                  <p className='gray'>
-                    {new Date(event.fecha).toLocaleDateString()} · {event.ubicacion} · Capacidad:{' '}
-                    {event.capacidad}
-                  </p>
+                <div className='event-header-content'>
+                  <div className='event-header-info'>
+                    <h3>{event.nombre}</h3>
+                    <p className='gray'>
+                      {new Date(event.fecha).toLocaleDateString()} · {event.ubicacion} · Capacidad:{' '}
+                      {event.capacidad}
+                    </p>
+                  </div>
+                  <span className={`status-pill ${statusColor[event.estado]}`}>
+                    {statusCopy[event.estado]}
+                  </span>
                 </div>
-                <span className={`status-pill ${statusColor[event.estado]}`}>
-                  {statusCopy[event.estado]}
-                </span>
+                <button
+                  className={`icon-button ${isExpanded ? 'expanded' : ''}`}
+                  onClick={() => toggleEventExpansion(event.idEvento)}
+                  aria-label={isExpanded ? 'Ocultar detalles' : 'Ver detalles'}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 7.5L10 12.5L15 7.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
               </div>
 
               <div className='event-summary-grid'>
                 <div>
-                  <span className='label'>Ingresos totales: </span>
-                  <strong> {formatCurrency(event.ingresosTotales)}</strong>
+                  <span className='label'>Ingresos totales</span>
+                  <strong>{formatCurrency(event.ingresosTotales)}</strong>
                 </div>
                 <div>
-                  <span className='label'>Tickets vendidos: </span>
-                  <strong> {event.ticketsVendidos.toLocaleString()}</strong>
+                  <span className='label'>Tickets vendidos</span>
+                  <strong>{event.ticketsVendidos.toLocaleString()}</strong>
                 </div>
                 <div>
-                  <span className='label'>Cargos de servicio: </span>
-                  <strong> {formatCurrency(event.cargosServicio)}</strong>
+                  <span className='label'>Cargos de servicio</span>
+                  <strong>{formatCurrency(event.cargosServicio)}</strong>
                 </div>
                 <div>
-                  <span className='label'>Comisiones: </span>
-                  <strong> {formatCurrency(event.comisiones)}</strong>
+                  <span className='label'>Comisiones</span>
+                  <strong>{formatCurrency(event.comisiones)}</strong>
                 </div>
               </div>
 
-              <div className='event-details-grid'>
+              <div className={`event-details-grid ${isExpanded ? 'expanded' : 'collapsed'}`}>
                 <div className='event-card'>
                   <h4>Ventas por tipo</h4>
                   <table>
@@ -316,7 +345,8 @@ const ReportsDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       </Section>
     </Master>
