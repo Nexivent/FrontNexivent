@@ -57,7 +57,7 @@ const Page: React.FC = () => (
               reportes en Nexivent.
             </p>
             <ButtonLink
-              color='yellow-overlay'
+              color='yellow-filled'
               text='Ver reportes'
               rightIcon='arrow_forward'
               url='organizer/reports'

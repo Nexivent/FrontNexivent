@@ -18,13 +18,25 @@ const Page: React.FC = () => (
             lugar antes de publicar en Nexivent.
           </p>
           <div className='organizer-cta-row'>
-            <ButtonLink
-              color='yellow-filled'
-              text='Gestionar cupones'
-              rightIcon='arrow_forward'
-              url='organizer/coupons'
-            />
-          </div>
+              <ButtonLink
+                color='yellow-filled'
+                text='Volver al inicio'
+                leftIcon='chevron_left'
+                url='organizer'
+              />
+              <ButtonLink
+                color='gray-overlay'
+                text='Ver reportes'
+                rightIcon='arrow_forward'
+                url='organizer/reports'
+              />
+              <ButtonLink
+                color='yellow-overlay'
+                text='Cupones'
+                rightIcon='arrow_outward'
+                url='organizer/coupons'
+              />
+            </div>
         </div>
       </div>
     </Section>

@@ -128,15 +128,16 @@ a.button {
 }
 
 .button.gray-overlay {
-  color: var(--gray);
-  background-color: var(--black);
-  border: 2px solid var(--gray);
-  margin: 0 5px;
+  color: var(--black) !important;
+  background-color: var(--gray);
+  gap: 4px;
 }
 
 .button.gray-overlay:hover {
-  color: var(--black) !important;
-  background-color: var(--gray);
+  color: var(--white) !important;
+  background-color: var(--black);
+  border: 2px solid var(--gray);
+  margin: 0 5px;
 }
 
 .button.yellow-filled {
