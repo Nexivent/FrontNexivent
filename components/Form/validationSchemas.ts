@@ -55,7 +55,15 @@ export const registerSchema = z
     path: ['confirmarContraseña'],
   });
 
-export const loginSchema = z.object({
-  correo: z.string().email(),
-  contraseña: z.string().min(1),
+export const emailLoginSchema = z.object({
+  email: z.string().email({ message: 'Por favor, ingresa un correo válido.' }),
+  password: z.string().min(1, { message: 'La contraseña es requerida.' }),
+});
+
+export const rucLoginSchema = z.object({
+  ruc: z
+    .string()
+    .length(11, { message: 'El RUC debe tener 11 dígitos.' })
+    .regex(/^\d+$/, { message: 'El RUC solo debe contener números.' }),
+  password: z.string().min(1, { message: 'La contraseña es requerida.' }),
 });

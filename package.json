@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@react-oauth/google": "^0.12.2",
     "axios": "^1.11.0",
     "base-64": "^1.0.0",
     "lucide-react": "^0.548.0",

@@ -5,22 +5,11 @@ import { type Metadata, type Viewport } from 'next';
 import './styles/ui.css';
 import './styles/site.css';
 
-// context
-import { UserProvider } from '@contexts/UserContext';
-// variables
-export const runtime = 'edge';
+import Providers from './providers';
 
-const RootLayout: React.FC<Readonly<{ children: React.ReactNode }>> = ({ children }) => (
-  <html lang='en'>
-    <body>
-      <UserProvider>{children}</UserProvider>
-    </body>
-  </html>
-);
-
-const title = 'Modern ticketing';
-const canonical = 'https://modern-ticketing.com';
-const description = 'Modern ticketing is a modern ticketing solution';
+const title = 'Nexivent';
+const canonical = 'https://nexivent.com';
+const description = 'Nexivent - Tu siguiente evento, nuestra misión';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -31,8 +20,8 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title,
   description,
-  robots: 'noindex, nofollow', // TODO: change in production
-  keywords: 'modern ticketing',
+  robots: 'noindex, nofollow',
+  keywords: 'nexivent, eventos, tickets, gestión de eventos, entradas en línea',
   alternates: { canonical },
   icons: {
     icon: '/favicon.ico',
@@ -46,8 +35,18 @@ export const metadata: Metadata = {
     url: canonical,
     type: 'website',
     images: '/logo192.png',
-    siteName: 'Modern Ticketing',
+    siteName: 'Nexivent',
   },
+};
+
+const RootLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <html lang='es'>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
 };
 
 export default RootLayout;
