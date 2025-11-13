@@ -1908,7 +1908,7 @@ button.button.blue-filled {
 .organizer-sidebar .organizer-panel {
   margin-bottom: 20px;
 }
-
+#resumen
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1922,6 +1922,29 @@ button.button.blue-filled {
   letter-spacing: 0.08em;
   color: var(--gray);
 }
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.summary-table th {
+  text-align: left;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gray);
+  padding: 8px;
+  width: 50%;
+}
+
+.summary-table td {
+  padding: 8px;
+  font-weight: bold;
+  text-align: right;
+}
+
+
 
 .organizer-tags {
   display: flex;

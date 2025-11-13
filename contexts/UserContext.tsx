@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState } from 'react';
 export type User = {
   idUsuario: number;
   nombre: string;
+  apellido: string;
   ndocumento: string;
   tipo_documento: string;
   correo: string;
@@ -24,6 +25,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User>({
     idUsuario: 1,
     nombre: 'Mario',
+    apellido: 'Bros',
     ndocumento: '123456789',
     tipo_documento: 'DNI',
     correo: 'mario_bros@gmail.com',
