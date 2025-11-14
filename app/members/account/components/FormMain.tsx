@@ -106,14 +106,14 @@ const FormMain: React.FC<IProps> = ({ data }) => {
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line'>
-              <label htmlFor='name'>Name</label>
+              <label htmlFor='name'>Nombre</label>
             </div>
             <Input
               type='text'
               name='name'
               value={formValues.name}
               maxLength={64}
-              placeholder='Enter your name'
+              placeholder='Ingresa tu nombre'
               required
               onChange={handleChange}
             />
@@ -122,14 +122,14 @@ const FormMain: React.FC<IProps> = ({ data }) => {
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line'>
-              <label htmlFor='lastname'>Last name</label>
+              <label htmlFor='lastname'>Apellido</label>
             </div>
             <Input
               type='text'
               name='lastname'
               value={formValues.lastname}
               maxLength={64}
-              placeholder='Enter your last name'
+              placeholder='Ingresa tu apellido'
               required
               onChange={handleChange}
             />
@@ -138,9 +138,9 @@ const FormMain: React.FC<IProps> = ({ data }) => {
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line flex flex-v-center flex-space-between'>
-              <label htmlFor='email'>E-mail address</label>
+              <label htmlFor='email'>Correo electronico</label>
               <Link href='/members/email' className='blue'>
-                Change e-mail
+                Cambiar e-mail
               </Link>
             </div>
             <Input
@@ -157,9 +157,9 @@ const FormMain: React.FC<IProps> = ({ data }) => {
         </div>
         <div className='form-line'>
           <div className='label-line flex flex-v-center flex-space-between'>
-            <label htmlFor='password'>Password</label>
+            <label htmlFor='password'>Contraseña</label>
             <Link href='/members/password' className='blue'>
-              Change password
+              Cambiar contraseña
             </Link>
           </div>
           <Input
@@ -173,9 +173,9 @@ const FormMain: React.FC<IProps> = ({ data }) => {
           />
         </div>
         <div className='form-buttons'>
-          <ButtonLink color='gray-overlay' text='Sign out' url='members/signout' />
+          <ButtonLink color='yellow-overlay' text='Cerrar sesión' url='members/signout' />
           &nbsp; &nbsp;
-          <Button type='submit' color='blue-filled' text='Update profile' />
+          <Button type='submit' color='yellow-filled' text='Actualizar perfil' />
         </div>
       </div>
     </form>

@@ -1,14 +1,34 @@
+import React from 'react';
+
 // interfaces
 interface IProps {
-  type?: string | 'button';
+  type?: 'button' | 'submit';
   text: string;
   color: string;
   leftIcon?: string;
   rightIcon?: string;
+  disabled?: boolean;
+  dataIntent?: string;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
 }
 
-const Button: React.FC<IProps> = ({ type, text, color, leftIcon, rightIcon }) => (
-  <button type={type === 'button' ? 'button' : 'submit'} className={`button ${color}`}>
+const Button: React.FC<IProps> = ({
+  type,
+  text,
+  color,
+  leftIcon,
+  rightIcon,
+  disabled,
+  dataIntent,
+  onClick,
+}) => (
+  <button
+    type={type === 'submit' ? 'submit' : 'button'}
+    className={`button ${color}`}
+    disabled={disabled}
+    data-intent={dataIntent}
+    onClick={onClick}
+  >
     {leftIcon !== undefined && (
       <span className='material-symbols-outlined left-icon'>{leftIcon}</span>
     )}

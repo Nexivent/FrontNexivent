@@ -18,45 +18,45 @@ const Footer: React.FC = () => (
           Home
         </Link>
         <Link href='/venues' className='white'>
-          Venues
+          Locales
         </Link>
         <Link href='/members/tickets' className='white'>
-          My tickets
+          Mis tickets
         </Link>
         <Link href='/members/account' className='white'>
-          My account
+          Mi acuenta
         </Link>
       </div>
       <div className='links'>
         <Link href='/help' className='white'>
-          Help
+          Ayuda
         </Link>
         <Link href='/news' className='white'>
-          News
+          Noticias
         </Link>
         <Link href='/contact' className='white'>
-          Contact us
+          Contactanos
         </Link>
         <Link href='/promoters' className='white'>
-          For promoters
+          Para organizadores
         </Link>
       </div>
       <div className='members'>
         <Link href='/members/signup' className='white'>
-          Sign up
+          Registrarse
         </Link>
         <span>or</span>
-        <ButtonLink color='blue-filled' text='Sign in' url='members/signin' />
+        <ButtonLink color='yellow-filled' text='Iniciar Sesión' url='members/signin' />
       </div>
     </div>
     <div className='newsletter'>
-      <p>Don&apos;t miss the latest on Modern ticketing news and events.</p>
+      <p>No te pierdas la nueva plataforma de eventos y animate a descubrir nuevas experiencias.</p>
       <div className='input-container'>
         <input
           type='email'
           name='email'
           autoComplete='off'
-          placeholder='your@emailaddress.com'
+          placeholder='tuNombre@email.com'
           required
         />
         <button type='submit'>
@@ -65,7 +65,7 @@ const Footer: React.FC = () => (
       </div>
     </div>
     <div className='copy'>
-      <span>&copy; 2024 - Modern ticketing</span>
+      <span>&copy; 2025 - Nexivent</span>
       <div className='terms'>
         <Link href='/legal/privacy-policy'>Privacy policy</Link>
         &nbsp;&bull;&nbsp;

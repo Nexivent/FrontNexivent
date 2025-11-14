@@ -20,7 +20,7 @@ const CardGroup: React.FC<IProps> = ({ url, title, color, background, children }
         <Heading type={3} color={color} text={title} />
         <ButtonLink
           color={`${color}-filled`}
-          text='See all'
+          text='Mira todo'
           rightIcon='arrow_forward'
           url={`${url}`}
         />

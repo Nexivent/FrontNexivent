@@ -8,7 +8,7 @@ import ButtonLink from '@components/Button/ButtonLink';
 
 const Page: React.FC = () => (
   <Master>
-    <Section className='white-background'>
+    <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='padding-bottom center'>
           <Heading type={1} color='gray' text='Contact us' />
@@ -82,7 +82,7 @@ const Page: React.FC = () => (
             </p>
           </div>
           <div className='button-container'>
-            <ButtonLink color='blue-filled' text='Open maps' rightIcon='arrow_forward' url='' />
+            <ButtonLink color='yellow-filled' text='Open maps' rightIcon='arrow_forward' url='' />
           </div>
         </div>
       </div>

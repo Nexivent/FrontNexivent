@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 // hooks
 import useAlert from '@hooks/useAlert';
@@ -26,6 +27,7 @@ interface IFormProps {
 
 const Form: React.FC = () => {
   const { showAlert, hideAlert } = useAlert();
+  const router = useRouter();
 
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<IFormProps>({
@@ -87,7 +89,7 @@ const Form: React.FC = () => {
   };
 
   if (loading) {
-    return <Loader type='inline' color='gray' text='Hang on a second' />;
+    return <Loader type='inline' color='gray' text='Procesando tu pago...' />;
   }
 
   return (
@@ -100,34 +102,34 @@ const Form: React.FC = () => {
     >
       <div className='form-elements'>
         <div className='form-line padding-top'>
-          <Heading type={5} color='gray' text='Buyer info' />
+          <Heading type={5} color='gray' text='Información del comprador' />
         </div>
         <div className='form-line'>
           <div className='flex flex-v-center flex-space-between'>
             <div className='two-line'>
               <div className='label-line'>
-                <label htmlFor='name'>Name</label>
+                <label htmlFor='name'>Nombre</label>
               </div>
               <Input
                 type='text'
                 name='name'
                 value={formValues.name}
                 maxLength={48}
-                placeholder='Enter your name'
+                placeholder='Ingresa tu nombre'
                 required
                 onChange={handleChange}
               />
             </div>
             <div className='two-line'>
               <div className='label-line'>
-                <label htmlFor='email'>E-mail address</label>
+                <label htmlFor='email'>Correo electrónico</label>
               </div>
               <Input
-                type='text'
+                type='email'
                 name='email'
                 value={formValues.email}
                 maxLength={64}
-                placeholder='Enter your e-mail address'
+                placeholder='Ingresa tu correo electrónico'
                 required
                 onChange={handleChange}
               />
@@ -135,34 +137,34 @@ const Form: React.FC = () => {
           </div>
         </div>
         <div className='form-line padding-top'>
-          <Heading type={5} color='gray' text='Payment details' />
+          <Heading type={5} color='gray' text='Detalles de pago' />
         </div>
         <div className='form-line'>
           <div className='flex flex-v-center flex-space-between'>
             <div className='two-line'>
               <div className='label-line'>
-                <label htmlFor='cardName'>Name on card</label>
+                <label htmlFor='cardName'>Nombre en la tarjeta</label>
               </div>
               <Input
                 type='text'
                 name='cardName'
                 value={formValues.cardName}
                 maxLength={48}
-                placeholder='Enter name on card'
+                placeholder='Nombre como aparece en la tarjeta'
                 required
                 onChange={handleChange}
               />
             </div>
             <div className='two-line'>
               <div className='label-line'>
-                <label htmlFor='cardNumber'>Card number</label>
+                <label htmlFor='cardNumber'>Número de tarjeta</label>
               </div>
               <Input
                 type='text'
                 name='cardNumber'
                 value={formValues.cardNumber}
                 maxLength={16}
-                placeholder='Enter your card number'
+                placeholder='Ingresa el número de tarjeta'
                 required
                 onChange={handleChange}
               />
@@ -173,28 +175,28 @@ const Form: React.FC = () => {
           <div className='flex flex-v-center flex-space-between'>
             <div className='two-line'>
               <div className='label-line'>
-                <label htmlFor='cardExpiration'>Expiration date</label>
+                <label htmlFor='cardExpiration'>Fecha de expiración</label>
               </div>
               <Input
                 type='text'
                 name='cardExpiration'
                 value={formValues.cardExpiration}
-                maxLength={4}
-                placeholder="Enter your card's expiration date"
+                maxLength={5}
+                placeholder='MM/AA'
                 required
                 onChange={handleChange}
               />
             </div>
             <div className='two-line'>
               <div className='label-line'>
-                <label htmlFor='cardCvc'>Security number</label>
+                <label htmlFor='cardCvc'>Código de seguridad (CVV)</label>
               </div>
               <Input
                 type='text'
                 name='cardCvc'
                 value={formValues.cardCvc}
-                maxLength={3}
-                placeholder="Enter your card's security number"
+                maxLength={4}
+                placeholder='CVV'
                 required
                 onChange={handleChange}
               />
@@ -202,7 +204,12 @@ const Form: React.FC = () => {
           </div>
         </div>
         <div className='form-buttons'>
-          <Button type='submit' color='blue-filled' text='Place payment & Issue tickets' />
+          <Button
+            type='submit'
+            color='yellow-filled'
+            text='Realizar pago y emitir tickets'
+            onClick={() => void router.push('/buy/components/success')}
+          />
         </div>
       </div>
     </form>
