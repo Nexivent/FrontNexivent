@@ -1304,8 +1304,8 @@ button.button.blue-filled {
 
 .organizer-hero {
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.12), transparent),
-    linear-gradient(135deg, rgba(113, 88, 226, 0.4), rgba(40, 180, 133, 0.25));
+    radial-gradient(circle at top, #120b55, transparent),
+    linear-gradient(135deg, #2c0844, #031b3b);
   padding-bottom: 30px;
 }
 

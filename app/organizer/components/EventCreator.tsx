@@ -102,7 +102,7 @@ const defaultPricePreset: PriceMatrix = {
 };
 
 const createInitialForm = (): OrganizerEventForm => ({
-  idEvento: Date.now(),
+  idEvento: 0,
   idOrganizador: 44,
   idCategoria: 0,
   titulo: '',
@@ -240,6 +240,12 @@ const EventCreator: React.FC = () => {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    setForm((previous) =>
+      previous.idEvento === 0 ? { ...previous, idEvento: Date.now() } : previous
+    );
   }, []);
 
   const selectedCategory = categories.find((category) => category.id === form.idCategoria);
@@ -1276,7 +1282,7 @@ const EventCreator: React.FC = () => {
                 </span>
                 <span className='organizer-chip muted'>
                   <span className='material-symbols-outlined'>tag</span>
-                  Evento #{form.idEvento}
+                  Evento #{form.idEvento === 0 ? 'Pendiente' : form.idEvento}
                 </span>
                 <span className='organizer-chip muted'>
                   <span className='material-symbols-outlined'>badge</span>
