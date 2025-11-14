@@ -18,9 +18,10 @@ interface IProps {
 const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack }) => {
   const {
     register,
+    control,
     handleSubmit,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
   } = useFormContext();
   const isRuc = prefilledData.tipo_documento === '06';
 
@@ -67,37 +68,20 @@ const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack }) => {
               : 'O completa tus datos manualmente.'}
           </p>
 
-          <Input
-            label='Correo electrónico'
-            type='email'
-            error={errors.correo?.message}
-            {...register('correo')}
-          />
-          <Input
-            label='Teléfono'
-            type='tel'
-            error={errors.telefono?.message}
-            {...register('telefono')}
-          />
-          <Input
-            label='Contraseña'
-            type='password'
-            isPassword
-            error={errors.contraseña?.message}
-            {...register('contraseña')}
-          />
+          <Input label='Correo electrónico' type='email' {...register('correo')} />
+          <Input label='Teléfono' type='tel' {...register('telefono')} />
+          <Input label='Contraseña' type='password' isPassword {...register('contraseña')} />
           <Input
             label='Confirmar Contraseña'
             type='password'
             isPassword
-            error={errors.confirmarContraseña?.message}
             {...register('confirmarContraseña')}
           />
           <Controller
             name='tos'
             control={control}
             render={({ field }) => (
-              <Switch {...field} checked={field.value} error={errors.tos?.message}>
+              <Switch {...field} checked={field.value}>
                 Acepto la{' '}
                 <Link href='/legal/privacy-policy' className='blue'>
                   Política de privacidad
