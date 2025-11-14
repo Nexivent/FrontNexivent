@@ -36,12 +36,7 @@ const Header: React.FC<MergedHeaderProps> = ({ user, onMenuToggle }) => {
     >
       <div className='container mx-auto grid grid-cols-3 items-center px-4 py-3'>
         <div className='flex items-center justify-start gap-4'>
-          <button
-            onClick={() => setDropdownOpen(!isDropdownOpen)}
-            className='text-white hover:text-white/80 transition-colors p-2'
-          >
-            <Menu size={24} />
-          </button>
+          {/* aquí va el menú hamburguesa, pero no es necesario por ahora */}
           <Link href='/'>
             <img src='/logo_transparente.png' alt='Nexivent' className='h-20 w-auto' />
           </Link>

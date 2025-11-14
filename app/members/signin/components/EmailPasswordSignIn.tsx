@@ -120,7 +120,7 @@ const EmailPasswordSignInForm: React.FC = () => {
 };
 
 const EmailPasswordSignIn: React.FC = () => (
-  <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
+  <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '357817738890-69lfoqffbuj9r3ku3bdtc1ah3no5jc6s.apps.googleusercontent.com'}>
     <EmailPasswordSignInForm />
   </GoogleOAuthProvider>
 );

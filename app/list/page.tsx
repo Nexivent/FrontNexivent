@@ -10,71 +10,74 @@ import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
 import EventCard from '@components/Card/EventCard';
 import SearchPanel from './SearchPanelClient';
+import CircleButtons from '../home/components/CircleButtons';
 
 const Page: React.FC = () => (
   <Master>
     <Section className='gray-background hero-offset'>
-      <div className='container'>
-        <div className='padding-bottom center'>
-          <Heading type={1} color='gray' text='Eventos' />
-          <p className='gray'>Nexivent, busca eventos en Lima.</p>
-        </div>
+  <div className='container'>
+    <div className='padding-bottom center'>
+      <Heading type={1} color='gray' text='Eventos' />
+      <p className='gray'>Nexivent, busca eventos en Lima.</p>
+    </div>
+
+    {/* CATEGORÍAS CENTRADAS CON ICONOS */}
+    <div className='flex justify-center'>
+      <div className='max-w-5xl w-full px-8'>
+        <CircleButtons />
       </div>
-    </Section>
-    <Section>
-      <Suspense fallback={<div>Cargando búsqueda...</div>}>
-          <SearchPanel />
-        </Suspense>
-    </Section>
+    </div>
+  </div>
+</Section>
+<Section>
+  <Suspense fallback={<div>Cargando búsqueda...</div>}>
+    <SearchPanel />
+  </Suspense>
+</Section>
     <Section className='list-cards'>
-      <div className='container center'>
-        <EventCard
-          url='1'
-          from='20'
-          color='yellow'
-          when='Tue, Sep 21, 2024 19:00'
-          name='Event name goes here'
-          venue='Royal Albert Hall'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <EventCard
-          url='1'
-          from='25'
-          color='yellow'
-          when='Wed, Aug 9, 2024 22:00'
-          name='Event name goes here'
-          venue='o2 Arena'
-          image='https://images.unsplash.com/photo-1472691681358-fdf00a4bfcfe?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <EventCard
-          url='1'
-          from='60'
-          color='yellow'
-          when='Mon, Jul 2, 2024 20:00'
-          name='Event name goes here'
-          venue='Eventim Apollo'
-          image='https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <EventCard
-          url='1'
-          from='20'
-          color='yellow'
-          when='Tue, Sep 21, 2024 19:00'
-          name='Event name goes here'
-          venue='Royal Albert Hall'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <EventCard
-          url='1'
-          from='25'
-          color='yellow'
-          when='Wed, Aug 9, 2024 22:00'
-          name='Event name goes here'
-          venue='o2 Arena'
-          image='https://images.unsplash.com/photo-1472691681358-fdf00a4bfcfe?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-      </div>
-    </Section>
+  <div className='container center'>
+    <EventCard
+      url='1'
+      from='35'
+      color='yellow'
+      when='10 de octubre'
+      name='SKILLBEA - 4MAR'
+      venue='Vichama Conciertos'
+      image='/portadaSkillbea.jpg'
+    />
+
+    <EventCard
+      url='2'
+      from='59'
+      color='yellow'
+      when='26 de setiembre'
+      name='JAZE - QUIZAS NO ES PARA TANTO'
+      venue='Costa 21'
+      image='/portadaJaze.jpg'
+    />
+
+    <EventCard
+      url='3'
+      from='44'
+      color='yellow'
+      when='13 de diciembre'
+      name='MADISON FEST - HABLANDO HU*VADAS'
+      venue='Costa 21'
+      image='/eventoHH.jpg'
+    />
+
+    <EventCard
+      url='4'
+      from='50'
+      color='yellow'
+      when='8 de noviembre'
+      name='Decir Adiós - Amén'
+      venue='CC Leguia'
+      image='/decirAdios.jpg'
+    />
+  </div>
+</Section>
+
   </Master>
 );
 
