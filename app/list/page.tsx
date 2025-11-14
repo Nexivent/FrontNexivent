@@ -1,4 +1,8 @@
+
+
+
 import { type Metadata } from 'next';
+import { Suspense } from "react";
 
 // components
 import Master from '@components/Layout/Master';
@@ -18,9 +22,9 @@ const Page: React.FC = () => (
       </div>
     </Section>
     <Section>
-      <div className='container'>
-        <SearchPanel />
-      </div>
+      <Suspense fallback={<div>Cargando búsqueda...</div>}>
+          <SearchPanel />
+        </Suspense>
     </Section>
     <Section className='list-cards'>
       <div className='container center'>
