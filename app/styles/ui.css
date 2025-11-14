@@ -1756,6 +1756,7 @@ input[type='range' i]::-webkit-slider-thumb {
   font-weight: 700;
   margin-bottom: 0.75rem;
   line-height: 1.2;
+  : #1e293b;
 }
 
 .header-subtitle {
@@ -1772,11 +1773,18 @@ input[type='range' i]::-webkit-slider-thumb {
 }
 
 .stat-card {
-  background: rgba(198, 201, 36, 0.15);
-  backdrop-filter: blur(10px);
-  padding: 1.5rem;
-  border-radius: 16px;
-  border: 1px solid rgba(251, 255, 7, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  background: rgba(205, 220, 57, 0.1);
+  border: 2px solid #cddc39;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 2rem 0;
+  color: #cddc39;
+  font-size: 1.1rem;
+  flex-direction: column;
 }
 
 .stat-label {
