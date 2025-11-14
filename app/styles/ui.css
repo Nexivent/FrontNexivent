@@ -291,6 +291,14 @@ select {
   border: 1px solid var(--light-gray);
 }
 
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.input-text::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
 .input-text:focus {
   background-color: #f1f1f1;
   border: 1px solid var(--dark-gray);
@@ -2005,7 +2013,7 @@ input[type='range' i]::-webkit-slider-thumb {
 }
 
 .entity-card {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, #000000 0%, #000000 100%);
   padding: 1.25rem;
   border-radius: 12px;
   border: 2px solid #e2e8f0;
@@ -2102,7 +2110,7 @@ input[type='range' i]::-webkit-slider-thumb {
 
 .media-preview {
   height: 180px;
-  background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+  background: linear-gradient(135deg, #000000 0%, #000000 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
