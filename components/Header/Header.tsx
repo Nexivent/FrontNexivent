@@ -48,12 +48,7 @@ const Header: React.FC<MergedHeaderProps> = ({ user, onMenuToggle }) => {
           >
             Recomendado
           </Link>
-          <Link
-            href='/tendencias'
-            className='text-white/70 text-sm hover:text-white/90 transition-colors'
-          >
-            Tendencias
-          </Link>
+          
           <Link
             href='/list?search=1'
             className='text-white hover:text-white/80 transition-colors'
