@@ -49,6 +49,49 @@ type OrganizerEventForm = {
   precios: PriceMatrix;
 };
 
+const organizerCategories: CategoryOption[] = [
+  {
+    id: 2,
+    name: 'Conciertos',
+    slug: 'conciertos',
+    description: 'Festivales, showcases y sesiones intimas de musica en vivo.',
+    color: '#f5a524',
+    icon: 'music_note',
+  },
+  {
+    id: 1,
+    name: 'Teatro y performance',
+    slug: 'teatro',
+    description: 'Obras independientes, musicales y puestas experimentales.',
+    color: '#9747ff',
+    icon: 'theater_comedy',
+  },
+  {
+    id: 3,
+    name: 'Conferencias',
+    slug: 'conferencias',
+    description: 'Charlas profesionales, workshops y meetups especializados.',
+    color: '#00b894',
+    icon: 'record_voice_over',
+  },
+  {
+    id: 4,
+    name: 'Deportes',
+    slug: 'deportes',
+    description: 'Eventos deportivos masivos y competencias locales.',
+    color: '#ff7675',
+    icon: 'stadium',
+  },
+  {
+    id: 5,
+    name: 'Experiencias gastronomicas',
+    slug: 'gastronomia',
+    description: 'Pop-ups, rutas de bares y experiencias culinarias.',
+    color: '#ff8d72',
+    icon: 'restaurant',
+  },
+];
+
 const defaultProfiles: Profile[] = [
   { id: 'adulto', label: 'Adulto' },
   { id: 'nino', label: 'Niño' },
@@ -104,7 +147,7 @@ const defaultPricePreset: PriceMatrix = {
 const createInitialForm = (): OrganizerEventForm => ({
   idEvento: 0,
   idOrganizador: 2,
-  idCategoria: 0,
+  idCategoria: organizerCategories[0]?.id ?? 0,
   titulo: '',
   descripcion: '',
   lugar: '',
@@ -127,6 +170,38 @@ const createInitialForm = (): OrganizerEventForm => ({
     defaultPricePreset
   ),
 });
+
+const EVENT_DRAFT_STORAGE_KEY = 'organizer-event-drafts';
+
+const persistDraftLocally = (draft: OrganizerEventForm): OrganizerEventForm => {
+  const normalized: OrganizerEventForm =
+    draft.idEvento === 0 ? { ...draft, idEvento: Date.now() } : { ...draft };
+
+  if (typeof window === 'undefined') {
+    return normalized;
+  }
+
+  try {
+    const storedRaw = window.localStorage.getItem(EVENT_DRAFT_STORAGE_KEY);
+    const storedDrafts: OrganizerEventForm[] = storedRaw
+      ? (JSON.parse(storedRaw) as OrganizerEventForm[])
+      : [];
+    const updatedDrafts = [
+      normalized,
+      ...storedDrafts.filter((event) => event.idEvento !== normalized.idEvento),
+    ].slice(0, 10);
+    window.localStorage.setItem(EVENT_DRAFT_STORAGE_KEY, JSON.stringify(updatedDrafts));
+  } catch (error) {
+    console.error('No se pudo guardar el borrador del evento en localStorage.', error);
+  }
+
+  return normalized;
+};
+
+const simulateDraftSync = async (draft: OrganizerEventForm) => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return persistDraftLocally(draft);
+};
 
 const mediaConfig: Record<
   MediaKey,
@@ -178,8 +253,8 @@ const normalizeIdentifier = (label: string, fallbackPrefix: string) => {
 };
 const EventCreator: React.FC = () => {
   const [form, setForm] = useState<OrganizerEventForm>(() => createInitialForm());
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [categoryStatus, setCategoryStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const categories = organizerCategories;
+  const categoryStatus: 'idle' = 'idle';
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
@@ -215,32 +290,6 @@ const EventCreator: React.FC = () => {
     videoUrl: false,
   });
 
-  useEffect(() => {
-    let mounted = true;
-    setCategoryStatus('loading');
-    fetch('/api/categories')
-      .then(async (response) => {
-        if (!response.ok) throw new Error('No se pudieron obtener las categorías');
-        return response.json();
-      })
-      .then((payload) => {
-        if (!mounted) return;
-        const data = (payload?.data ?? []) as CategoryOption[];
-        setCategories(data);
-        setCategoryStatus('idle');
-        if (data.length > 0) {
-          setForm((previous) =>
-            previous.idCategoria === 0 ? { ...previous, idCategoria: data[0].id } : previous
-          );
-        }
-      })
-      .catch(() => {
-        if (mounted) setCategoryStatus('error');
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     setForm((previous) =>
@@ -710,18 +759,11 @@ const EventCreator: React.FC = () => {
 
     setSavingState('saving');
     try {
-      console.log('Payload enviado:', JSON.stringify(payload));
-      const response = await fetch('http://localhost:8098/evento/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error('Error al guardar');
+      const savedDraft = await simulateDraftSync(payload);
+      console.log('Borrador sincronizado localmente:', savedDraft);
       setSavingState('success');
       setLastSavedAt(new Date().toISOString());
-      if (intentState && intentState !== form.estado) {
-        setForm((previous) => ({ ...previous, estado: intentState }));
-      }
+      setForm(savedDraft);
     } catch {
       setSavingState('error');
     } finally {
