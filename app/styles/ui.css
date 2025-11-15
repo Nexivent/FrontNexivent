@@ -1756,7 +1756,7 @@ input[type='range' i]::-webkit-slider-thumb {
   font-weight: 700;
   margin-bottom: 0.75rem;
   line-height: 1.2;
-  : #1e293b;
+  color: #1e293b;
 }
 
 .header-subtitle {

@@ -11,7 +11,7 @@ type Category = {
 
 const categories: Category[] = [
   {
-    id: 1,
+    id: 2,
     name: 'Conciertos',
     slug: 'conciertos',
     description: 'Festivales, showcases y sesiones íntimas de música en vivo.',
@@ -19,7 +19,7 @@ const categories: Category[] = [
     icon: 'music_note',
   },
   {
-    id: 2,
+    id: 1,
     name: 'Teatro y performance',
     slug: 'teatro',
     description: 'Obras independientes, musicales y puestas experimentales.',

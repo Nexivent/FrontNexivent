@@ -103,7 +103,7 @@ const defaultPricePreset: PriceMatrix = {
 
 const createInitialForm = (): OrganizerEventForm => ({
   idEvento: 0,
-  idOrganizador: 44,
+  idOrganizador: 2,
   idCategoria: 0,
   titulo: '',
   descripcion: '',
@@ -304,12 +304,8 @@ const EventCreator: React.FC = () => {
           date.horaFin.trim().length > 0
       );
 
-    const publishReady =
-      infoComplete &&
-      mediaComplete &&
-      ticketMatrixComplete &&
-      datesComplete &&
-      form.estado !== 'BORRADOR';
+    const publishReady = infoComplete && mediaComplete && ticketMatrixComplete && datesComplete;
+    const publishComplete = publishReady && form.estado !== 'BORRADOR';
 
     return {
       totalCapacity,
@@ -322,6 +318,7 @@ const EventCreator: React.FC = () => {
       entitiesReady,
       datesComplete,
       publishReady,
+      publishComplete,
     };
   }, [form]);
 
@@ -360,7 +357,7 @@ const EventCreator: React.FC = () => {
       id: 'publish',
       label: 'Listo para publicar',
       description: 'Estado distinto a borrador y validaciones completas.',
-      completed: stats.publishReady,
+      completed: stats.publishComplete,
     },
   ];
   const handleSectorCapacityChange = (sectorId: string, value: string) => {
@@ -713,7 +710,8 @@ const EventCreator: React.FC = () => {
 
     setSavingState('saving');
     try {
-      const response = await fetch('/api/organizer/events', {
+      console.log('Payload enviado:', JSON.stringify(payload));
+      const response = await fetch('http://localhost:8098/evento/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
