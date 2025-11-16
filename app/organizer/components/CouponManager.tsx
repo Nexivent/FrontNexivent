@@ -24,6 +24,8 @@ type OrganizerEventSummary = {
   titulo: string;
 };
 
+type FetchState = 'idle' | 'loading' | 'error';
+
 const createEmptyCoupon = (): CouponForm => {
   const today = new Date();
   const nextMonth = new Date(today);
@@ -44,121 +46,11 @@ const createEmptyCoupon = (): CouponForm => {
   };
 };
 
-const COUPON_STORAGE_KEY = 'organizer-coupons';
-const EVENT_DRAFT_STORAGE_KEY = 'organizer-event-drafts';
-
-const baseCoupons: CouponForm[] = [
-  {
-    idCupon: 801,
-    idEvento: 1024,
-    descripcion: '20% para los primeros fanaticos del showcase.',
-    tipo: 'PORCENTAJE',
-    activo: 1,
-    valor: 20,
-    codigo: 'SHOWCASE20',
-    uso_por_usuario: 2,
-    uso_realizados: 45,
-    fechaInicio: '2025-01-10',
-    fechaFin: '2025-02-10',
-  },
-  {
-    idCupon: 802,
-    idEvento: 1024,
-    descripcion: 'Monto fijo para clientes corporativos.',
-    tipo: 'MONTO',
-    activo: 1,
-    valor: 50,
-    codigo: 'CORP50',
-    uso_por_usuario: 5,
-    uso_realizados: 12,
-    fechaInicio: '2025-02-01',
-    fechaFin: '2025-03-30',
-  },
-  {
-    idCupon: 803,
-    idEvento: 2048,
-    descripcion: 'Preventa exclusiva para comunidad digital.',
-    tipo: 'PORCENTAJE',
-    activo: 0,
-    valor: 15,
-    codigo: 'COMMUNITY15',
-    uso_por_usuario: 1,
-    uso_realizados: 0,
-    fechaInicio: '2025-03-01',
-    fechaFin: '2025-04-15',
-  },
-];
-
-const baseEventSummaries: OrganizerEventSummary[] = [
-  { idEvento: 1024, titulo: 'Showcase de bandas indie' },
-  { idEvento: 2048, titulo: 'Festival gastronomico Lima Fusion' },
-  { idEvento: 4096, titulo: 'Conferencia de tecnologia FutureStack' },
-];
-
-const readStoredCollection = <T,>(key: string, fallback: T): T => {
-  if (typeof window === 'undefined') {
-    return fallback;
-  }
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (raw === null) return fallback;
-    return JSON.parse(raw) as T;
-  } catch (error) {
-    console.error(`No se pudo leer la clave ${key} desde localStorage.`, error);
-    return fallback;
-  }
-};
-
-const getStoredCoupons = () => readStoredCollection<CouponForm[]>(COUPON_STORAGE_KEY, baseCoupons);
-
-const getStoredEventOptions = (): OrganizerEventSummary[] => {
-  const fallback = baseEventSummaries;
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const raw = window.localStorage.getItem(EVENT_DRAFT_STORAGE_KEY);
-    const stored = raw ? (JSON.parse(raw) as Array<{ idEvento?: number; titulo?: string }>) : [];
-    const merged = new Map<number, string>();
-    fallback.forEach((event) => merged.set(event.idEvento, event.titulo));
-    stored.forEach((event) => {
-      if (typeof event.idEvento === 'number' && event.idEvento > 0) {
-        const title =
-          typeof event.titulo === 'string' && event.titulo.trim().length > 0
-            ? event.titulo
-            : `Evento #${event.idEvento}`;
-        merged.set(event.idEvento, title);
-      }
-    });
-    return Array.from(merged.entries()).map(([idEvento, titulo]) => ({ idEvento, titulo }));
-  } catch (error) {
-    console.error('No se pudieron leer los eventos almacenados.', error);
-    return fallback;
-  }
-};
-
-const persistCoupons = (collection: CouponForm[]) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(collection));
-  } catch (error) {
-    console.error('No se pudieron guardar los cupones.', error);
-  }
-};
-
-const normalizeCoupon = (coupon: CouponForm): CouponForm => {
-  const identifier = coupon.codigo.trim().length > 0 ? coupon.codigo.trim().toUpperCase() : null;
-  return {
-    ...coupon,
-    idCupon: coupon.idCupon ?? Date.now(),
-    codigo: identifier ?? `CUPON-${Date.now()}`,
-    valor: Math.max(0, coupon.valor),
-    uso_por_usuario: Math.max(1, coupon.uso_por_usuario),
-    activo: coupon.activo === 0 ? 0 : 1,
-  };
-};
-
 const CouponManager: React.FC = () => {
-  const [coupons, setCoupons] = useState<CouponForm[]>(() => getStoredCoupons());
-  const [events, setEvents] = useState<OrganizerEventSummary[]>(() => getStoredEventOptions());
+  const [coupons, setCoupons] = useState<CouponForm[]>([]);
+  const [events, setEvents] = useState<OrganizerEventSummary[]>([]);
+  const [fetchState, setFetchState] = useState<FetchState>('idle');
+  const [eventsState, setEventsState] = useState<FetchState>('idle');
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [selectedCouponId, setSelectedCouponId] = useState<number | null>(null);
   const [form, setForm] = useState<CouponForm>(() => createEmptyCoupon());
@@ -168,11 +60,50 @@ const CouponManager: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   useEffect(() => {
-    const refreshEvents = () => setEvents(getStoredEventOptions());
-    refreshEvents();
-    window.addEventListener('focus', refreshEvents);
+    let mounted = true;
+    setFetchState('loading');
+    fetch('/api/organizer/coupons')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('No se pudieron obtener los cupones');
+        return response.json();
+      })
+      .then((payload) => {
+        if (!mounted) return;
+        setCoupons(payload?.data ?? []);
+        setFetchState('idle');
+      })
+      .catch(() => {
+        if (mounted) setFetchState('error');
+      });
+
     return () => {
-      window.removeEventListener('focus', refreshEvents);
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    setEventsState('loading');
+    fetch('/api/organizer/events')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('No se pudieron obtener los eventos');
+        return response.json();
+      })
+      .then((payload) => {
+        if (!mounted) return;
+        const normalized: OrganizerEventSummary[] = (payload?.data ?? []).map((event: any) => ({
+          idEvento: event.idEvento,
+          titulo: event.titulo,
+        }));
+        setEvents(normalized);
+        setEventsState('idle');
+      })
+      .catch(() => {
+        if (mounted) setEventsState('error');
+      });
+
+    return () => {
+      mounted = false;
     };
   }, []);
 
@@ -241,29 +172,32 @@ const CouponManager: React.FC = () => {
     setFeedback(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      const savedCoupon = normalizeCoupon(form);
+      const response = await fetch('/api/organizer/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!response.ok) throw new Error('No se pudo guardar el cupón');
+
+      const payload = await response.json();
+      const savedCoupon = payload?.data as CouponForm;
       setCoupons((previous) => {
         const filtered = previous.filter((coupon) => coupon.idCupon !== savedCoupon.idCupon);
-        const updated = [savedCoupon, ...filtered];
-        persistCoupons(updated);
-        return updated;
+        return [savedCoupon, ...filtered];
       });
       setSelectedCouponId(savedCoupon.idCupon);
       setForm(savedCoupon);
       setSavingState('success');
-      setFeedback('Cupon guardado correctamente.');
+      setFeedback('Cupón guardado correctamente.');
     } catch {
       setSavingState('error');
-      setFeedback('No se pudo guardar el cupon. Intenta nuevamente.');
+      setFeedback('No se pudo guardar el cupón. Intenta nuevamente.');
     } finally {
       setTimeout(() => {
         setSavingState((current) => (current === 'success' ? 'idle' : current));
       }, 2500);
     }
   };
-
-
 
   return (
     <div className='organizer-builder coupons'>
@@ -317,7 +251,7 @@ const CouponManager: React.FC = () => {
                   const value = event.target.value;
                   setEventFilter(value === 'all' ? 'all' : Number(value));
                 }}
-                disabled={eventOptions.length === 0}
+                disabled={eventsState === 'loading'}
               >
                 <option value='all'>Todos los eventos</option>
                 {eventOptions.map((event) => (
@@ -341,7 +275,11 @@ const CouponManager: React.FC = () => {
             </label>
           </div>
 
-          {filteredCoupons.length === 0 ? (
+          {fetchState === 'loading' ? (
+            <p className='gray'>Cargando cupones...</p>
+          ) : fetchState === 'error' ? (
+            <p className='field-hint'>No se pudo obtener la data. Intenta nuevamente.</p>
+          ) : filteredCoupons.length === 0 ? (
             <p className='field-hint'>No hay cupones que coincidan con el filtro seleccionado.</p>
           ) : (
             <table className='coupon-table'>
@@ -452,9 +390,9 @@ const CouponManager: React.FC = () => {
                         ))
                       )}
                     </select>
-                    {eventOptions.length === 0 && (
+                    {eventsState === 'error' && (
                       <span className='field-hint'>
-                        No hay eventos registrados. Crea uno desde el módulo de Eventos.
+                        No pudimos cargar los eventos. Intenta recargar.
                       </span>
                     )}
                   </label>

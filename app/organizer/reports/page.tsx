@@ -57,146 +57,6 @@ const statusColor: Record<EventReport['estado'], string> = {
 
 const formatCurrency = (value: number) => `S/ ${value.toLocaleString()}`;
 
-const EVENT_DRAFT_STORAGE_KEY = 'organizer-event-drafts';
-
-const baseReports: EventReport[] = [
-  {
-    idEvento: 1024,
-    nombre: 'Showcase de bandas indie',
-    ubicacion: 'Teatro Canout',
-    capacidad: 800,
-    estado: 'EN_VENTA',
-    ingresosTotales: 90500,
-    ticketsVendidos: 640,
-    ventasPorTipo: [
-      { tipo: 'General', vendidos: 320, ingresos: 32000 },
-      { tipo: 'VIP', vendidos: 180, ingresos: 36000 },
-      { tipo: 'Preventa', vendidos: 110, ingresos: 14300 },
-      { tipo: 'Cortesia', vendidos: 30, ingresos: 0 },
-    ],
-    fechas: [
-      { idFechaEvento: 1, fecha: '2025-03-21', horaInicio: '18:00', horaFin: '22:30' },
-      { idFechaEvento: 2, fecha: '2025-03-22', horaInicio: '18:00', horaFin: '22:30' },
-    ],
-    cargosServicio: 5200,
-    comisiones: 3600,
-  },
-  {
-    idEvento: 2048,
-    nombre: 'Festival gastronomico Lima Fusion',
-    ubicacion: 'Parque de la Exposicion',
-    capacidad: 1200,
-    estado: 'AGOTADO',
-    ingresosTotales: 135400,
-    ticketsVendidos: 1200,
-    ventasPorTipo: [
-      { tipo: 'General', vendidos: 700, ingresos: 70000 },
-      { tipo: 'VIP', vendidos: 300, ingresos: 45000 },
-      { tipo: 'Preventa', vendidos: 150, ingresos: 19500 },
-      { tipo: 'Cortesia', vendidos: 50, ingresos: 0 },
-    ],
-    fechas: [
-      { idFechaEvento: 3, fecha: '2025-04-12', horaInicio: '12:00', horaFin: '23:30' },
-      { idFechaEvento: 4, fecha: '2025-04-13', horaInicio: '12:00', horaFin: '23:30' },
-    ],
-    cargosServicio: 8200,
-    comisiones: 6100,
-  },
-  {
-    idEvento: 4096,
-    nombre: 'Conferencia de tecnologia FutureStack',
-    ubicacion: 'Centro de Convenciones de Lima',
-    capacidad: 1500,
-    estado: 'EN_VENTA',
-    ingresosTotales: 60200,
-    ticketsVendidos: 480,
-    ventasPorTipo: [
-      { tipo: 'General', vendidos: 250, ingresos: 25000 },
-      { tipo: 'VIP', vendidos: 90, ingresos: 22500 },
-      { tipo: 'Early-bird', vendidos: 120, ingresos: 11000 },
-      { tipo: 'Cortesia', vendidos: 20, ingresos: 0 },
-    ],
-    fechas: [
-      { idFechaEvento: 5, fecha: '2025-05-05', horaInicio: '09:00', horaFin: '18:00' },
-      { idFechaEvento: 6, fecha: '2025-05-06', horaInicio: '09:00', horaFin: '18:00' },
-      { idFechaEvento: 7, fecha: '2025-05-07', horaInicio: '09:00', horaFin: '18:00' },
-    ],
-    cargosServicio: 3800,
-    comisiones: 2700,
-  },
-];
-
-const getReportEventOptions = (): Array<{ id: number; nombre: string }> => {
-  const fallback = Array.from(
-    new Map(baseReports.map((event) => [event.idEvento, event.nombre])).entries()
-  ).map(([id, nombre]) => ({ id, nombre }));
-
-  if (typeof window === 'undefined') {
-    return fallback;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(EVENT_DRAFT_STORAGE_KEY);
-    const stored = raw ? (JSON.parse(raw) as Array<{ idEvento?: number; titulo?: string }>) : [];
-    const merged = new Map<number, string>();
-    fallback.forEach((event) => merged.set(event.id, event.nombre));
-    stored.forEach((event) => {
-      if (typeof event.idEvento === 'number' && event.idEvento > 0) {
-        const title =
-          typeof event.titulo === 'string' && event.titulo.trim().length > 0
-            ? event.titulo
-            : `Evento #${event.idEvento}`;
-        merged.set(event.idEvento, title);
-      }
-    });
-    return Array.from(merged.entries()).map(([id, nombre]) => ({ id, nombre }));
-  } catch (error) {
-    console.error('No se pudieron leer los eventos almacenados para reportes.', error);
-    return fallback;
-  }
-};
-
-const getReportData = (
-  start?: string,
-  end?: string,
-  eventId: 'all' | number = 'all'
-): ReportResponse => {
-  let eventos = [...baseReports];
-
-  if (start !== undefined || end !== undefined) {
-    eventos = eventos.filter((event) =>
-      event.fechas.some((date) => {
-        const dateValue = new Date(date.fecha).getTime();
-        const afterStart = start === undefined ? true : dateValue >= new Date(start).getTime();
-        const beforeEnd = end === undefined ? true : dateValue <= new Date(end).getTime();
-        return afterStart && beforeEnd;
-      })
-    );
-  }
-
-  if (eventId !== 'all') {
-    eventos = eventos.filter((event) => event.idEvento === eventId);
-  }
-
-  const resumen = {
-    eventosActivos: eventos.filter((event) => event.estado === 'EN_VENTA').length,
-    ingresosTotales: eventos.reduce((sum, event) => sum + event.ingresosTotales, 0),
-    ticketsVendidos: eventos.reduce((sum, event) => sum + event.ticketsVendidos, 0),
-    promedioOcupacion:
-      eventos.length === 0
-        ? 0
-        : Math.round(
-            (eventos.reduce((sum, event) => sum + event.ticketsVendidos / event.capacidad, 0) /
-              eventos.length) *
-              100
-          ),
-  };
-
-  return { resumen, eventos };
-};
-
-const simulateReportDelay = () => new Promise((resolve) => setTimeout(resolve, 350));
-
 const ReportsDashboard: React.FC = () => {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [events, setEvents] = useState<EventReport[]>([]);
@@ -205,28 +65,32 @@ const ReportsDashboard: React.FC = () => {
     end: '',
     event: 'all',
   });
-  const [eventOptions, setEventOptions] = useState<Array<{ id: number; nombre: string }>>(
-    () => getReportEventOptions()
-  );
+  const [eventOptions, setEventOptions] = useState<Array<{ id: number; nombre: string }>>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
-
-  useEffect(() => {
-    const refreshOptions = () => setEventOptions(getReportEventOptions());
-    refreshOptions();
-    window.addEventListener('focus', refreshOptions);
-    return () => {
-      window.removeEventListener('focus', refreshOptions);
-    };
-  }, []);
 
   const fetchReports = useCallback(
     async (start?: string, end?: string, eventId: 'all' | number = 'all') => {
       try {
         setStatus('loading');
-        await simulateReportDelay();
-        const data = getReportData(start, end, eventId);
+        const params = new URLSearchParams();
+        if (start) params.set('start', start);
+        if (end) params.set('end', end);
+        if (eventId !== 'all') params.set('eventId', String(eventId));
+        const response = await fetch(
+          `/api/organizer/reports${params.size > 0 ? `?${params.toString()}` : ''}`
+        );
+        if (!response.ok) throw new Error('No se pudieron obtener los reportes');
+        const data = (await response.json()) as ReportResponse;
         setSummary(data.resumen);
         setEvents(data.eventos);
+        setEventOptions((previous) => {
+          const merged = new Map<number, string>();
+          [
+            ...previous,
+            ...data.eventos.map((event) => ({ id: event.idEvento, nombre: event.nombre })),
+          ].forEach((entry) => merged.set(entry.id, entry.nombre));
+          return Array.from(merged, ([id, nombre]) => ({ id, nombre }));
+        });
         setStatus('idle');
       } catch {
         setStatus('error');
