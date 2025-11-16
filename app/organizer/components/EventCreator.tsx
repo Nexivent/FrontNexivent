@@ -160,13 +160,28 @@ const formatCurrency = (value: number) =>
 const formatSize = (size: number | null) =>
   size !== null ? `${(size / 1024).toFixed(1)} KB` : undefined;
 
-const readFileAsDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result?.toString() ?? '');
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+const getApiBaseUrl = () => (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
+
+const buildUploadUrl = (path: string) => {
+  const base = getApiBaseUrl();
+  if (base.length === 0) {
+    throw new Error('Configura NEXT_PUBLIC_API_URL para subir archivos.');
+  }
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${normalizedPath}`;
+};
+
+const resolveMediaPreviewUrl = (value: string) => {
+  if (value.trim().length === 0) return '';
+  if (/^https?:\/\//i.test(value)) return value;
+  const previewBase = (
+    process.env.NEXT_PUBLIC_UPLOAD_BASE_URL ??
+    process.env.NEXT_PUBLIC_CDN_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    ''
+  ).replace(/\/+$/, '');
+  return previewBase.length > 0 ? `${previewBase}/${value.replace(/^\/+/, '')}` : value;
+};
 
 const normalizeIdentifier = (label: string, fallbackPrefix: string) => {
   const slug = label
@@ -638,14 +653,47 @@ const EventCreator: React.FC = () => {
   const handleMediaUpload = async (key: MediaKey, file: File | null | undefined) => {
     if (!file) return;
     setMediaUploading((previous) => ({ ...previous, [key]: true }));
+    setMediaMeta((previous) => ({ ...previous, [key]: { name: file.name, size: file.size } }));
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      setForm((previous) => ({ ...previous, [key]: dataUrl }));
-      setMediaMeta((previous) => ({ ...previous, [key]: { name: file.name, size: file.size } }));
-    } catch {
+      const uploadEndpoint = buildUploadUrl('/media/upload-url');
+      const presignResponse = await fetch(uploadEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type }),
+      });
+
+      if (!presignResponse.ok) {
+        throw new Error('No se pudo obtener el URL prefirmado.');
+      }
+
+      const presign = (await presignResponse.json()) as { uploadUrl?: string; key?: string };
+
+      if (typeof presign.uploadUrl !== 'string' || typeof presign.key !== 'string') {
+        throw new Error('Respuesta invalida del servicio de carga.');
+      }
+
+      const uploadResponse = await fetch(presign.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Error subiendo el archivo a S3.');
+      }
+
+      setForm((previous) => ({ ...previous, [key]: presign.key }));
+    } catch (error) {
+      console.error('Error subiendo archivo', error);
       setMediaMeta((previous) => ({
         ...previous,
-        [key]: { name: 'Error al procesar el archivo', size: null },
+        [key]: {
+          name:
+            error instanceof Error
+              ? error.message
+              : 'No se pudo subir el archivo. Intenta nuevamente.',
+          size: null,
+        },
       }));
     } finally {
       setMediaUploading((previous) => ({ ...previous, [key]: false }));
@@ -946,55 +994,58 @@ const EventCreator: React.FC = () => {
                 <h3>Medios subidos</h3>
               </div>
               <div className='media-upload-grid'>
-                {mediaKeys.map((key) => (
-                  <div key={key} className='media-upload-card'>
-                    <div
-                      className={`media-preview ${key === 'videoUrl' ? 'video' : ''}`}
-                      style={
-                        key !== 'videoUrl' && form[key].trim().length > 0
-                          ? { backgroundImage: `url(${form[key]})` }
-                          : undefined
-                      }
-                    >
-                      <span className='material-symbols-outlined'>{mediaConfig[key].icon}</span>
-                      <p>
-                        {form[key].trim().length > 0
-                          ? 'Contenido listo'
-                          : 'Aún no has cargado un archivo'}
-                      </p>
-                    </div>
-                    <div className='media-upload-controls'>
-                      <label className='upload-trigger'>
+                {mediaKeys.map((key) => {
+                  const previewUrl = resolveMediaPreviewUrl(form[key]);
+                  return (
+                    <div key={key} className='media-upload-card'>
+                      <div
+                        className={`media-preview ${key === 'videoUrl' ? 'video' : ''}`}
+                        style={
+                          key !== 'videoUrl' && previewUrl.trim().length > 0
+                            ? { backgroundImage: `url(${previewUrl})` }
+                            : undefined
+                        }
+                      >
+                        <span className='material-symbols-outlined'>{mediaConfig[key].icon}</span>
+                        <p>
+                          {form[key].trim().length > 0
+                            ? 'Contenido listo'
+                            : 'Aun no has cargado un archivo'}
+                        </p>
+                      </div>
+                      <div className='media-upload-controls'>
+                        <label className='upload-trigger'>
+                          <input
+                            type='file'
+                            accept={mediaConfig[key].accept}
+                            onChange={(event) => {
+                              void handleMediaUpload(key, event.target.files?.[0]);
+                              event.currentTarget.value = '';
+                            }}
+                          />
+                          <span>Cargar archivo</span>
+                        </label>
                         <input
-                          type='file'
-                          accept={mediaConfig[key].accept}
-                          onChange={(event) => {
-                            void handleMediaUpload(key, event.target.files?.[0]);
-                            event.currentTarget.value = '';
-                          }}
+                          className='input-text'
+                          type='text'
+                          value={form[key]}
+                          placeholder='O pega un enlace publico'
+                          onChange={(event) => handleMediaUrlChange(key, event.target.value)}
                         />
-                        <span>Cargar archivo</span>
-                      </label>
-                      <input
-                        className='input-text'
-                        type='text'
-                        value={form[key]}
-                        placeholder='O pega un enlace público'
-                        onChange={(event) => handleMediaUrlChange(key, event.target.value)}
-                      />
-                      <span className='field-hint'>{mediaConfig[key].helper}</span>
-                      <div className='media-meta'>
-                        {mediaUploading[key]
-                          ? 'Procesando archivo...'
-                          : (mediaMeta[key].name ??
-                            'Sin archivo adjunto (se permite sólo enlace o archivo)')}
-                        {mediaMeta[key].size !== null && (
-                          <span className='media-size'>{formatSize(mediaMeta[key].size)}</span>
-                        )}
+                        <span className='field-hint'>{mediaConfig[key].helper}</span>
+                        <div className='media-meta'>
+                          {mediaUploading[key]
+                            ? 'Procesando archivo...'
+                            : (mediaMeta[key].name ??
+                              'Sin archivo adjunto (se permite solo enlace o archivo)')}
+                          {mediaMeta[key].size !== null && (
+                            <span className='media-size'>{formatSize(mediaMeta[key].size)}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
             <section className='organizer-panel'>
@@ -1334,3 +1385,4 @@ const EventCreator: React.FC = () => {
 };
 
 export default EventCreator;
+
