@@ -60,24 +60,24 @@ const TicketCard: React.FC<IProps> = ({
     </Link>
     <div className='card-buttons'>
       <button
-  className={`button ${color}`}
-  onClick={async () => {
-    const res = await fetch(
-  `/api/tickets/download?eventName=${encodeURIComponent(eventName)}&eventWhen=${encodeURIComponent(eventWhen)}&eventVenue=${encodeURIComponent(eventVenue)}`
-);
+        className={`button ${color}`}
+        onClick={async () => {
+          const res = await fetch(
+            `/api/tickets/download?eventName=${encodeURIComponent(eventName)}&eventWhen=${encodeURIComponent(eventWhen)}&eventVenue=${encodeURIComponent(eventVenue)}`
+          );
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${eventName}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }}
->
-  <span className='material-symbols-outlined'>download</span>
-  Descargar
-</button>
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${eventName}.pdf`;
+          link.click();
+          URL.revokeObjectURL(url);
+        }}
+      >
+        <span className='material-symbols-outlined'>download</span>
+        Descargar
+      </button>
       <Link href={sendUrl} className={`button ${color}-overlay`}>
         <span className='material-symbols-outlined'>forward_to_inbox</span>
         Enviar

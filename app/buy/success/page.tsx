@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@contexts/UserContext';
 
 // components
 import Master from '@components/Layout/Master';
@@ -20,17 +21,24 @@ interface TicketsData {
   tickets: TicketInfo[];
   orderId: string;
   timestamp: number;
+  eventName?: string;
+  eventDate?: string;
+  eventVenue?: string;
 }
 
 const Page: React.FC = () => {
   const router = useRouter();
+  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [ticketsData, setTicketsData] = useState<TicketsData | null>(null);
+
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState('');
 
   useEffect(() => {
     // Recuperar datos de los tickets
     const storedData = sessionStorage.getItem('ticketsData');
-    
+
     if (storedData) {
       try {
         const data: TicketsData = JSON.parse(storedData);
@@ -39,6 +47,15 @@ const Page: React.FC = () => {
       } catch (error) {
         console.error('Error parsing tickets data:', error);
       }
+    } else {
+      setTicketsData({
+        orderId: 'ORD-SIMULADO-XYZ',
+        tickets: [{ idTicket: 'TICKET-SIM-001', codigoQR: 'QR-SIMULADO-XYZ', estado: 'activo' }],
+        timestamp: Date.now(),
+        eventName: 'Concierto de Prueba',
+        eventDate: 'Mañana por la noche',
+        eventVenue: 'Estadio Virtual',
+      });
     }
 
     // Limpiar sessionStorage
@@ -58,7 +75,46 @@ const Page: React.FC = () => {
   const handleViewTickets = () => {
     // Navegar a página de "Mis Entradas"
     // Ajusta la ruta según tu estructura
-    router.push('/members/account/tickets'); 
+    router.push('/members/account/tickets');
+  };
+
+  const handleSendEmail = async () => {
+    if (!ticketsData) {
+      setEmailStatus('Error: No se encontraron datos de la compra.');
+      return;
+    }
+
+    setIsSendingEmail(true);
+    setEmailStatus('Enviando...');
+
+    try {
+      const payload = {
+        eventDate: ticketsData.timestamp,
+        eventName: ticketsData.eventName || 'Evento',
+        eventVenue: ticketsData.eventVenue || 'Lugar',
+        orderId: ticketsData.orderId,
+        userEmail: user.correo,
+        userName: user.nombre,
+      };
+
+      const response = await fetch('/api/tickets/sendEmail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'El servidor respondió con un error.');
+      }
+
+      setEmailStatus('¡Correo enviado con éxito a tu dirección registrada!');
+    } catch (error: any) {
+      console.error('Error al enviar el correo:', error);
+      setEmailStatus('Error al enviar el correo. Por favor, intenta de nuevo.');
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   if (loading) {
@@ -88,16 +144,16 @@ const Page: React.FC = () => {
 
             {/* Mensaje */}
             <div className='success-message'>
-              <p>
-                ¡Tu compra se ha procesado correctamente!
-              </p>
+              <p>¡Tu compra se ha procesado correctamente!</p>
               {ticketsData && ticketsData.tickets && ticketsData.tickets.length > 0 && (
                 <p>
-                  Se generaron <strong>{ticketsData.tickets.length} ticket(s)</strong> con código QR único.
+                  Se generaron <strong>{ticketsData.tickets.length} ticket(s)</strong> con código QR
+                  único.
                 </p>
               )}
               <p>
-                Puedes ver y descargar tus entradas en la sección <strong>"Mis entradas"</strong> de tu perfil.
+                Puedes ver y descargar tus entradas en la sección <strong>"Mis entradas"</strong> de
+                tu perfil.
               </p>
             </div>
 
@@ -120,6 +176,14 @@ const Page: React.FC = () => {
 
             {/* Botones */}
             <div className='form-buttons'>
+              <Button
+                type='button'
+                color='yellow-filled'
+                text={isSendingEmail ? 'Enviando...' : 'Enviar entradas a mi correo'}
+                onClick={handleSendEmail}
+                disabled={isSendingEmail}
+                leftIcon='forward_to_inbox'
+              />
               <Button
                 type='button'
                 color='yellow-filled'
@@ -253,6 +317,11 @@ const Page: React.FC = () => {
           .info-box {
             padding: 1rem;
           }
+        }
+        .email-status-message {
+          margin-top: 1rem;
+          color: #cddc39;
+          font-weight: 500;
         }
       `}</style>
     </Master>
