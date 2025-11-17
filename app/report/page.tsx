@@ -4,46 +4,12 @@ import Heading from "@components/Heading/Heading";
 import Master from "../../components/Layout/Master";
 import { useRouter } from "next/navigation";
 
-const mockData = {
-  events: [
-    {
-      idEvento: 1,
-      titulo: "Concierto de Rock",
-      categoria: "Música",
-      lugar: "Estadio Nacional",
-      estado: "PUBLICADO",
-      fechaInicio: "2025-11-01",
-      fechaFin: "2025-11-03",
-      entradasVendidas: 5000,
-      recaudacionTotal: 25000,
-    },
-    {
-      idEvento: 2,
-      titulo: "Feria Gastronómica",
-      categoria: "Gastronomía",
-      lugar: "Parque de la Exposición",
-      estado: "CANCELADO",
-      fechaInicio: "2025-10-15",
-      fechaFin: "2025-10-16",
-      entradasVendidas: 2000,
-      recaudacionTotal: 8000,
-    },
-    {
-      idEvento: 3,
-      titulo: "Taller de Software",
-      categoria: "Educación",
-      lugar: "Centro de Innovación",
-      estado: "BORRADOR",
-      fechaInicio: "2025-12-01",
-      fechaFin: "2025-12-03",
-      entradasVendidas: 150,
-      recaudacionTotal: 900,
-    },
-  ],
-};
+const API_URL = "https://tu-backend.com/api";
+
 
 export default function ReportPage() {
   const router = useRouter();
+
   const [filters, setFilters] = useState({
     fechaInicio: "",
     fechaFin: "",
@@ -61,13 +27,51 @@ export default function ReportPage() {
   });
   const [filteredData, setFilteredData] = useState<any[]>([]);
 
-  // 🔹 Generar reporte (simula llamada al backend)
-  const handleGenerate = () => {
-    console.log("Información recibida:", filters);
-    setData(mockData.events.slice(0, filters.limit)); // aplica el limit
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [reportData, setReportData] = useState<any>(null);
+
+  // 🔹 Generar reporte → Llamada real al backend
+const handleGenerate = async () => {
+  setLoading(true);
+  setError("");
+  setReportData(null);
+
+  const payload = {
+    fechaInicio: filters.fechaInicio ? new Date(filters.fechaInicio).toISOString() : null,
+    fechaFin: filters.fechaFin ? new Date(filters.fechaFin).toISOString() : null,
+    idOrganizador: filters.idOrganizador ? Number(filters.idOrganizador) : null,
+    idCategoria: filters.idCategoria ? Number(filters.idCategoria) : null,
+    estado: filters.estado || null,
+    limit: Number(filters.limit),
   };
 
-  // 🔹 Filtros principales (antes de generar)
+  console.log("📤 JSON enviado al backend:", payload); // 👀 Verificar antes de enviar
+
+  try {
+    const response = await fetch("https://mi-backend.com/api/reportes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error("Error en la respuesta");
+
+    const data = await response.json();
+    console.log("📥 Respuesta recibida:", data);
+
+    setReportData(data.events);
+  } catch (err) {
+    console.error(err);
+    setError("Error al generar el reporte (backend no disponible).");
+  }
+
+  setLoading(false);
+};
+
+  // 🔹 Manejo de cambios filtros principales (antes del fetch)
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -75,7 +79,7 @@ export default function ReportPage() {
     setFilters({ ...filters, [name]: name === "limit" ? Number(value) : value });
   };
 
-  // 🔹 Filtros secundarios (para tabla ya generada)
+  // 🔹 Manejo filtros secundarios (filtro local)
   const handleTableChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -105,221 +109,227 @@ export default function ReportPage() {
   }, [data, tableFilters]);
 
   return (
-    
-  <Master>
-    <div className="min-h-screen bg-black text-white pt-20 pb-10">
-      <section className="container mx-auto px-6 space-y-8">
-        {/* 🧭 Encabezado */}
-        <div className="text-center">
-          <Heading type={1} color="gray" text="Reporte" />
-          <p className="text-gray-400 mt-2">
-            Genera y filtra tus reportes según fechas, categoría u organizador.
-          </p>
-          {/* 🔙 Botón para volver */}
-            <button
-            onClick={() => router.push("/dashboards")}
-            className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
-            >
-            ir a dashboards
-            </button>
-        </div>
-
-        {/* 🧮 Barra de generación de reporte */}
-        <div className="bg-gray-800 shadow rounded-lg p-4 flex flex-wrap gap-3 items-end">
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Fecha inicio
-            </label>
-            <input
-              type="date"
-              name="fechaInicio"
-              value={filters.fechaInicio}
-              onChange={handleChange}
-              className="border border-gray-600 bg-gray-900 text-white rounded p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Fecha fin
-            </label>
-            <input
-              type="date"
-              name="fechaFin"
-              value={filters.fechaFin}
-              onChange={handleChange}
-              className="border border-gray-600 bg-gray-900 text-white rounded p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Categoría
-            </label>
-            <input
-              type="text"
-              name="idCategoria"
-              placeholder="ID categoría"
-              value={filters.idCategoria}
-              onChange={handleChange}
-              className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-32"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Organizador
-            </label>
-            <input
-              type="text"
-              name="idOrganizador"
-              placeholder="ID organizador"
-              value={filters.idOrganizador}
-              onChange={handleChange}
-              className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-32"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Estado
-            </label>
-            <select
-              name="estado"
-              value={filters.estado}
-              onChange={handleChange}
-              className="border border-gray-600 bg-gray-900 text-white rounded p-2"
-            >
-              <option value="">Todos</option>
-              <option value="PUBLICADO">Publicado</option>
-              <option value="CANCELADO">Cancelado</option>
-              <option value="BORRADOR">Borrador</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Límite
-            </label>
-            <input
-              type="number"
-              name="limit"
-              min="1"
-              value={filters.limit}
-              onChange={handleChange}
-              className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-24"
-            />
-          </div>
-
-          <button
-            onClick={handleGenerate}
-            className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-4 py-2 rounded transition"
-          >
-            Generar reporte
-          </button>
-        </div>
-
-        {/* 🔍 Barra de filtros secundarios */}
-        <div className="bg-gray-700 shadow rounded-lg p-4 flex flex-wrap gap-3 items-end">
-          <div>
-            <label className="block text-sm font-medium text-gray-200">
-              Fecha inicio
-            </label>
-            <input
-              type="date"
-              name="fechaInicio"
-              value={tableFilters.fechaInicio}
-              onChange={handleTableChange}
-              className="border border-gray-500 bg-gray-900 text-white rounded p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-200">
-              Fecha fin
-            </label>
-            <input
-              type="date"
-              name="fechaFin"
-              value={tableFilters.fechaFin}
-              onChange={handleTableChange}
-              className="border border-gray-500 bg-gray-900 text-white rounded p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-200">
-              Estado
-            </label>
-            <select
-              name="estado"
-              value={tableFilters.estado}
-              onChange={handleTableChange}
-              className="border border-gray-500 bg-gray-900 text-white rounded p-2"
-            >
-              <option value="">Todos</option>
-              <option value="PUBLICADO">Publicado</option>
-              <option value="CANCELADO">Cancelado</option>
-              <option value="BORRADOR">Borrador</option>
-            </select>
-          </div>
-        </div>
-
-        {/* 📊 Tabla de resultados */}
-        <div className="bg-gray-900 shadow rounded-lg overflow-x-auto">
-          {filteredData.length === 0 ? (
-            <p className="text-center text-gray-400 py-6">
-              No hay datos para mostrar.
+    <Master>
+      <div className="min-h-screen bg-black text-white pt-20 pb-10">
+        <section className="container mx-auto px-6 space-y-8">
+          {/* 🧭 Encabezado */}
+          <div className="text-center">
+            <Heading type={1} color="gray" text="Reporte" />
+            <p className="text-gray-400 mt-2">
+              Genera y filtra tus reportes según fechas, categoría u organizador.
             </p>
-          ) : (
-            <table className="min-w-full border-collapse text-sm">
-              <thead className="bg-yellow-500 text-black border-b border-white/30">
-                <tr>
-                  <th className="border border-white/30 p-3 text-left">ID</th>
-                  <th className="border border-white/30 p-3 text-left">Título</th>
-                  <th className="border border-white/30 p-3 text-left">Categoría</th>
-                  <th className="border border-white/30 p-3 text-left">Lugar</th>
-                  <th className="border border-white/30 p-3 text-left">Estado</th>
-                  <th className="border border-white/30 p-3 text-left">Inicio</th>
-                  <th className="border border-white/30 p-3 text-left">Fin</th>
-                  <th className="border border-white/30 p-3 text-right">Entradas</th>
-                  <th className="border border-white/30 p-3 text-right">
-                    Recaudación
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/30">
-                {filteredData.map((ev) => (
-                  <tr
-                    key={ev.idEvento}
-                    className="hover:bg-white/10 hover:text-white transition-colors duration-150"
-                  >
-                    <td className="border border-white/30 p-3">{ev.idEvento}</td>
-                    <td className="border border-white/30 p-3">{ev.titulo}</td>
-                    <td className="border border-white/30 p-3">{ev.categoria}</td>
-                    <td className="border border-white/30 p-3">{ev.lugar}</td>
-                    <td className="border border-white/30 p-3">{ev.estado}</td>
-                    <td className="border border-white/30 p-3">
-                      {new Date(ev.fechaInicio).toLocaleDateString("es-PE")}
-                    </td>
-                    <td className="border border-white/30 p-3">
-                      {new Date(ev.fechaFin).toLocaleDateString("es-PE")}
-                    </td>
-                    <td className="border border-white/30 p-3 text-right">
-                      {ev.entradasVendidas.toLocaleString()}
-                    </td>
-                    <td className="border border-white/30 p-3 text-right">
-                      ${ev.recaudacionTotal.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </section>
-    </div>
-  </Master>
-);
 
+            {/* 🔙 Botón para volver */}
+            <button
+              onClick={() => router.push("/dashboards")}
+              className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
+            >
+              ir a dashboards
+            </button>
+          </div>
+
+          {/* 🧮 Barra de generación de reporte */}
+          <div className="bg-gray-800 shadow rounded-lg p-4 flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Fecha inicio
+              </label>
+              <input
+                type="date"
+                name="fechaInicio"
+                value={filters.fechaInicio}
+                onChange={handleChange}
+                className="border border-gray-600 bg-gray-900 text-white rounded p-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Fecha fin
+              </label>
+              <input
+                type="date"
+                name="fechaFin"
+                value={filters.fechaFin}
+                onChange={handleChange}
+                className="border border-gray-600 bg-gray-900 text-white rounded p-2"
+              />
+            </div>
+
+            <div>
+  <label className="block text-sm font-medium text-gray-300">
+    Categoría
+  </label>
+  <select
+    name="idCategoria"
+    value={filters.idCategoria}
+    onChange={handleChange}
+    className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-40"
+  >
+    <option value="">Todas</option>
+    <option value="1">Conciertos</option>
+    <option value="2">Ferias y Expos</option>
+    <option value="3">Teatro</option>
+    <option value="4">Gastronomía</option>
+    <option value="5">Deportes</option>
+    {/* Puedes añadir más categorías según tu BD */}
+  </select>
+</div>
+
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Organizador
+              </label>
+              <input
+                type="text"
+                name="idOrganizador"
+                placeholder="ID organizador"
+                value={filters.idOrganizador}
+                onChange={handleChange}
+                className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-32"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Estado
+              </label>
+              <select
+                name="estado"
+                value={filters.estado}
+                onChange={handleChange}
+                className="border border-gray-600 bg-gray-900 text-white rounded p-2"
+              >
+                <option value="">Todos</option>
+                <option value="PUBLICADO">Publicado</option>
+                <option value="CANCELADO">Cancelado</option>
+                <option value="BORRADOR">Borrador</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Límite
+              </label>
+              <input
+                type="number"
+                name="limit"
+                min="1"
+                value={filters.limit}
+                onChange={handleChange}
+                className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-24"
+              />
+            </div>
+
+            <button
+              onClick={handleGenerate}
+              className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-4 py-2 rounded transition"
+            >
+              Generar reporte
+            </button>
+          </div>
+
+          {/* 🔍 Barra de filtros secundarios */}
+          <div className="bg-gray-700 shadow rounded-lg p-4 flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-200">
+                Fecha inicio
+              </label>
+              <input
+                type="date"
+                name="fechaInicio"
+                value={tableFilters.fechaInicio}
+                onChange={handleTableChange}
+                className="border border-gray-500 bg-gray-900 text-white rounded p-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-200">
+                Fecha fin
+              </label>
+              <input
+                type="date"
+                name="fechaFin"
+                value={tableFilters.fechaFin}
+                onChange={handleTableChange}
+                className="border border-gray-500 bg-gray-900 text-white rounded p-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-200">
+                Estado
+              </label>
+              <select
+                name="estado"
+                value={tableFilters.estado}
+                onChange={handleTableChange}
+                className="border border-gray-500 bg-gray-900 text-white rounded p-2"
+              >
+                <option value="">Todos</option>
+                <option value="PUBLICADO">Publicado</option>
+                <option value="CANCELADO">Cancelado</option>
+                <option value="BORRADOR">Borrador</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 📊 Tabla de resultados */}
+          <div className="bg-gray-900 shadow rounded-lg overflow-x-auto">
+            {filteredData.length === 0 ? (
+              <p className="text-center text-gray-400 py-6">
+                No hay datos para mostrar.
+              </p>
+            ) : (
+              <table className="min-w-full border-collapse text-sm">
+                <thead className="bg-yellow-500 text-black border-b border-white/30">
+                  <tr>
+                    <th className="border border-white/30 p-3 text-left">ID</th>
+                    <th className="border border-white/30 p-3 text-left">Título</th>
+                    <th className="border border-white/30 p-3 text-left">Categoría</th>
+                    <th className="border border-white/30 p-3 text-left">Lugar</th>
+                    <th className="border border-white/30 p-3 text-left">Estado</th>
+                    <th className="border border-white/30 p-3 text-left">Inicio</th>
+                    <th className="border border-white/30 p-3 text-left">Fin</th>
+                    <th className="border border-white/30 p-3 text-right">Entradas</th>
+                    <th className="border border-white/30 p-3 text-right">
+                      Recaudación
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/30">
+                  {filteredData.map((ev) => (
+                    <tr
+                      key={ev.idEvento}
+                      className="hover:bg-white/10 hover:text-white transition-colors duration-150"
+                    >
+                      <td className="border border-white/30 p-3">{ev.idEvento}</td>
+                      <td className="border border-white/30 p-3">{ev.titulo}</td>
+                      <td className="border border-white/30 p-3">{ev.categoria}</td>
+                      <td className="border border-white/30 p-3">{ev.lugar}</td>
+                      <td className="border border-white/30 p-3">{ev.estado}</td>
+                      <td className="border border-white/30 p-3">
+                        {new Date(ev.fechaInicio).toLocaleDateString("es-PE")}
+                      </td>
+                      <td className="border border-white/30 p-3">
+                        {new Date(ev.fechaFin).toLocaleDateString("es-PE")}
+                      </td>
+                      <td className="border border-white/30 p-3 text-right">
+                        {ev.entradasVendidas.toLocaleString()}
+                      </td>
+                      <td className="border border-white/30 p-3 text-right">
+                        ${ev.recaudacionTotal.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+      </div>
+    </Master>
+  );
 }
