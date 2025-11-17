@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Heading from '@components/Heading/Heading';
+import { useRouter } from 'next/navigation';
 
 interface User {
   idUsuario: number;
@@ -214,6 +215,7 @@ const styles = {
 };
 
 export default function UsersManagement() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -446,14 +448,22 @@ export default function UsersManagement() {
     <div style={styles.container}>
       <div style={styles.header}>
         <Heading type={2} color='white' text='Gestión de Usuarios y Roles' />
-
         <div>
           <select
             style={styles.filterSelect}
             value={selectedRoleFilter}
-            onChange={(e) => setSelectedRoleFilter(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'transactions') {
+                void router.push('/administrator/transactions');
+                setSelectedRoleFilter('');
+                return;
+              }
+              setSelectedRoleFilter(v);
+            }}
           >
             <option value=''>Todos los usuarios</option>
+            <option value='transactions'>Ver transacciones</option>
             {availableRoles.map((role) => (
               <option key={role.idRol} value={role.idRol.toString()}>
                 Usuarios con rol: {role.nombre}
