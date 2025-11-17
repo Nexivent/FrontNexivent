@@ -24,26 +24,22 @@ const MOCK_USERS: User[] = [
     nombre: 'Juan Pérez',
     correo: 'juan@email.com',
     estado: 'activo',
-    roles: [
-      { idRol: 2, nombre: 'Organizador' }
-    ]
+    roles: [{ idRol: 2, nombre: 'Organizador' }],
   },
   {
     idUsuario: 2,
     nombre: 'María García',
     correo: 'maria@email.com',
     estado: 'activo',
-    roles: [
-      { idRol: 1, nombre: 'Usuario' }
-    ]
+    roles: [{ idRol: 1, nombre: 'Usuario' }],
   },
   {
     idUsuario: 3,
     nombre: 'Pedro López',
     correo: 'pedro@email.com',
     estado: 'inactivo',
-    roles: []
-  }
+    roles: [],
+  },
 ];
 
 const MOCK_ROLES: Role[] = [
@@ -54,7 +50,12 @@ const MOCK_ROLES: Role[] = [
 
 const styles = {
   container: { maxWidth: '1400px' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '30px',
+  },
   filterSelect: {
     padding: '12px 20px',
     border: '2px solid #cddc39',
@@ -64,13 +65,13 @@ const styles = {
     fontSize: '14px',
     minWidth: '250px',
     cursor: 'pointer',
-    fontWeight: 600
+    fontWeight: 600,
   },
   tableContainer: {
     background: '#1a1a1a',
     borderRadius: '12px',
     overflow: 'hidden',
-    border: '1px solid #333'
+    border: '1px solid #333',
   },
   table: { width: '100%', borderCollapse: 'collapse' as const },
   th: {
@@ -79,7 +80,7 @@ const styles = {
     fontWeight: 600,
     borderBottom: '2px solid #333',
     backgroundColor: '#0a0a0a',
-    color: 'white'
+    color: 'white',
   },
   td: { padding: '16px', borderBottom: '1px solid #333', color: '#ccc' },
   statusBadge: (estado: string) => ({
@@ -89,7 +90,7 @@ const styles = {
     fontWeight: 600,
     textTransform: 'uppercase' as const,
     backgroundColor: estado === 'activo' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-    color: estado === 'activo' ? '#4caf50' : '#f44336'
+    color: estado === 'activo' ? '#4caf50' : '#f44336',
   }),
   rolesList: { display: 'flex', flexWrap: 'wrap' as const, gap: '8px' },
   roleBadge: {
@@ -101,7 +102,7 @@ const styles = {
     color: '#000',
     borderRadius: '20px',
     fontSize: '12px',
-    fontWeight: 600
+    fontWeight: 600,
   },
   roleRemove: {
     background: 'none',
@@ -114,7 +115,7 @@ const styles = {
     height: '16px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   btnAction: {
     padding: '8px 16px',
@@ -123,7 +124,7 @@ const styles = {
     cursor: 'pointer',
     fontWeight: 600,
     backgroundColor: '#cddc39',
-    color: '#000'
+    color: '#000',
   },
   modalOverlay: {
     position: 'fixed' as const,
@@ -135,7 +136,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000
+    zIndex: 1000,
   },
   modalContent: {
     background: '#1a1a1a',
@@ -144,14 +145,14 @@ const styles = {
     width: '90%',
     maxWidth: '600px',
     maxHeight: '80vh',
-    overflowY: 'auto' as const
+    overflowY: 'auto' as const,
   },
   modalHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '24px',
-    borderBottom: '1px solid #333'
+    borderBottom: '1px solid #333',
   },
   modalClose: {
     background: 'none',
@@ -161,7 +162,7 @@ const styles = {
     color: '#999',
     padding: 0,
     width: '32px',
-    height: '32px'
+    height: '32px',
   },
   modalBody: { padding: '24px' },
   rolesGrid: { display: 'flex', flexDirection: 'column' as const, gap: '12px' },
@@ -172,7 +173,7 @@ const styles = {
     padding: '16px',
     border: `2px solid ${isAssigned ? '#cddc39' : '#333'}`,
     borderRadius: '8px',
-    backgroundColor: isAssigned ? 'rgba(205, 220, 57, 0.1)' : 'transparent'
+    backgroundColor: isAssigned ? 'rgba(205, 220, 57, 0.1)' : 'transparent',
   }),
   btnRole: (isAssigned: boolean) => ({
     padding: '8px 20px',
@@ -181,13 +182,13 @@ const styles = {
     cursor: isAssigned ? 'not-allowed' : 'pointer',
     fontWeight: 600,
     backgroundColor: isAssigned ? '#4caf50' : '#cddc39',
-    color: isAssigned ? 'white' : '#000'
+    color: isAssigned ? 'white' : '#000',
   }),
   modalFooter: {
     padding: '24px',
     borderTop: '1px solid #333',
     display: 'flex',
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
   },
   btnSecondary: {
     padding: '10px 24px',
@@ -196,20 +197,20 @@ const styles = {
     color: '#fff',
     borderRadius: '6px',
     cursor: 'pointer',
-    fontWeight: 600
+    fontWeight: 600,
   },
   loadingText: {
     color: '#999',
     textAlign: 'center' as const,
     padding: '40px',
-    fontSize: '16px'
+    fontSize: '16px',
   },
   errorText: {
     color: '#f44336',
     textAlign: 'center' as const,
     padding: '40px',
-    fontSize: '16px'
-  }
+    fontSize: '16px',
+  },
 };
 
 export default function UsersManagement() {
@@ -240,7 +241,9 @@ export default function UsersManagement() {
 
         // 2. Obtener usuarios (con filtro si está seleccionado)
         const roleParam = selectedRoleFilter || '';
-        const usersRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users?rol=${roleParam}`);
+        const usersRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/users?rol=${roleParam}`
+        );
         if (!usersRes.ok) throw new Error('Error al cargar usuarios');
         const usersData = await usersRes.json();
 
@@ -251,7 +254,7 @@ export default function UsersManagement() {
               const userRolesRes = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/users/${user.idUsuario}/roles`
               );
-              
+
               if (userRolesRes.ok) {
                 const userRolesData = await userRolesRes.json();
                 return {
@@ -259,20 +262,20 @@ export default function UsersManagement() {
                   nombre: user.nombre,
                   correo: user.correo,
                   estado: user.estado,
-                  roles: userRolesData.roles || [] // ← Ajustado según tu JSON
+                  roles: userRolesData.roles || [], // ← Ajustado según tu JSON
                 };
               }
             } catch (err) {
               console.error(`Error obteniendo roles del usuario ${user.idUsuario}:`, err);
             }
-            
+
             // Si falla, retorna usuario sin roles
             return {
               idUsuario: user.idUsuario,
               nombre: user.nombre,
               correo: user.correo,
               estado: user.estado,
-              roles: []
+              roles: [],
             };
           })
         );
@@ -287,14 +290,14 @@ export default function UsersManagement() {
     } else {
       // VERSION MOCK
       let filteredUsers = MOCK_USERS;
-      
+
       if (selectedRoleFilter) {
         const roleId = parseInt(selectedRoleFilter);
-        filteredUsers = MOCK_USERS.filter(user => 
-          user.roles.some(role => role.idRol === roleId)
+        filteredUsers = MOCK_USERS.filter((user) =>
+          user.roles.some((role) => role.idRol === roleId)
         );
       }
-      
+
       setUsers(filteredUsers);
       setAvailableRoles(MOCK_ROLES);
     }
@@ -312,8 +315,8 @@ export default function UsersManagement() {
           },
           body: JSON.stringify({
             idUsuario: userId,
-            idRol: roleId
-          })
+            idRol: roleId,
+          }),
         });
 
         if (!response.ok) {
@@ -326,10 +329,10 @@ export default function UsersManagement() {
 
         // Recargar datos para reflejar cambios
         await loadData();
-        
+
         // Actualizar usuario seleccionado en el modal
         if (selectedUser && selectedUser.idUsuario === userId) {
-          const updatedUser = users.find(u => u.idUsuario === userId);
+          const updatedUser = users.find((u) => u.idUsuario === userId);
           if (updatedUser) setSelectedUser(updatedUser);
         }
       } catch (err: any) {
@@ -338,24 +341,26 @@ export default function UsersManagement() {
       }
     } else {
       // VERSION MOCK
-      const role = availableRoles.find(r => r.idRol === roleId);
+      const role = availableRoles.find((r) => r.idRol === roleId);
       if (!role) return;
 
-      setUsers(users.map(user => {
-        if (user.idUsuario === userId && !user.roles.find(r => r.idRol === roleId)) {
-          return { 
-            ...user, 
-            roles: [...user.roles, { idRol: role.idRol, nombre: role.nombre }]
-          };
-        }
-        return user;
-      }));
-      
+      setUsers(
+        users.map((user) => {
+          if (user.idUsuario === userId && !user.roles.find((r) => r.idRol === roleId)) {
+            return {
+              ...user,
+              roles: [...user.roles, { idRol: role.idRol, nombre: role.nombre }],
+            };
+          }
+          return user;
+        })
+      );
+
       if (selectedUser && selectedUser.idUsuario === userId) {
-        if (!selectedUser.roles.find(r => r.idRol === roleId)) {
+        if (!selectedUser.roles.find((r) => r.idRol === roleId)) {
           setSelectedUser({
             ...selectedUser,
-            roles: [...selectedUser.roles, { idRol: role.idRol, nombre: role.nombre }]
+            roles: [...selectedUser.roles, { idRol: role.idRol, nombre: role.nombre }],
           });
         }
       }
@@ -372,8 +377,8 @@ export default function UsersManagement() {
           },
           body: JSON.stringify({
             idUsuario: userId,
-            idRol: roleId
-          })
+            idRol: roleId,
+          }),
         });
 
         if (!response.ok) {
@@ -386,10 +391,10 @@ export default function UsersManagement() {
 
         // Recargar datos
         await loadData();
-        
+
         // Actualizar usuario seleccionado en el modal
         if (selectedUser && selectedUser.idUsuario === userId) {
-          const updatedUser = users.find(u => u.idUsuario === userId);
+          const updatedUser = users.find((u) => u.idUsuario === userId);
           if (updatedUser) setSelectedUser(updatedUser);
         }
       } catch (err: any) {
@@ -398,20 +403,22 @@ export default function UsersManagement() {
       }
     } else {
       // VERSION MOCK
-      setUsers(users.map(user => {
-        if (user.idUsuario === userId) {
-          return {
-            ...user,
-            roles: user.roles.filter(r => r.idRol !== roleId)
-          };
-        }
-        return user;
-      }));
-      
+      setUsers(
+        users.map((user) => {
+          if (user.idUsuario === userId) {
+            return {
+              ...user,
+              roles: user.roles.filter((r) => r.idRol !== roleId),
+            };
+          }
+          return user;
+        })
+      );
+
       if (selectedUser && selectedUser.idUsuario === userId) {
         setSelectedUser({
           ...selectedUser,
-          roles: selectedUser.roles.filter(r => r.idRol !== roleId)
+          roles: selectedUser.roles.filter((r) => r.idRol !== roleId),
         });
       }
     }
@@ -439,7 +446,7 @@ export default function UsersManagement() {
     <div style={styles.container}>
       <div style={styles.header}>
         <Heading type={2} color='white' text='Gestión de Usuarios y Roles' />
-        
+
         <div>
           <select
             style={styles.filterSelect}
@@ -476,9 +483,7 @@ export default function UsersManagement() {
                   <td style={styles.td}>{user.nombre}</td>
                   <td style={styles.td}>{user.correo}</td>
                   <td style={styles.td}>
-                    <span style={styles.statusBadge(user.estado)}>
-                      {user.estado}
-                    </span>
+                    <span style={styles.statusBadge(user.estado)}>{user.estado}</span>
                   </td>
                   <td style={styles.td}>
                     <div style={styles.rolesList}>
@@ -535,13 +540,13 @@ export default function UsersManagement() {
                 ×
               </button>
             </div>
-            
+
             <div style={styles.modalBody}>
               <p style={{ color: '#999', marginBottom: '16px' }}>Roles disponibles:</p>
               <div style={styles.rolesGrid}>
                 {availableRoles.map((role) => {
-                  const isAssigned = selectedUser.roles.some(r => r.idRol === role.idRol);
-                  
+                  const isAssigned = selectedUser.roles.some((r) => r.idRol === role.idRol);
+
                   return (
                     <div key={role.idRol} style={styles.roleCard(isAssigned)}>
                       <div>
@@ -568,7 +573,7 @@ export default function UsersManagement() {
                 })}
               </div>
             </div>
-            
+
             <div style={styles.modalFooter}>
               <button style={styles.btnSecondary} onClick={() => setShowModal(false)}>
                 Cerrar

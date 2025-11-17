@@ -28,7 +28,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     apellido: 'Bros',
     ndocumento: '123456789',
     tipo_documento: 'DNI',
-    correo: 'luisaguigar0408@gmail.com',
+    correo: 'a20200751@pucp.edu.pe',
     foto: 'https://www.desura.games/files/images/49/49eee8a55fe13133dc5d8ae33106c74b.jpg',
     telefono: '123-456-7890',
     idRolUsuarios: 2,
