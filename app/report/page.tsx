@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import Heading from "@components/Heading/Heading";
 import Master from "../../components/Layout/Master";
 import { useRouter } from "next/navigation";
+import { generateReport } from "../api/admin/generateReport";
+
 
 const API_URL = "https://tu-backend.com/api";
 
@@ -37,39 +39,18 @@ const handleGenerate = async () => {
   setError("");
   setReportData(null);
 
-  const payload = {
-    fechaInicio: filters.fechaInicio ? new Date(filters.fechaInicio).toISOString() : null,
-    fechaFin: filters.fechaFin ? new Date(filters.fechaFin).toISOString() : null,
-    idOrganizador: filters.idOrganizador ? Number(filters.idOrganizador) : null,
-    idCategoria: filters.idCategoria ? Number(filters.idCategoria) : null,
-    estado: filters.estado || null,
-    limit: Number(filters.limit),
-  };
+  const result = await generateReport(filters);
 
-  console.log("📤 JSON enviado al backend:", payload); // 👀 Verificar antes de enviar
-
-  try {
-    const response = await fetch("https://mi-backend.com/api/reportes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) throw new Error("Error en la respuesta");
-
-    const data = await response.json();
-    console.log("📥 Respuesta recibida:", data);
-
-    setReportData(data.events);
-  } catch (err) {
-    console.error(err);
-    setError("Error al generar el reporte (backend no disponible).");
+  if (result.error) {
+    setError(result.error);
+  } else {
+    setData(result.data);
+    setReportData(result.data);
   }
 
   setLoading(false);
 };
+
 
   // 🔹 Manejo de cambios filtros principales (antes del fetch)
   const handleChange = (
