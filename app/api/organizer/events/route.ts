@@ -209,7 +209,7 @@ const resolveUpstreamEvent = (candidate: unknown, fallback: OrganizerEvent): Org
 const baseMetadataTimestamp = new Date().toISOString();
 
 const baseEvent: OrganizerEvent = {
-  idEvento: 1024,
+  idEvento: 1,
   idOrganizador: 44,
   idCategoria: 1,
   titulo: 'Showcase de bandas indie',

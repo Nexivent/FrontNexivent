@@ -33,7 +33,7 @@ type ReportPayload = {
 
 const mockReports: EventReport[] = [
   {
-    idEvento: 1024,
+    idEvento: 1,
     nombre: 'Showcase de bandas indie',
     ubicacion: 'Teatro Canout',
     capacidad: 800,
