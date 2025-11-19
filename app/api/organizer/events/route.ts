@@ -10,6 +10,11 @@ type EventDate = {
   horaFin: string;
 };
 
+type Profile = { id: string; label: string };
+type Sector = { id: string; nombre: string; capacidad: number };
+type TicketType = { id: string; label: string };
+type PriceMatrix = Record<string, Record<string, Record<string, number>>>;
+
 type OrganizerEventMetadata = {
   version: string;
   lastUpdated: string;
@@ -34,10 +39,10 @@ export type OrganizerEvent = {
   imagenLugar: string;
   videoUrl: string;
   fechas: EventDate[];
-  perfiles: Array<{ id: string; label: string }>;
-  sectores: Array<{ id: string; nombre: string; capacidad: number }>;
-  tiposTicket: Array<{ id: string; label: string }>;
-  precios: Record<string, Record<string, Record<string, number>>>;
+  perfiles: Profile[];
+  sectores: Sector[];
+  tiposTicket: TicketType[];
+  precios: PriceMatrix;
   metadata: OrganizerEventMetadata;
 };
 
@@ -283,14 +288,161 @@ let events: OrganizerEvent[] = [baseEvent];
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  return NextResponse.json({
-    data: events,
+const normalizeUpstreamEvent = (payload: Partial<OrganizerEvent>): OrganizerEvent => {
+  const now = new Date();
+  const fallbackId = payload.idEvento ?? (payload as { ID?: number }).ID ?? payload.idOrganizador ?? now.getTime();
+  const rawDates =
+    (payload as { eventDates?: EventDate[]; fechas?: EventDate[]; Fechas?: EventDate[] }).fechas ??
+    (payload as { eventDates?: EventDate[] }).eventDates ??
+    (payload as { Fechas?: EventDate[] }).Fechas ??
+    [];
+
+  return {
+    idEvento:
+      payload.idEvento ??
+      (payload as { id?: number }).id ??
+      (payload as { ID?: number }).ID ??
+      fallbackId,
+    idOrganizador:
+      payload.idOrganizador ??
+      (payload as { OrganizadorID?: number }).OrganizadorID ??
+      baseEvent.idOrganizador,
+    idCategoria: payload.idCategoria ?? (payload as { CategoriaID?: number }).CategoriaID ?? baseEvent.idCategoria,
+    titulo: payload.titulo ?? (payload as { nombre?: string }).nombre ?? (payload as { Titulo?: string }).Titulo ?? '',
+    descripcion: payload.descripcion ?? (payload as { Descripcion?: string }).Descripcion ?? '',
+    lugar: payload.lugar ?? (payload as { Lugar?: string }).Lugar ?? '',
+    estado:
+      (payload.estado as OrganizerEvent['estado']) ??
+      ((payload as { EventoEstado?: number }).EventoEstado === 1 ? 'PUBLICADO' : 'BORRADOR'),
+    likes: payload.likes ?? (payload as { CantMeGusta?: number }).CantMeGusta ?? 0,
+    noInteres: payload.noInteres ?? (payload as { CantNoInteresa?: number }).CantNoInteresa ?? 0,
+    cantVendidasTotal: payload.cantVendidasTotal ?? (payload as { CantVendidoTotal?: number }).CantVendidoTotal ?? 0,
+    totalRecaudado: payload.totalRecaudado ?? (payload as { TotalRecaudado?: number }).TotalRecaudado ?? 0,
+    imagenPortada: payload.imagenPortada ?? (payload as { ImagenPortada?: string }).ImagenPortada ?? '',
+    imagenLugar: payload.imagenLugar ?? (payload as { ImagenEscenario?: string }).ImagenEscenario ?? '',
+    videoUrl: payload.videoUrl ?? (payload as { VideoPresentacion?: string }).VideoPresentacion ?? '',
+    fechas: rawDates.map((date, index) => ({
+      idFechaEvento: date.idFechaEvento ?? fallbackId + index,
+      idFecha: date.idFecha ?? fallbackId + index,
+      fecha: date.fecha,
+      horaInicio: date.horaInicio,
+      horaFin: date.horaFin,
+    })),
+    perfiles:
+      (payload as { perfiles?: Profile[] }).perfiles ?? (payload as { Perfiles?: Profile[] }).Perfiles ?? [],
+    sectores: (payload as { sectores?: Sector[] }).sectores ?? (payload as { Sectores?: Sector[] }).Sectores ?? [],
+    tiposTicket:
+      (payload as { tiposTicket?: TicketType[] }).tiposTicket ??
+      (payload as { TiposTicket?: TicketType[] }).TiposTicket ??
+      [],
+    precios: (payload as { precios?: PriceMatrix }).precios ?? {},
     metadata: {
-      serverTime: new Date().toISOString(),
-      source: 'mock:organizer-events',
+      version: '1',
+      lastUpdated: now.toISOString(),
+      creadoPor: baseEvent.metadata.creadoPor,
+      fechaCreacion: baseEvent.metadata.fechaCreacion,
+      ultimaActualizacion: now.toISOString(),
     },
-  });
+  };
+};
+
+export async function GET(request: NextRequest) {
+  const organizerId =
+    Number(request.nextUrl.searchParams.get('organizadorId')) ||
+    Number(process.env.NEXT_PUBLIC_ORGANIZER_ID) ||
+    Number(process.env.ORGANIZER_ID) ||
+    baseEvent.idOrganizador;
+
+  const apiBaseUrl = getOrganizerApiBaseUrl();
+  const endpoint =
+    organizerId > 0 ? buildEndpoint(apiBaseUrl, `/evento/filter?organizadorId=${organizerId}`) : '';
+
+  if (apiBaseUrl.length === 0 || endpoint.length === 0) {
+    return NextResponse.json({
+      data: events,
+      metadata: {
+        serverTime: new Date().toISOString(),
+        source: 'mock:organizer-events',
+      },
+    });
+  }
+
+  try {
+    const upstreamResponse = await fetch(endpoint, { cache: 'no-store' });
+    const upstreamBody = await parseResponseBody(upstreamResponse);
+
+    if (!upstreamResponse.ok) {
+      // fallback to mock if upstream fails but return error status
+      if (events.length > 0) {
+        return NextResponse.json(
+          {
+            message: 'La API real respondio con un error al listar los eventos.',
+            details: upstreamBody,
+            data: events,
+          },
+          { status: upstreamResponse.status }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          message: 'La API real respondio con un error al listar los eventos.',
+          details: upstreamBody,
+        },
+        { status: upstreamResponse.status }
+      );
+    }
+
+    const isEventLike = (value: unknown) =>
+      typeof value === 'object' &&
+      value !== null &&
+      ('idEvento' in (value as Record<string, unknown>) ||
+        'ID' in (value as Record<string, unknown>) ||
+        'Titulo' in (value as Record<string, unknown>) ||
+        'titulo' in (value as Record<string, unknown>));
+
+    let rawEvents: unknown[] = [];
+
+    const dataField = (upstreamBody as { data?: unknown }).data;
+    const eventosField = (upstreamBody as { eventos?: unknown }).eventos;
+
+    if (Array.isArray(dataField) && !Array.isArray(upstreamBody)) {
+      rawEvents = dataField as unknown[];
+    } else if (!Array.isArray(dataField) && isEventLike(dataField)) {
+      rawEvents = [dataField as unknown];
+    } else if (Array.isArray(eventosField) && !Array.isArray(upstreamBody)) {
+      rawEvents = eventosField as unknown[];
+    } else if (!Array.isArray(eventosField) && isEventLike(eventosField)) {
+      rawEvents = [eventosField as unknown];
+    } else if (Array.isArray(upstreamBody)) {
+      rawEvents = upstreamBody as unknown[];
+    } else if (isEventLike(upstreamBody)) {
+      rawEvents = [upstreamBody];
+    }
+
+    const normalizedEvents = rawEvents.map((event) =>
+      normalizeUpstreamEvent(event as Partial<OrganizerEvent>)
+    );
+
+    events = normalizedEvents.length > 0 ? normalizedEvents : events;
+
+    return NextResponse.json({
+      data: normalizedEvents,
+      metadata: {
+        serverTime: new Date().toISOString(),
+        source: endpoint,
+        upstreamStatus: upstreamResponse.status,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        message: 'No se pudo obtener los eventos desde la API real.',
+        error: error instanceof Error ? error.message : 'Error desconocido',
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {

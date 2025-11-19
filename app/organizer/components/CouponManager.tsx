@@ -34,6 +34,7 @@ const organizerUserId = resolveOrganizerUserId();
 const couponsListEndpoint = `/api/organizer/coupons?organizerId=${organizerUserId}`;
 const couponCreateEndpoint = `/api/organizer/coupons?usuarioCreacion=${organizerUserId}`;
 const couponUpdateEndpoint = `/api/organizer/coupons?usuarioModificacion=${organizerUserId}`;
+const eventsListEndpoint = `/api/organizer/events?organizadorId=${organizerUserId}`;
 
 const createEmptyCoupon = (): CouponForm => {
   const today = new Date();
@@ -101,17 +102,21 @@ const CouponManager: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     setEventsState('loading');
-    fetch('/api/organizer/events')
+    fetch(eventsListEndpoint)
       .then(async (response) => {
         if (!response.ok) throw new Error('No se pudieron obtener los eventos');
+        console.log('Events response:', response.body);
         return response.json();
       })
       .then((payload) => {
         if (!mounted) return;
-        const normalized: OrganizerEventSummary[] = (payload?.data ?? []).map((event: any) => ({
-          idEvento: event.idEvento,
-          titulo: event.titulo,
-        }));
+        const normalized: OrganizerEventSummary[] = (payload?.data ?? []).map((event: any) => {
+          const eventId = Number(event.idEvento ?? event.id ?? 0);
+          return {
+            idEvento: Number.isNaN(eventId) ? 0 : eventId,
+            titulo: event.titulo ?? event.nombre ?? `Evento #${eventId || ''}`,
+          };
+        });
         setEvents(normalized);
         setEventsState('idle');
       })
