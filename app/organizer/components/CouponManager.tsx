@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Button from '@components/Button/Button';
 
-type CouponType = 'PORCENTAJE' | 'MONTO';
-
 type CouponForm = {
   idCupon: number;
   idEvento: number;
@@ -35,6 +33,7 @@ const resolveOrganizerUserId = () => {
 const organizerUserId = resolveOrganizerUserId();
 const couponsListEndpoint = `/api/organizer/coupons?organizerId=${organizerUserId}`;
 const couponCreateEndpoint = `/api/organizer/coupons?usuarioCreacion=${organizerUserId}`;
+const couponUpdateEndpoint = `/api/organizer/coupons?usuarioModificacion=${organizerUserId}`;
 
 const createEmptyCoupon = (): CouponForm => {
   const today = new Date();
@@ -190,9 +189,12 @@ const CouponManager: React.FC = () => {
     setFeedback(null);
 
     try {
-      console.log('Submitting coupon form:', JSON.stringify(form));
-      const response = await fetch(couponCreateEndpoint, {
-        method: 'POST',
+      const isEditing = selectedCouponId !== null;
+      const endpoint = isEditing ? couponUpdateEndpoint : couponCreateEndpoint;
+      const method = isEditing ? 'PUT' : 'POST';
+      console.log('Submitting to', endpoint, 'with method', method, 'and form', JSON.stringify(form));
+      const response = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
@@ -219,7 +221,8 @@ const CouponManager: React.FC = () => {
       setFeedback(
         (typeof payload?.message === 'string' && payload.message.length > 0
           ? payload.message
-          : null) ?? 'Cupon guardado correctamente.'
+          : null) ??
+          (isEditing ? 'Cupon actualizado correctamente.' : 'Cupon guardado correctamente.')
       );
     } catch (error) {
       setSavingState('error');
@@ -449,11 +452,11 @@ const CouponManager: React.FC = () => {
                       className='input-text'
                       value={form.tipo}
                       onChange={(event) =>
-                        handleInputChange('tipo', event.target.value as CouponType)
+                        handleInputChange('tipo', Number(event.target.value) === 1 ? 1 : 0)
                       }
                     >
-                      <option value='0'>Porcentaje</option>
-                      <option value='1'>Monto fijo</option>
+                      <option value={0}>Porcentaje</option>
+                      <option value={1}>Monto fijo</option>
                     </select>
                   </label>
 
