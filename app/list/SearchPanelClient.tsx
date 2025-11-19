@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { searchEvents } from "../api/events/search/route"; // IMPORTA TU FUNCIÓN CENTRALIZADA
+import { searchEvents } from "../api/events/search/route";
+import EventCard from "@components/Card/EventCard";
 
 export default function SearchPanel({ initialData }: { initialData: any[] }) {
   const [events, setEvents] = useState(initialData);
@@ -23,12 +24,12 @@ export default function SearchPanel({ initialData }: { initialData: any[] }) {
 
     console.log("🔍 Buscando con payload:", payload);
 
-    const result = await searchEvents(payload); // 💥 usamos la API unificada
+    const result = await searchEvents(payload);
 
     if (result.ok) {
       setEvents(result.data ?? []);
     } else {
-      console.warn("⚠  Error en búsqueda:", result.error);
+      console.warn("⚠ Error en búsqueda:", result.error);
       setEvents([]);
     }
 
@@ -63,12 +64,21 @@ export default function SearchPanel({ initialData }: { initialData: any[] }) {
 
       {/* RESULTADOS */}
       <div className="container center list-cards" style={{ marginTop: 30 }}>
-        {events.length === 0 && !loading && <p>No se encontraron eventos.</p>}
+        {events.length === 0 && !loading && (
+          <p>No se encontraron eventos.</p>
+        )}
 
         {events.map((ev: any) => (
-          <div key={ev.idEvento}>
-            {JSON.stringify(ev)}
-          </div>
+          <EventCard
+            key={ev.ID}
+            url={ev.ID?.toString()}
+            from={ev.precioDesde?.toString() ?? ""}
+            color="yellow"
+            when={ev.fechaHoraInicio}
+            name={ev.Titulo}
+            venue={ev.Lugar}
+            image={ev.imagenPrincipal ?? "/logo6.png"}
+          />
         ))}
       </div>
     </>

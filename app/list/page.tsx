@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import Master from "@components/Layout/Master";
 import Section from "@components/Section/Section";
 import Heading from "@components/Heading/Heading";
-import EventCard from "@components/Card/EventCard";
 import CircleButtons from "../home/components/CircleButtons";
 import SearchPanel from "./SearchPanelClient";
 
@@ -48,31 +47,11 @@ const Page = async () => {
         </div>
       </Section>
 
-      {/* SEARCH PANEL */}
+      {/* SEARCH PANEL (CLIENT) */}
       <Section>
         <Suspense fallback={<div>Cargando búsqueda...</div>}>
           <SearchPanel initialData={events} />
         </Suspense>
-      </Section>
-
-      {/* EVENTOS (SSR) */}
-      <Section className="list-cards">
-        <div className="container center">
-          {events.length === 0 && <p>No hay eventos para mostrar.</p>}
-
-          {events.map((ev: any) => (
-            <EventCard
-              key={ev.idEvento}
-              url={ev.idEvento?.toString()}
-              from={ev.precioDesde?.toString() ?? ""}
-              color="yellow"
-              when={ev.fechaHoraInicio}
-              name={ev.titulo}
-              venue={ev.lugar}
-              image={ev.imagenPrincipal ?? "/default.jpg"}
-            />
-          ))}
-        </div>
       </Section>
     </Master>
   );
