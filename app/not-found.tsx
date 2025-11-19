@@ -148,10 +148,10 @@ const Page: React.FC = () => {
         .error-digit {
           display: inline-block;
           transition: transform 0.3s ease;
-          font-family: 'Times', monospace;
+          font-family: 'Arial', monospace;
           font-size: 9rem;
           color: #facc15;
-          font-boldness: 1000;
+          font-weight: 900;
         }
 
         .error-digit:hover {
@@ -360,7 +360,7 @@ const Page: React.FC = () => {
           </button>
           
           <button
-            onClick={() => window.location.href = '/list'}
+            onClick={() => window.location.href = '/list?search=1'}
             className="flex items-center gap-2 px-8 py-4 border-2 border-yellow-400 text-yellow-400 font-bold rounded-lg hover:bg-yellow-400 hover:text-black transform hover:scale-105 transition-all duration-300"
           >
             <Calendar size={20} />
