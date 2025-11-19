@@ -21,31 +21,33 @@ const Page: React.FC = () => (
       </div>
     </Section>
     <Section className='list-cards'>
-  <div className='container events-grid'>
+      <div className='container events-grid'>
 
-    <TicketCard
-      eventUrl='/event/2'
-      eventName='JAZE - QUIZAS NO ES PARA TANTO'
-      eventWhen='26 de setiembre 21:00'
-      eventVenue='Costa 21'
-      eventImage='/portadaJaze.jpg'
-      purchaseDetails={[{ quantity: 2, type: 'VIP' }]}
-      downloadUrl='/tickets/download/2'
-      sendUrl='/tickets/send/2'
-    />
-    <TicketCard
-      eventUrl='/event/3'
-      eventName='MADISON FEST - HABLANDO HU*VADAS'
-      eventWhen='13 de diciembre 19:00'
-      eventVenue='Costa 21'
-      eventImage='/eventoHH.jpg'
-      purchaseDetails={[{ quantity: 3, type: 'General' }]}
-      downloadUrl='/tickets/download/3'
-      sendUrl='/tickets/send/3'
-    />
-   
-  </div>
-</Section>
+        <TicketCard
+          id='2'
+          eventUrl='/event/2'
+          eventName='JAZE - QUIZAS NO ES PARA TANTO'
+          eventWhen='26 de setiembre 21:00'
+          eventVenue='Costa 21'
+          eventImage='/portadaJaze.jpg'
+          purchaseDetails={[{ quantity: 2, type: 'VIP' }]}
+          downloadUrl='/tickets/download/2'
+          sendUrl='/tickets/send/2'
+        />
+        <TicketCard
+          id='3'
+          eventUrl='/event/3'
+          eventName='MADISON FEST - HABLANDO HU*VADAS'
+          eventWhen='13 de diciembre 19:00'
+          eventVenue='Costa 21'
+          eventImage='/eventoHH.jpg'
+          purchaseDetails={[{ quantity: 3, type: 'General' }]}
+          downloadUrl='/tickets/download/3'
+          sendUrl='/tickets/send/3'
+        />
+
+      </div>
+    </Section>
   </Master>
 );
 
