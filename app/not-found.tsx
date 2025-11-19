@@ -146,13 +146,68 @@ const Page: React.FC = () => {
         }
 
         .error-digit {
-          display: inline-block;
-          transition: transform 0.3s ease;
-          font-family: 'Arial', monospace;
-          font-size: 9rem;
-          color: #facc15;
-          font-weight: 900;
-        }
+  position: relative;
+  display: inline-block;
+  font-family: 'Arial', monospace;
+  font-size: 9rem;
+  color: #facc15;
+  font-weight: 900;
+  transition: transform 0.3s ease;
+  text-shadow: 0 0 2px #facc15;
+  animation: glitch-skew 1.5s infinite linear alternate-reverse;
+}
+
+.error-digit::before,
+.error-digit::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  color: #facc15;
+  overflow: hidden;
+  clip-path: inset(0 0);
+}
+
+.error-digit::before {
+  text-shadow: -3px 0 red;
+  animation: glitch-1 2.5s infinite linear alternate-reverse;
+}
+
+.error-digit::after {
+  text-shadow: -3px 0 cyan;
+  animation: glitch-2 2s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-1 {
+  0% { clip-path: inset(0 0 80% 0); }
+  15% { clip-path: inset(15% 0 60% 0); }
+  30% { clip-path: inset(30% 0 40% 0); }
+  45% { clip-path: inset(45% 0 30% 0); }
+  60% { clip-path: inset(60% 0 15% 0); }
+  75% { clip-path: inset(75% 0 5% 0); }
+  100% { clip-path: inset(0 0 80% 0); }
+}
+
+@keyframes glitch-2 {
+  0% { clip-path: inset(80% 0 0 0); }
+  15% { clip-path: inset(60% 0 20% 0); }
+  30% { clip-path: inset(40% 0 40% 0); }
+  45% { clip-path: inset(20% 0 60% 0); }
+  60% { clip-path: inset(10% 0 70% 0); }
+  75% { clip-path: inset(5% 0 75% 0); }
+  100% { clip-path: inset(80% 0 0 0); }
+}
+
+@keyframes glitch-skew {
+  0% { transform: skew(0deg); }
+  20% { transform: skew(3deg); }
+  40% { transform: skew(-3deg); }
+  60% { transform: skew(2deg); }
+  80% { transform: skew(-2deg); }
+  100% { transform: skew(0deg); }
+}
+
 
         .error-digit:hover {
           transform: scale(1.1);
@@ -323,10 +378,10 @@ const Page: React.FC = () => {
 
           {/* Número 404 */}
           <h1 className='error-number'>
-            <span className='error-digit'>4</span>
-            <span className='error-digit'>0</span>
-            <span className='error-digit'>4</span>
-          </h1>
+  <span className='error-digit' data-text="4">4</span>
+  <span className='error-digit' data-text="0">0</span>
+  <span className='error-digit' data-text="4">4</span>
+</h1>
 
           {/* Título y descripción */}
           <h2 className='error-title'>Pagina no encontrada!</h2>
