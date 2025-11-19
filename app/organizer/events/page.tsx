@@ -24,18 +24,6 @@ const Page: React.FC = () => (
                 leftIcon='chevron_left'
                 url='organizer'
               />
-              <ButtonLink
-                color='gray-overlay'
-                text='Ver reportes'
-                rightIcon='arrow_forward'
-                url='organizer/reports'
-              />
-              <ButtonLink
-                color='yellow-overlay'
-                text='Cupones'
-                rightIcon='arrow_outward'
-                url='organizer/coupons'
-              />
             </div>
         </div>
       </div>

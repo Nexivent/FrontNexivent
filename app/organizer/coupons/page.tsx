@@ -19,10 +19,10 @@ const Page: React.FC = () => (
           </p>
           <div className='organizer-cta-row'>
             <ButtonLink
-              color='yellow-overlay'
-              text='Ir al creador de eventos'
+              color='yellow-filled'
+              text='Volver al inicio'
               leftIcon='chevron_left'
-              url='organizer/events'
+              url='organizer'
             />
           </div>
         </div>
