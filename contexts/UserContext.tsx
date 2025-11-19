@@ -1,45 +1,100 @@
 'use client';
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authApi, Usuario, RegisterData } from '@utils/api';
 
-// 1️⃣ Tipo de los datos de usuario
-export type User = {
-  idUsuario: number;
-  nombre: string;
-  apellido: string;
-  ndocumento: string;
-  tipo_documento: string;
-  correo: string;
-  foto: string;
-  telefono: string;
-  idRolUsuarios: number;
-};
+interface UserContextType {
+  user: Usuario | null;
+  loading: boolean;
+  login: (email: string, contrasena: string) => Promise<{ success: boolean; message: string }>;
+  register: (data: RegisterData) => Promise<{ success: boolean; message: string }>;
+  logout: () => void;
+  isAuthenticated: boolean;
+}
 
-// 2️⃣ Crea el contexto
-const UserContext = createContext<{
-  user: User;
-  setUser: React.Dispatch<React.SetStateAction<User>>;
-} | null>(null);
+const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// 3️⃣ Proveedor del contexto
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>({
-    idUsuario: 1,
-    nombre: 'Mario',
-    apellido: 'Bros',
-    ndocumento: '123456789',
-    tipo_documento: 'DNI',
-    correo: 'a20200751@pucp.edu.pe',
-    foto: 'https://www.desura.games/files/images/49/49eee8a55fe13133dc5d8ae33106c74b.jpg',
-    telefono: '123-456-7890',
-    idRolUsuarios: 2,
-  });
+  const [user, setUser] = useState<Usuario | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  return <UserContext.Provider value={{ user, setUser }}>{children}</UserContext.Provider>;
+  useEffect(() => {
+    const currentUser = authApi.getCurrentUser();
+    setUser(currentUser);
+    setLoading(false);
+  }, []);
+
+  const login = async (email: string, contrasena: string) => {
+    setLoading(true);
+    try {
+      const result = await authApi.login(email, contrasena);
+
+      if (result.success && result.data) {
+        setUser(result.data.usuario);
+      }
+
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Error inesperado en login',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (data: RegisterData) => {
+    setLoading(true);
+    try {
+      const result = await authApi.register(data);
+
+      if (result.success && result.data) {
+        setUser(result.data.usuario);
+      }
+
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error) {
+      console.error('Error en register:', error);
+      return {
+        success: false,
+        message: 'Error inesperado en registro',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    authApi.logout();
+    setUser(null);
+  };
+
+  return (
+    <UserContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        isAuthenticated: !!user,
+      }}
+    >
+      {children}
+    </UserContext.Provider>
+  );
 };
 
-// 4️⃣ Hook para usar el contexto en cualquier parte
 export const useUser = () => {
   const context = useContext(UserContext);
-  if (!context) throw new Error('useUser debe usarse dentro de un UserProvider');
+  if (context === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
   return context;
 };

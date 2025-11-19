@@ -2,7 +2,6 @@
 import { useEffect } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { type PrefilledData } from './Form';
-import api from '@utils/api';
 
 // components
 import Input from '@components/Form/Input';
@@ -33,11 +32,39 @@ const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack }) => {
 
   const onFinalSubmit = async (data: any) => {
     try {
-      await api.post('/api/auth/register', data);
-      alert('¡Registro exitoso!');
-      window.location.href = '/members/signin';
+      // Preparar datos para enviar al backend
+      const payload = {
+        nombre: data.nombre,
+        tipo_documento: data.tipo_documento,
+        num_documento: data.ndocumento,
+        email: data.correo,
+        contrasena: data.contraseña,
+        telefono: data.telefono || null,
+      };
+
+      const response = await fetch('http://localhost:8098/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.token) {
+        // Guardar token y usuario en localStorage
+        localStorage.setItem('auth_token', result.token);
+        localStorage.setItem('user', JSON.stringify(result.usuario));
+
+        alert('¡Registro exitoso!');
+        window.location.href = '/dashboards';
+      } else {
+        throw new Error(result.message || 'Error al registrar el usuario');
+      }
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Error al registrar el usuario.');
+      alert(error.message || 'Error al registrar el usuario.');
+      console.error('Error en registro:', error);
     }
   };
 
