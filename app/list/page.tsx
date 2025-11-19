@@ -1,103 +1,81 @@
-
-
-
-import { type Metadata } from 'next';
 import { Suspense } from "react";
 
 // components
-import Master from '@components/Layout/Master';
-import Section from '@components/Section/Section';
-import Heading from '@components/Heading/Heading';
-import EventCard from '@components/Card/EventCard';
-import SearchPanel from './SearchPanelClient';
-import CircleButtons from '../home/components/CircleButtons';
+import Master from "@components/Layout/Master";
+import Section from "@components/Section/Section";
+import Heading from "@components/Heading/Heading";
+import EventCard from "@components/Card/EventCard";
+import CircleButtons from "../home/components/CircleButtons";
+import SearchPanel from "./SearchPanelClient";
 
-const Page: React.FC = () => (
-  <Master>
-    <Section className='gray-background hero-offset'>
-  <div className='container'>
-    <div className='padding-bottom center'>
-      <Heading type={1} color='gray' text='Eventos' />
-      <p className='gray'>Nexivent, busca eventos en Lima.</p>
-    </div>
+// función unificada
+import { searchEvents } from "../api/events/search/route";
 
-    {/* CATEGORÍAS CENTRADAS CON ICONOS */}
-    <div className='flex justify-center'>
-      <div className='max-w-5xl w-full px-8'>
-        <CircleButtons />
-      </div>
-    </div>
-  </div>
-</Section>
-<Section>
-  <Suspense fallback={<div>Cargando búsqueda...</div>}>
-    <SearchPanel />
-  </Suspense>
-</Section>
-    <Section className='list-cards'>
-  <div className='container center'>
-    <EventCard
-      url='1'
-      from='35'
-      color='yellow'
-      when='10 de octubre'
-      name='SKILLBEA - 4MAR'
-      venue='Vichama Conciertos'
-      image='/portadaSkillbea.jpg'
-    />
+// --- SERVER CALL (SSR) ---
+async function fetchInitialEvents() {
+  const payload = {
+    idCategoria: null,
+    titulo: "",
+    descripcion: "",
+    lugar: "",
+    fechaHoraInicio: new Date().toISOString(),
+    page: 1,
+    limit: 10
+  };
 
-    <EventCard
-      url='2'
-      from='59'
-      color='yellow'
-      when='26 de setiembre'
-      name='JAZE - QUIZAS NO ES PARA TANTO'
-      venue='Costa 21'
-      image='/portadaJaze.jpg'
-    />
+  const { data } = await searchEvents(payload, true);
+  return data;
+}
 
-    <EventCard
-      url='3'
-      from='44'
-      color='yellow'
-      when='13 de diciembre'
-      name='MADISON FEST - HABLANDO HU*VADAS'
-      venue='Costa 21'
-      image='/eventoHH.jpg'
-    />
+const Page = async () => {
+  const events = await fetchInitialEvents(); // <-- SSR fetch
 
-    <EventCard
-      url='4'
-      from='50'
-      color='yellow'
-      when='8 de noviembre'
-      name='Decir Adiós - Amén'
-      venue='CC Leguia'
-      image='/decirAdios.jpg'
-    />
-  </div>
-</Section>
+  return (
+    <Master>
+      {/* HEADER */}
+      <Section className="gray-background hero-offset">
+        <div className="container">
+          <div className="padding-bottom center">
+            <Heading type={1} color="gray" text="Eventos" />
+            <p className="gray">Nexivent, busca eventos en Lima.</p>
+          </div>
 
-  </Master>
-);
+          <div className="flex justify-center">
+            <div className="w-full max-w-5xl">
+              <CircleButtons />
+            </div>
+          </div>
+        </div>
+      </Section>
 
-const title = 'List';
-const canonical = 'https://modern-ticketing.com/list';
-const description = 'Modern ticketing is a modern ticketing solution';
+      {/* SEARCH PANEL */}
+      <Section>
+        <Suspense fallback={<div>Cargando búsqueda...</div>}>
+          <SearchPanel initialData={events} />
+        </Suspense>
+      </Section>
 
-export const metadata: Metadata = {
-  title,
-  description,
-  keywords: 'modern ticketing',
-  alternates: { canonical },
-  openGraph: {
-    title,
-    description,
-    url: canonical,
-    type: 'website',
-    siteName: 'Modern Ticketing',
-    images: 'https://modern-ticketing.com/logo192.png',
-  },
+      {/* EVENTOS (SSR) */}
+      <Section className="list-cards">
+        <div className="container center">
+          {events.length === 0 && <p>No hay eventos para mostrar.</p>}
+
+          {events.map((ev: any) => (
+            <EventCard
+              key={ev.idEvento}
+              url={ev.idEvento?.toString()}
+              from={ev.precioDesde?.toString() ?? ""}
+              color="yellow"
+              when={ev.fechaHoraInicio}
+              name={ev.titulo}
+              venue={ev.lugar}
+              image={ev.imagenPrincipal ?? "/default.jpg"}
+            />
+          ))}
+        </div>
+      </Section>
+    </Master>
+  );
 };
 
 export default Page;
