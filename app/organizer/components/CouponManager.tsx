@@ -401,6 +401,7 @@ const CouponManager: React.FC = () => {
                       onChange={(event) =>
                         handleInputChange('codigo', event.target.value.toUpperCase())
                       }
+                      disabled={selectedCouponId !== null}
                     />
                   </label>
                   <label className='field'>
@@ -411,6 +412,7 @@ const CouponManager: React.FC = () => {
                       onChange={(event) =>
                         handleInputChange('idEvento', Number(event.target.value))
                       }
+                      disabled={selectedCouponId !== null}
                     >
                       {eventOptions.length === 0 ? (
                         <option value={form.idEvento || 0}>
@@ -454,6 +456,7 @@ const CouponManager: React.FC = () => {
                       onChange={(event) =>
                         handleInputChange('tipo', Number(event.target.value) === 1 ? 1 : 0)
                       }
+                      disabled={selectedCouponId !== null}
                     >
                       <option value={0}>Porcentaje</option>
                       <option value={1}>Monto fijo</option>
@@ -468,6 +471,7 @@ const CouponManager: React.FC = () => {
                       min={0}
                       value={form.valor}
                       onChange={(event) => handleInputChange('valor', Number(event.target.value))}
+                      disabled={selectedCouponId !== null}
                     />
                   </label>
 
