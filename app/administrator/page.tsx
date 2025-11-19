@@ -9,7 +9,7 @@ interface User {
   nombre: string;
   correo: string;
   estado: string;
-  roles: { idRol: number; nombre: string }[]; // ← Sin descripción aquí
+  roles: { idRol: number; nombre: string }[];
 }
 
 interface Role {
@@ -264,7 +264,7 @@ export default function UsersManagement() {
                   nombre: user.nombre,
                   correo: user.correo,
                   estado: user.estado,
-                  roles: userRolesData.roles || [], // ← Ajustado según tu JSON
+                  roles: userRolesData.roles || [],
                 };
               }
             } catch (err) {

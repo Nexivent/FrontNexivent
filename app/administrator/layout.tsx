@@ -62,18 +62,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 textDecoration: 'none',
                 borderRadius: '8px',
                 fontWeight: 600,
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                color: pathname === '/administrator' ? '#cddc39' : '#fff',
-                backgroundColor:
-                  pathname === '/administrator' ? 'rgba(205, 220, 57, 0.15)' : 'transparent',
-                textDecoration: 'none',
-                borderRadius: '8px',
-                fontWeight: 600,
                 transition: 'all 0.2s ease',
                 border:
                   pathname === '/administrator'
@@ -108,20 +96,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 textDecoration: 'none',
                 borderRadius: '8px',
                 fontWeight: 600,
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                color: pathname === '/administrator/transactions' ? '#cddc39' : '#fff',
-                backgroundColor:
-                  pathname === '/administrator/transactions'
-                    ? 'rgba(205, 220, 57, 0.15)'
-                    : 'transparent',
-                textDecoration: 'none',
-                borderRadius: '8px',
-                fontWeight: 600,
                 transition: 'all 0.2s ease',
                 border:
                   pathname === '/administrator/transactions'
@@ -141,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <span>💳</span> Transacciones
             </Link>
-            {/* 🔙 Botón para ir a Reportes */}
+            {/* Botón para ir a Reportes */}
             <button
               onClick={() => router.push("/report")}
               className="group relative inline-flex items-center justify-center px-6 py-3 mt-4 
