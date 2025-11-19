@@ -3,7 +3,7 @@
 import React from "react";
 import Master from "@components/Layout/Master";
 import Heading from "@components/Heading/Heading";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   Card,
@@ -18,76 +18,106 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-
-// 🧩 Mock Data (simula respuesta del backend)
-const mockData = {
-  summary: {
-    totalEventos: 48,
-    totalPublicados: 32,
-    totalCancelados: 6,
-    totalBorradores: 10,
-    entradasVendidasTotales: 12560,
-    recaudacionTotal: 984000.5,
-  },
-  topEventos: [
-    {
-      idEvento: 101,
-      titulo: "Festival de Música Electrónica Lima",
-      lugar: "Parque de la Exposición",
-      entradasVendidas: 3200,
-      recaudacion: 256000.0,
-    },
-    {
-      idEvento: 115,
-      titulo: "Rock & Beer Fest 2025",
-      lugar: "Estadio San Marcos",
-      entradasVendidas: 2800,
-      recaudacion: 233500.0,
-    },
-    {
-      idEvento: 102,
-      titulo: "Expo Gamer Perú 2025",
-      lugar: "Centro de Convenciones María Angola",
-      entradasVendidas: 2100,
-      recaudacion: 189000.0,
-    },
-  ],
-  byCategory: [
-    {
-      idCategoria: 1,
-      categoria: "Conciertos",
-      cantidadEventos: 15,
-      recaudacionTotal: 520000.0,
-      entradasVendidas: 6700,
-    },
-    {
-      idCategoria: 2,
-      categoria: "Ferias y Expos",
-      cantidadEventos: 10,
-      recaudacionTotal: 300000.0,
-      entradasVendidas: 4100,
-    },
-    {
-      idCategoria: 3,
-      categoria: "Teatro",
-      cantidadEventos: 8,
-      recaudacionTotal: 164000.0,
-      entradasVendidas: 1760,
-    },
-    {
-      idCategoria: 4,
-      categoria: "Deportes",
-      cantidadEventos: 15,
-      recaudacionTotal: 180000.0,
-      entradasVendidas: 2000,
-    },
-  ],
-};
-
-// 🧭 Página principal
 export default function DashboardPage() {
-  const { summary, topEventos, byCategory } = mockData;
   const router = useRouter();
+  const params = useSearchParams();
+
+  // 🟡 Obtenemos el JSON enviado desde /report
+const raw = params.get("data");
+
+// ❗ Si no hay data, mostrar mensaje y evitar crash
+if (!raw) {
+  return (
+    <Master>
+      <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white">
+        <p className="text-lg">No se recibieron datos del reporte.</p>
+
+        <button
+          onClick={() => router.push("/report")}
+          className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
+        >
+          ← Volver al reporte
+        </button>
+      </div>
+    </Master>
+  );
+}
+
+let reportData = null;
+
+try {
+  reportData = JSON.parse(raw);
+} catch (e) {
+  return (
+    <Master>
+      <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white">
+        <p className="text-lg">Los datos recibidos están corruptos o no son válidos.</p>
+
+        <button
+          onClick={() => router.push("/report")}
+          className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
+        >
+          ← Volver al reporte
+        </button>
+      </div>
+    </Master>
+  );
+}
+
+// ❗ De nuevo, validar por si llega null del backend
+if (!reportData || !Array.isArray(reportData)) {
+  return (
+    <Master>
+      <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white">
+        <p className="text-lg">Aún no hay resultados para generar un dashboard.</p>
+
+        <button
+          onClick={() => router.push("/report")}
+          className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
+        >
+          ← Volver al reporte
+        </button>
+      </div>
+    </Master>
+  );
+}
+
+
+  // 🎯 Aquí tú extraes tus agregados igual que hacías con mockData
+  // Ajusta estas funciones según la estructura del backend
+  const summary = {
+    totalEventos: reportData.length,
+    totalPublicados: reportData.filter((e: any) => e.estado === "PUBLICADO").length,
+    totalCancelados: reportData.filter((e: any) => e.estado === "CANCELADO").length,
+    totalBorradores: reportData.filter((e: any) => e.estado === "BORRADOR").length,
+    entradasVendidasTotales: reportData.reduce(
+      (acc: number, e: any) => acc + (e.entradasVendidas || 0),
+      0
+    ),
+    recaudacionTotal: reportData.reduce(
+      (acc: number, e: any) => acc + (e.recaudacion || 0),
+      0
+    ),
+  };
+
+  // 📊 Agrupación por categoría
+  const byCategory = Object.values(
+    reportData.reduce((acc: any, item: any) => {
+      if (!acc[item.categoria]) {
+        acc[item.categoria] = {
+          categoria: item.categoria,
+          recaudacionTotal: 0,
+        };
+      }
+      acc[item.categoria].recaudacionTotal += item.recaudacion || 0;
+      return acc;
+    }, {})
+  );
+
+  // 🏆 Top eventos
+  const topEventos = [...reportData]
+    .sort((a, b) => b.recaudacion - a.recaudacion)
+    .slice(0, 10);
 
   return (
     <Master>
@@ -99,18 +129,18 @@ export default function DashboardPage() {
           <p className="text-gray-400 mt-2">
             Visualiza el rendimiento general de tus eventos.
           </p>
+
           {/* 🔙 Botón para volver */}
-            <button
+          <button
             onClick={() => router.push("/report")}
             className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
-            >
+          >
             ← Volver al reporte
-            </button>
+          </button>
         </div>
-         
+
         {/* 📈 Resumen general */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            
           <Card><CardContent><h3 className="text-gray-400">Total de eventos</h3><p className="text-3xl font-bold">{summary.totalEventos}</p></CardContent></Card>
           <Card><CardContent><h3 className="text-gray-400">Publicados</h3><p className="text-3xl font-bold">{summary.totalPublicados}</p></CardContent></Card>
           <Card><CardContent><h3 className="text-gray-400">Cancelados</h3><p className="text-3xl font-bold">{summary.totalCancelados}</p></CardContent></Card>
@@ -152,18 +182,19 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {topEventos.map((ev) => (
+                {topEventos.map((ev: any) => (
                   <tr key={ev.idEvento} className="border-t border-white/10 hover:bg-white/5 transition">
                     <td className="p-3">{ev.titulo}</td>
                     <td className="p-3">{ev.lugar}</td>
-                    <td className="p-3 text-right">{ev.entradasVendidas.toLocaleString()}</td>
-                    <td className="p-3 text-right">${ev.recaudacion.toLocaleString()}</td>
+                    <td className="p-3 text-right">{ev.entradasVendidas?.toLocaleString()}</td>
+                    <td className="p-3 text-right">${ev.recaudacion?.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </section>
+
       </div>
     </Master>
   );

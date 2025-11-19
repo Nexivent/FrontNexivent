@@ -3,10 +3,12 @@
 import React from 'react';
 import Link from 'next/link';
 import Master from '@components/Layout/Master';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   return (
     <Master>
       <div
@@ -139,6 +141,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <span>💳</span> Transacciones
             </Link>
+            {/* 🔙 Botón para ir a Reportes */}
+            <button
+              onClick={() => router.push("/report")}
+              className="group relative inline-flex items-center justify-center px-6 py-3 mt-4 
+             font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 
+             rounded-xl shadow-md transition-all duration-300 
+             hover:shadow-xl hover:scale-[1.03] active:scale-[0.97]"
+            >
+              <span className="absolute inset-0 w-full h-full bg-white/10 opacity-0 
+                   group-hover:opacity-100 rounded-xl transition-opacity"></span>
+              Ir a Reportes
+            </button>
+
+
           </nav>
         </aside>
 

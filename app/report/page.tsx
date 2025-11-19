@@ -44,7 +44,7 @@ const handleGenerate = async () => {
   if (result.error) {
     setError(result.error);
   } else {
-    setData(result.data);
+    setData(result.data.events);
     setReportData(result.data);
   }
 
@@ -100,13 +100,16 @@ const handleGenerate = async () => {
               Genera y filtra tus reportes según fechas, categoría u organizador.
             </p>
 
-            {/* 🔙 Botón para volver */}
-            <button
-              onClick={() => router.push("/dashboards")}
-              className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
-            >
-              ir a dashboards
-            </button>
+            {/* 🔙 Botón para ir a Dashboards con reportData */}
+<button
+  onClick={() => {
+    const encoded = encodeURIComponent(JSON.stringify(reportData));
+    router.push(`/dashboards?data=${encoded}`);
+  }}
+  className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
+>
+  ir a dashboards
+</button>
           </div>
 
           {/* 🧮 Barra de generación de reporte */}

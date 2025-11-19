@@ -25,7 +25,7 @@ export const generateReport = async (filters: any) => {
     const data = await response.json();
     console.log("📥 Respuesta del backend:", data);
 
-    return { data: data.events };
+    return { data: data };
   } catch (error) {
     console.error("Error de conexión:", error);
     return { error: "No se pudo conectar al servidor" };
