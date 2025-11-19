@@ -131,18 +131,6 @@ const ReportsDashboard: React.FC = () => {
                 leftIcon='chevron_left'
                 url='organizer'
               />
-              <ButtonLink
-                color='gray-overlay'
-                text='Crear eventos'
-                rightIcon='arrow_forward'
-                url='organizer/events'
-              />
-              <ButtonLink
-                color='yellow-overlay'
-                text='Cupones'
-                rightIcon='arrow_outward'
-                url='organizer/coupons'
-              />
             </div>
           </div>
         </div>
