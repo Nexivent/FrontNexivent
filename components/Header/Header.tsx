@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 
-import { Menu, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface User {
   name: string;
@@ -18,6 +19,8 @@ const Header: React.FC<MergedHeaderProps> = ({ user, onMenuToggle }) => {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState<boolean>(false);
+  const pathname = usePathname();
+  const showFeedNav = pathname === '/' || pathname === '' || pathname === null;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -36,27 +39,27 @@ const Header: React.FC<MergedHeaderProps> = ({ user, onMenuToggle }) => {
     >
       <div className='container mx-auto grid grid-cols-3 items-center px-4 py-3'>
         <div className='flex items-center justify-start gap-4'>
-          {/* aquí va el menú hamburguesa, pero no es necesario por ahora */}
           <Link href='/'>
             <img src='/logo_transparente.png' alt='Nexivent' className='h-20 w-auto' />
           </Link>
         </div>
-        <nav className='hidden md:flex items-center justify-center gap-8'>
-          <Link
-            href='/'
-            className='text-white text-sm font-medium hover:text-white/80 transition-colors'
-          >
-            Recomendado
-          </Link>
-          
-          <Link
-            href='/list?search=1'
-            className='text-white hover:text-white/80 transition-colors'
-            aria-label='Ir a la sección de búsqueda en la lista de eventos'
-          >
-            <Search size={22} />
-          </Link>
-        </nav>
+        {showFeedNav && (
+          <nav className='hidden md:flex items-center justify-center gap-8'>
+            <Link
+              href='/'
+              className='text-white text-sm font-medium hover:text-white/80 transition-colors'
+            >
+              Recomendado
+            </Link>
+            <Link
+              href='/list?search=1'
+              className='text-white hover:text-white/80 transition-colors'
+              aria-label='Ir a la sección de búsqueda en la lista de eventos'
+            >
+              <Search size={22} />
+            </Link>
+          </nav>
+        )}
         <div className='flex items-center justify-end'>
           {user ? (
             <div className='relative' ref={dropdownRef}>
