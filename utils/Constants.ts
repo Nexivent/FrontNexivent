@@ -8,26 +8,33 @@ export interface DocumentType {
   isNumeric: boolean;
 }
 
-export const DOCUMENTS_TYPES: DocumentType[] = [
+export const DOCUMENTS_TYPES = [
   {
-    value: '01',
     label: 'DNI',
+    value: 'DNI',
     length: 8,
-    isExact: true,
     isNumeric: true,
+    isExact: true,
   },
   {
-    value: '02',
-    label: 'RUC',
-    length: 11,
-    isExact: true,
-    isNumeric: true,
-  },
-  {
-    value: '03',
     label: 'Carnet de Extranjería',
+    value: 'CE',
     length: 12,
-    isExact: false,
     isNumeric: false,
+    isExact: false,
+  },
+  {
+    label: 'RUC - Persona Natural',
+    value: 'RUC_PERSONA',
+    length: 11,
+    isNumeric: true,
+    isExact: true,
+  },
+  {
+    label: 'RUC - Empresa',
+    value: 'RUC_EMPRESA',
+    length: 11,
+    isNumeric: true,
+    isExact: true,
   },
 ];

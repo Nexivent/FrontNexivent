@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DOCUMENTS_TYPES } from '@utils/Constants';
-import api from '@utils/api';
 import { type PrefilledData } from './Form';
 
 // Componentes
@@ -77,16 +76,45 @@ const InitialStep: React.FC<IProps> = ({ onValidateSuccess }) => {
     setApiError(null);
 
     try {
-      const endpoint = data.tipo_documento === '01' ? '/api/validate/dni' : '/api/validate/ruc';
-      const response = await api.post(endpoint, { ndocumento: data.ndocumento });
+      // Determinar el tipo de documento para nuestra API
+      const tipoDocumento = data.tipo_documento;
 
-      onValidateSuccess({
-        nombre: response.data.nombreCompleto,
-        tipo_documento: data.tipo_documento,
-        ndocumento: data.ndocumento,
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+
+      console.log('Enviando petición a:', `${API_URL}/validar-documento`);
+      console.log('Datos:', { tipo_documento: tipoDocumento, numero_documento: data.ndocumento });
+
+      const response = await fetch(`${API_URL}/validar-documento`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tipo_documento: tipoDocumento,
+          numero_documento: data.ndocumento,
+        }),
+        cache: 'no-store',
       });
+
+      console.log('Response status:', response.status);
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        // Usar nombre_completo o razon_social según el tipo
+        const nombre = result.data.nombre_completo || result.data.razon_social || '';
+
+        onValidateSuccess({
+          nombre: nombre,
+          tipo_documento: data.tipo_documento,
+          ndocumento: data.ndocumento,
+        });
+      } else {
+        setApiError(result.message || 'Error al validar el documento.');
+      }
     } catch (error: any) {
-      setApiError(error.response?.data?.error || 'Error al validar el documento.');
+      setApiError('Error de conexión al validar el documento.');
+      console.error('Error en validación:', error);
     } finally {
       setLoading(false);
     }
@@ -108,6 +136,17 @@ const InitialStep: React.FC<IProps> = ({ onValidateSuccess }) => {
               type='text'
               error={errors.ndocumento?.message}
               maxLength={docNumberMaxLength}
+              placeholder={
+                watchedDocType === 'DNI'
+                  ? '12345678'
+                  : watchedDocType === 'CE'
+                    ? '001234567'
+                    : watchedDocType === 'RUC_PERSONA'
+                      ? '10123456789'
+                      : watchedDocType === 'RUC_EMPRESA'
+                        ? '20123456789'
+                        : 'Ingrese su documento'
+              }
               {...register('ndocumento')}
             />
           </div>
