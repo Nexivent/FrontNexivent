@@ -291,7 +291,7 @@ select {
   border: 1px solid var(--light-gray);
 }
 
-input[type="time"]::-webkit-calendar-picker-indicator {
+input[type='time']::-webkit-calendar-picker-indicator {
   filter: invert(1);
 }
 
@@ -1665,16 +1665,20 @@ input[type='range' i]::-webkit-slider-thumb {
 
 .input-wrapper .input-text {
   flex-grow: 1;
+  padding-right: 3rem;
 }
 
 .password-toggle-button {
   position: absolute;
-  right: 9rem;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   padding: 10px;
   cursor: pointer;
   color: #a0a0a0;
+  z-index: 10;
 }
 
 .input-group .password-toggle-button:hover {
@@ -1689,6 +1693,7 @@ input[type='range' i]::-webkit-slider-thumb {
   border: 1px solid #444;
   border-radius: 8px;
   transition: border-color 0.2s;
+  position: relative;
 }
 
 .input-group .input-text {
@@ -1696,7 +1701,7 @@ input[type='range' i]::-webkit-slider-thumb {
   border: none;
   background: transparent;
   outline: none;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 3rem 0.75rem 1rem;
   color: #fff;
   font-size: 1rem;
   height: 48px;
@@ -1704,6 +1709,8 @@ input[type='range' i]::-webkit-slider-thumb {
 }
 
 .input-group .password-toggle-button {
+  position: absolute;
+  right: 0.5rem;
   flex-shrink: 0;
   padding: 0 1rem;
   background: none;
@@ -1711,6 +1718,7 @@ input[type='range' i]::-webkit-slider-thumb {
   cursor: pointer;
   color: #a0a0a0;
   display: flex;
+  align-items: center;
 }
 
 /* Header */
