@@ -258,12 +258,12 @@ const Page: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((ticket) => {
+                {tickets.map((ticket, index) => {
                   const price = parseFloat(ticket.price.replace('S/.', '').replace(',', '').trim());
                   const subtotal = price * ticket.quantity;
                   
                   return (
-                    <tr key={ticket.id}>
+                    <tr key={`ticket-${ticket.id}-${index}`}>
                       <td>{ticket.name}</td>
                       <td align='center'>{ticket.quantity}</td>
                       <td align='right'>{ticket.price}</td>

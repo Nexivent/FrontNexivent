@@ -15,7 +15,6 @@ interface User {
 interface Role {
   idRol: number;
   nombre: string;
-  descripcion: string;
 }
 
 // MOCK DATA
@@ -44,9 +43,9 @@ const MOCK_USERS: User[] = [
 ];
 
 const MOCK_ROLES: Role[] = [
-  { idRol: 1, nombre: 'Usuario', descripcion: 'Usuario básico' },
-  { idRol: 2, nombre: 'Organizador', descripcion: 'Puede crear eventos' },
-  { idRol: 3, nombre: 'Moderador', descripcion: 'Puede moderar contenido' },
+  { idRol: 1, nombre: 'Usuario' },
+  { idRol: 2, nombre: 'Organizador' },
+  { idRol: 3, nombre: 'Moderador' },
 ];
 
 const styles = {
@@ -560,12 +559,9 @@ export default function UsersManagement() {
                   return (
                     <div key={role.idRol} style={styles.roleCard(isAssigned)}>
                       <div>
-                        <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', color: '#fff' }}>
+                        <h4 style={{ margin: 0, fontSize: '16px', color: '#fff' }}>
                           {role.nombre}
                         </h4>
-                        <p style={{ margin: 0, color: '#999', fontSize: '14px' }}>
-                          {role.descripcion}
-                        </p>
                       </div>
                       <button
                         style={styles.btnRole(isAssigned)}
