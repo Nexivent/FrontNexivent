@@ -1,14 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Master from "@components/Layout/Master";
 import Heading from "@components/Heading/Heading";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import {
   Card,
   CardContent,
 } from "@components/Card/dashboard";
+
 import {
   ResponsiveContainer,
   BarChart,
@@ -18,73 +19,52 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+
 export default function DashboardPage() {
   const router = useRouter();
-  const params = useSearchParams();
+  const [reportData, setReportData] = useState<any[] | null>(null);
 
-  // 🟡 Obtenemos el JSON enviado desde /report
-const raw = params.get("data");
+  // 🟡 Cargar la data almacenada por /report
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("reportData");
 
-// ❗ Si no hay data, mostrar mensaje y evitar crash
-if (!raw) {
-  return (
-    <Master>
-      <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white">
-        <p className="text-lg">No se recibieron datos del reporte.</p>
+      if (!saved) {
+        setReportData(null);
+        return;
+      }
 
-        <button
-          onClick={() => router.push("/report")}
-          className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
-        >
-          ← Volver al reporte
-        </button>
-      </div>
-    </Master>
-  );
-}
+      const parsed = JSON.parse(saved);
 
-let reportData = null;
+      // Si viene como { summary, events }, tomamos events
+      const events = Array.isArray(parsed?.events) ? parsed.events : [];
 
-try {
-  reportData = JSON.parse(raw);
-} catch (e) {
-  return (
-    <Master>
-      <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white">
-        <p className="text-lg">Los datos recibidos están corruptos o no son válidos.</p>
+      setReportData(events);
+    } catch (err) {
+      console.error("Error cargando data:", err);
+      setReportData(null);
+    }
+  }, []);
 
-        <button
-          onClick={() => router.push("/report")}
-          className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
-        >
-          ← Volver al reporte
-        </button>
-      </div>
-    </Master>
-  );
-}
+  // ❗ Caso: sin data → mensaje
+  if (!reportData) {
+    return (
+      <Master>
+        <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white">
+          <p className="text-lg">No se encontraron datos para mostrar el dashboard.</p>
 
-// ❗ De nuevo, validar por si llega null del backend
-if (!reportData || !Array.isArray(reportData)) {
-  return (
-    <Master>
-      <div className="min-h-screen flex flex-col justify-center items-center bg-black text-white">
-        <p className="text-lg">Aún no hay resultados para generar un dashboard.</p>
+          <button
+            onClick={() => router.push("/report")}
+            className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
+          >
+            ← Volver al reporte
+          </button>
+        </div>
+      </Master>
+    );
+  }
 
-        <button
-          onClick={() => router.push("/report")}
-          className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
-        >
-          ← Volver al reporte
-        </button>
-      </div>
-    </Master>
-  );
-}
-
-
-  // 🎯 Aquí tú extraes tus agregados igual que hacías con mockData
-  // Ajusta estas funciones según la estructura del backend
+  // 🎯 Agregaciones
   const summary = {
     totalEventos: reportData.length,
     totalPublicados: reportData.filter((e: any) => e.estado === "PUBLICADO").length,
@@ -114,7 +94,7 @@ if (!reportData || !Array.isArray(reportData)) {
     }, {})
   );
 
-  // 🏆 Top eventos
+  // 🏆 Top 10 eventos
   const topEventos = [...reportData]
     .sort((a, b) => b.recaudacion - a.recaudacion)
     .slice(0, 10);
@@ -122,7 +102,7 @@ if (!reportData || !Array.isArray(reportData)) {
   return (
     <Master>
       <div className="min-h-screen bg-black text-white pt-20 pb-10 px-6 space-y-16">
-        
+
         {/* 🧩 Encabezado */}
         <div className="text-center">
           <Heading type={1} color="gray" text="Dashboard de Eventos" />
@@ -130,7 +110,6 @@ if (!reportData || !Array.isArray(reportData)) {
             Visualiza el rendimiento general de tus eventos.
           </p>
 
-          {/* 🔙 Botón para volver */}
           <button
             onClick={() => router.push("/report")}
             className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"

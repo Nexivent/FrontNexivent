@@ -34,22 +34,29 @@ export default function ReportPage() {
   const [reportData, setReportData] = useState<any>(null);
 
   // 🔹 Generar reporte → Llamada real al backend
-const handleGenerate = async () => {
-  setLoading(true);
-  setError("");
-  setReportData(null);
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError("");
+    setReportData(null);
 
-  const result = await generateReport(filters);
+    const result = await generateReport(filters);
 
-  if (result.error) {
-    setError(result.error);
-  } else {
-    setData(result.data.events);
-    setReportData(result.data);
-  }
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setData(result.data.events);
+      setReportData(result.data);
+    }
 
-  setLoading(false);
-};
+    setLoading(false);
+  };
+
+  const handleGoToDashboard = () => {
+    if (!reportData) return;
+
+    localStorage.setItem("reportData", JSON.stringify(reportData));
+    router.push("/dashboards");
+  };
 
 
   // 🔹 Manejo de cambios filtros principales (antes del fetch)
@@ -101,15 +108,12 @@ const handleGenerate = async () => {
             </p>
 
             {/* 🔙 Botón para ir a Dashboards con reportData */}
-<button
-  onClick={() => {
-    const encoded = encodeURIComponent(JSON.stringify(reportData));
-    router.push(`/dashboards?data=${encoded}`);
-  }}
-  className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
->
-  ir a dashboards
-</button>
+            <button
+              onClick={handleGoToDashboard}
+              className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition"
+            >
+              ir a dashboards
+            </button>
           </div>
 
           {/* 🧮 Barra de generación de reporte */}
@@ -141,24 +145,24 @@ const handleGenerate = async () => {
             </div>
 
             <div>
-  <label className="block text-sm font-medium text-gray-300">
-    Categoría
-  </label>
-  <select
-    name="idCategoria"
-    value={filters.idCategoria}
-    onChange={handleChange}
-    className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-40"
-  >
-    <option value="">Todas</option>
-    <option value="1">Conciertos</option>
-    <option value="2">Ferias y Expos</option>
-    <option value="3">Teatro</option>
-    <option value="4">Gastronomía</option>
-    <option value="5">Deportes</option>
-    {/* Puedes añadir más categorías según tu BD */}
-  </select>
-</div>
+              <label className="block text-sm font-medium text-gray-300">
+                Categoría
+              </label>
+              <select
+                name="idCategoria"
+                value={filters.idCategoria}
+                onChange={handleChange}
+                className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-40"
+              >
+                <option value="">Todas</option>
+                <option value="1">Conciertos</option>
+                <option value="2">Ferias y Expos</option>
+                <option value="3">Teatro</option>
+                <option value="4">Gastronomía</option>
+                <option value="5">Deportes</option>
+                {/* Puedes añadir más categorías según tu BD */}
+              </select>
+            </div>
 
 
             <div>
@@ -276,7 +280,7 @@ const handleGenerate = async () => {
                     <th className="border border-white/30 p-3 text-left">Lugar</th>
                     <th className="border border-white/30 p-3 text-left">Estado</th>
                     <th className="border border-white/30 p-3 text-left">Inicio</th>
-                    <th className="border border-white/30 p-3 text-left">Fin</th>
+
                     <th className="border border-white/30 p-3 text-right">Entradas</th>
                     <th className="border border-white/30 p-3 text-right">
                       Recaudación
@@ -296,9 +300,6 @@ const handleGenerate = async () => {
                       <td className="border border-white/30 p-3">{ev.estado}</td>
                       <td className="border border-white/30 p-3">
                         {new Date(ev.fechaInicio).toLocaleDateString("es-PE")}
-                      </td>
-                      <td className="border border-white/30 p-3">
-                        {new Date(ev.fechaFin).toLocaleDateString("es-PE")}
                       </td>
                       <td className="border border-white/30 p-3 text-right">
                         {ev.entradasVendidas.toLocaleString()}

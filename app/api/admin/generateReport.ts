@@ -12,7 +12,7 @@ export const generateReport = async (filters: any) => {
   console.log("JSON enviado al backend:", payload);
 
   try {
-    const response = await fetch("http://localhost:8098/api/admin/reports", {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/reports`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
