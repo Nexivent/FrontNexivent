@@ -164,8 +164,13 @@ const Page: React.FC = () => {
         console.log('📡 Paso 3: Generando tickets...');
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        // ⚠️ CORRECCIÓN: Generar tickets según la cantidad total
-        const allTickets = [];
+        // ⚠️ CORRECCIÓN: Generar tickets según la cantidad total con tipo explícito
+        const allTickets: Array<{
+          idTicket: string;
+          codigoQR: string;
+          estado: string;
+          zona: string;
+        }> = [];
         let ticketCounter = 1;
         
         // Por cada tipo de ticket, generar la cantidad especificada

@@ -28,16 +28,14 @@ interface Fecha {
 }
 
 interface Tarifa {
-  idTipoTicket: number;
-  nombreTicket: string;
-  fechaInicio: string;
-  fechaFin: string;
-  idSector: number;
-  nombreSector: string;
-  idPerfil: number;
-  nombrePerfil: string;
+  idTarifa: number;        // ID único de la tarifa
   precio: number;
+  tipoSector: string;      // ej: "VIP", "General", "Platino"
   stockDisponible: number;
+  tipoTicket: string;      // ej: "Preventa", "Regular"
+  fechaIni: string;
+  fechaFin: string;
+  perfil: string;          // ej: "Profesional", "Estudiante", "Founder"
 }
 
 interface EventData {
@@ -47,7 +45,6 @@ interface EventData {
   descripcionArtista: string;
   imagenPortada: string;
   lugar: string;
-  estado: string;
   fechas: Fecha[];
   tarifas: Tarifa[];
 }
@@ -63,7 +60,6 @@ const MOCK_EVENT_DATA: EventData = {
   descripcionArtista: 'Skillbea es uno de los artistas más destacados de la escena urbana peruana, conocido por sus letras auténticas y su estilo único que fusiona trap, reggaetón y hip hop.',
   imagenPortada: '/portadaSkillbea.jpg',
   lugar: 'Vichama Conciertos',
-  estado: 'PUBLICADO',
   fechas: [
     {
       idFechaEvento: 1,
@@ -79,116 +75,104 @@ const MOCK_EVENT_DATA: EventData = {
     }
   ],
   tarifas: [
-    // VIP - Preventa (50 disponibles en total para el sector)
+    // VIP - Profesional
     {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
-      fechaFin: '2025-12-31', // Vigente para pruebas
-      idSector: 1,
-      nombreSector: 'VIP',
-      idPerfil: 1,
-      nombrePerfil: 'Profesional',
+      idTarifa: 1,
       precio: 80,
-      stockDisponible: 50, // Stock del sector VIP
-    },
-    {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
+      tipoSector: 'VIP',
+      stockDisponible: 50, // Stock total del sector VIP
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
       fechaFin: '2025-12-31',
-      idSector: 1,
-      nombreSector: 'VIP',
-      idPerfil: 2,
-      nombrePerfil: 'Estudiante',
+      perfil: 'Profesional',
+    },
+    // VIP - Estudiante
+    {
+      idTarifa: 2,
       precio: 60,
-      stockDisponible: 50, // Mismo stock del sector VIP
-    },
-    {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
+      tipoSector: 'VIP',
+      stockDisponible: 50, // Mismo stock (se comparte entre todos los perfiles del sector)
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
       fechaFin: '2025-12-31',
-      idSector: 1,
-      nombreSector: 'VIP',
-      idPerfil: 3,
-      nombrePerfil: 'Founder',
+      perfil: 'Estudiante',
+    },
+    // VIP - Founder
+    {
+      idTarifa: 3,
       precio: 70,
-      stockDisponible: 50, // Mismo stock del sector VIP
-    },
-    // General - Preventa (100 disponibles en total para el sector)
-    {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
+      tipoSector: 'VIP',
+      stockDisponible: 50, // Mismo stock
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
       fechaFin: '2025-12-31',
-      idSector: 2,
-      nombreSector: 'General',
-      idPerfil: 1,
-      nombrePerfil: 'Profesional',
+      perfil: 'Founder',
+    },
+    // General - Profesional
+    {
+      idTarifa: 4,
       precio: 50,
-      stockDisponible: 100, // Stock del sector General
-    },
-    {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
+      tipoSector: 'General',
+      stockDisponible: 100, // Stock total del sector General
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
       fechaFin: '2025-12-31',
-      idSector: 2,
-      nombreSector: 'General',
-      idPerfil: 2,
-      nombrePerfil: 'Estudiante',
+      perfil: 'Profesional',
+    },
+    // General - Estudiante
+    {
+      idTarifa: 5,
       precio: 35,
-      stockDisponible: 100, // Mismo stock del sector General
-    },
-    {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
+      tipoSector: 'General',
+      stockDisponible: 100, // Mismo stock
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
       fechaFin: '2025-12-31',
-      idSector: 2,
-      nombreSector: 'General',
-      idPerfil: 3,
-      nombrePerfil: 'Founder',
+      perfil: 'Estudiante',
+    },
+    // General - Founder
+    {
+      idTarifa: 6,
       precio: 45,
-      stockDisponible: 100, // Mismo stock del sector General
-    },
-    // Platino - Preventa (0 disponibles - AGOTADO para probar)
-    {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
+      tipoSector: 'General',
+      stockDisponible: 100, // Mismo stock
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
       fechaFin: '2025-12-31',
-      idSector: 3,
-      nombreSector: 'Platino',
-      idPerfil: 1,
-      nombrePerfil: 'Profesional',
+      perfil: 'Founder',
+    },
+    // Platino - Profesional (AGOTADO)
+    {
+      idTarifa: 7,
       precio: 120,
+      tipoSector: 'Platino',
       stockDisponible: 0, // Sector Platino AGOTADO
-    },
-    {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
       fechaFin: '2025-12-31',
-      idSector: 3,
-      nombreSector: 'Platino',
-      idPerfil: 2,
-      nombrePerfil: 'Estudiante',
+      perfil: 'Profesional',
+    },
+    // Platino - Estudiante (AGOTADO)
+    {
+      idTarifa: 8,
       precio: 90,
+      tipoSector: 'Platino',
       stockDisponible: 0, // Sector Platino AGOTADO
-    },
-    {
-      idTipoTicket: 1,
-      nombreTicket: 'Preventa',
-      fechaInicio: '2024-01-01',
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
       fechaFin: '2025-12-31',
-      idSector: 3,
-      nombreSector: 'Platino',
-      idPerfil: 3,
-      nombrePerfil: 'Founder',
+      perfil: 'Estudiante',
+    },
+    // Platino - Founder (AGOTADO)
+    {
+      idTarifa: 9,
       precio: 100,
+      tipoSector: 'Platino',
       stockDisponible: 0, // Sector Platino AGOTADO
+      tipoTicket: 'Preventa',
+      fechaIni: '2024-01-01',
+      fechaFin: '2025-12-31',
+      perfil: 'Founder',
     },
   ],
 };
@@ -238,7 +222,7 @@ function formatMultipleDates(fechas: Fecha[]): string {
 /*
 async function getEventData(eventId: number): Promise<EventData> {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/evento/${eventId}`,
+    `${process.env.NEXT_PUBLIC_API_URL}/api/events/:id/summary`,
     {
       cache: 'no-store',
     }
@@ -250,11 +234,6 @@ async function getEventData(eventId: number): Promise<EventData> {
 
   const data = await response.json();
   
-  // Validar que el evento esté publicado
-  if (data.estado !== 'PUBLICADO') {
-    throw new Error('Evento no disponible');
-  }
-
   return data;
 }
 */

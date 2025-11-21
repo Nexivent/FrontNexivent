@@ -84,6 +84,12 @@ const Page: React.FC = () => {
       return;
     }
 
+    // Verificar que el usuario esté autenticado
+    if (!user || !user.email) {
+      setEmailStatus('Error: Debes iniciar sesión para enviar el correo.');
+      return;
+    }
+
     setIsSendingEmail(true);
     setEmailStatus('Enviando...');
 
@@ -93,8 +99,8 @@ const Page: React.FC = () => {
         eventName: ticketsData.eventName || 'Evento',
         eventVenue: ticketsData.eventVenue || 'Lugar',
         orderId: ticketsData.orderId,
-        userEmail: user.correo,
-        userName: user.nombre,
+        userEmail: user.email,
+        userName: user.nombre || 'Usuario',
       };
 
       const response = await fetch('/api/tickets/sendEmail', {
@@ -181,7 +187,7 @@ const Page: React.FC = () => {
                 color='yellow-filled'
                 text={isSendingEmail ? 'Enviando...' : 'Enviar entradas a mi correo'}
                 onClick={handleSendEmail}
-                disabled={isSendingEmail}
+                disabled={isSendingEmail || !user}
                 leftIcon='forward_to_inbox'
               />
               <Button
@@ -198,6 +204,13 @@ const Page: React.FC = () => {
                 onClick={handleGoHome}
               />
             </div>
+
+            {/* Mensaje de estado del email */}
+            {emailStatus && (
+              <div className='email-status-message'>
+                <p>{emailStatus}</p>
+              </div>
+            )}
           </div>
         </div>
       </Section>
@@ -301,6 +314,20 @@ const Page: React.FC = () => {
           gap: 1rem;
         }
 
+        .email-status-message {
+          margin-top: 1.5rem;
+          padding: 1rem;
+          background: rgba(205, 220, 57, 0.1);
+          border: 1px solid #cddc39;
+          border-radius: 8px;
+          color: #cddc39;
+          font-weight: 500;
+        }
+
+        .email-status-message p {
+          margin: 0;
+        }
+
         @media (max-width: 768px) {
           .success-container {
             padding: 2rem 1rem;
@@ -317,11 +344,6 @@ const Page: React.FC = () => {
           .info-box {
             padding: 1rem;
           }
-        }
-        .email-status-message {
-          margin-top: 1rem;
-          color: #cddc39;
-          font-weight: 500;
         }
       `}</style>
     </Master>

@@ -138,7 +138,7 @@ const Page: React.FC = () => {
         remainingSeconds: 600, // 10 minutos
       };
 
-      console.log('✅ Reserva simulada exitosa:', mockReservationData);
+      console.log('Reserva simulada exitosa:', mockReservationData);
 
       // =========================================================================
       // VERSION CON API - Descomentar cuando esté lista
@@ -163,7 +163,7 @@ const Page: React.FC = () => {
       }
 
       const reservaData = await response.json();
-      console.log('✅ Reserva exitosa:', reservaData);
+      console.log('Reserva exitosa:', reservaData);
 
       const mockReservationData = {
         orderId: reservaData.orderId,

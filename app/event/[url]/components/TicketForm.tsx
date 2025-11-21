@@ -22,16 +22,14 @@ interface Fecha {
 }
 
 interface Tarifa {
-  idTipoTicket: number;
-  nombreTicket: string;
-  fechaInicio: string;
-  fechaFin: string;
-  idSector: number;
-  nombreSector: string;
-  idPerfil: number;
-  nombrePerfil: string;
+  idTarifa: number;        // ID único de la tarifa
   precio: number;
+  tipoSector: string;      // ej: "VIP", "General", "Platino"
   stockDisponible: number;
+  tipoTicket: string;      // ej: "Preventa", "Regular"
+  fechaIni: string;
+  fechaFin: string;
+  perfil: string;          // ej: "Profesional", "Estudiante", "Founder"
 }
 
 interface EventData {
@@ -41,7 +39,6 @@ interface EventData {
   descripcionArtista: string;
   imagenPortada: string;
   lugar: string;
-  estado: string;
   fechas: Fecha[];
   tarifas: Tarifa[];
 }
@@ -77,11 +74,9 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
   const getSectores = () => {
     const sectoresMap = new Map();
     tarifasConCantidad.forEach(tarifa => {
-      if (!sectoresMap.has(tarifa.idSector)) {
-        sectoresMap.set(tarifa.idSector, {
-          idSector: tarifa.idSector,
-          nombreSector: tarifa.nombreSector,
-          stockDisponible: tarifa.stockDisponible,
+      if (!sectoresMap.has(tarifa.tipoSector)) {
+        sectoresMap.set(tarifa.tipoSector, {
+          tipoSector: tarifa.tipoSector,
         });
       }
     });
@@ -92,10 +87,9 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
   const getPerfiles = () => {
     const perfilesMap = new Map();
     tarifasConCantidad.forEach(tarifa => {
-      if (!perfilesMap.has(tarifa.idPerfil)) {
-        perfilesMap.set(tarifa.idPerfil, {
-          idPerfil: tarifa.idPerfil,
-          nombrePerfil: tarifa.nombrePerfil,
+      if (!perfilesMap.has(tarifa.perfil)) {
+        perfilesMap.set(tarifa.perfil, {
+          perfil: tarifa.perfil,
         });
       }
     });
@@ -107,25 +101,30 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
     if (tarifasConCantidad.length === 0) return null;
     const primera = tarifasConCantidad[0];
     return {
-      nombreTicket: primera.nombreTicket,
+      tipoTicket: primera.tipoTicket,
       fechaFin: primera.fechaFin,
     };
   };
 
   // Calcular stock disponible de un sector considerando las cantidades seleccionadas
-  const calcularStockDisponibleSector = (idSector: number): number => {
-    const tarifasSector = tarifasConCantidad.filter(t => t.idSector === idSector);
+  const calcularStockDisponibleSector = (tipoSector: string): number => {
+    const tarifasSector = tarifasConCantidad.filter(t => t.tipoSector === tipoSector);
     if (tarifasSector.length === 0) return 0;
 
-    const stockTotal = tarifasSector[0].stockDisponible;
+    // El stock es compartido entre todos los perfiles del mismo sector
+    // Tomamos el stock de la primera tarifa del sector
+    const stockBase = tarifasSector[0].stockDisponible;
+    
+    // Restamos todas las cantidades seleccionadas en ese sector
     const totalSeleccionado = tarifasSector.reduce((sum, tarifa) => sum + tarifa.cantidad, 0);
-    return Math.max(0, stockTotal - totalSeleccionado);
+    
+    return Math.max(0, stockBase - totalSeleccionado);
   };
 
   // Obtener tarifa específica por sector y perfil
-  const getTarifa = (idSector: number, idPerfil: number): TarifaConCantidad | undefined => {
+  const getTarifa = (tipoSector: string, perfil: string): TarifaConCantidad | undefined => {
     return tarifasConCantidad.find(
-      t => t.idSector === idSector && t.idPerfil === idPerfil
+      t => t.tipoSector === tipoSector && t.perfil === perfil
     );
   };
 
@@ -156,7 +155,7 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
     hoy.setHours(0, 0, 0, 0);
 
     return tarifas.filter(tarifa => {
-      const inicio = new Date(tarifa.fechaInicio);
+      const inicio = new Date(tarifa.fechaIni);
       const fin = new Date(tarifa.fechaFin);
       inicio.setHours(0, 0, 0, 0);
       fin.setHours(23, 59, 59, 999);
@@ -198,10 +197,10 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
   // HANDLERS
   // =================================
 
-  const handleDecrease = (idSector: number, idPerfil: number): void => {
+  const handleDecrease = (tipoSector: string, perfil: string): void => {
     setTarifasConCantidad(prev => {
       return prev.map(tarifa => {
-        if (tarifa.idSector === idSector && tarifa.idPerfil === idPerfil && tarifa.cantidad > 0) {
+        if (tarifa.tipoSector === tipoSector && tarifa.perfil === perfil && tarifa.cantidad > 0) {
           return { ...tarifa, cantidad: tarifa.cantidad - 1 };
         }
         return tarifa;
@@ -209,8 +208,8 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
     });
   };
 
-  const handleIncrease = (idSector: number, idPerfil: number): void => {
-    const stockDisponibleSector = calcularStockDisponibleSector(idSector);
+  const handleIncrease = (tipoSector: string, perfil: string): void => {
+    const stockDisponibleSector = calcularStockDisponibleSector(tipoSector);
     
     if (stockDisponibleSector <= 0) {
       showAlert({ type: 'error', text: 'No hay más entradas disponibles en este sector.' });
@@ -219,7 +218,7 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
 
     setTarifasConCantidad(prev => {
       return prev.map(tarifa => {
-        if (tarifa.idSector === idSector && tarifa.idPerfil === idPerfil) {
+        if (tarifa.tipoSector === tipoSector && tarifa.perfil === perfil) {
           if (tarifa.cantidad >= 9) {
             showAlert({ type: 'error', text: 'Máximo 9 entradas por tipo.' });
             return tarifa;
@@ -274,8 +273,8 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
       const ticketsSeleccionados = tarifasConCantidad
         .filter(tarifa => tarifa.cantidad > 0)
         .map(tarifa => ({
-          id: tarifa.idTipoTicket,
-          name: `${tarifa.nombreSector} - ${tarifa.nombrePerfil}`,
+          id: tarifa.idTarifa,
+          name: `${tarifa.tipoSector} - ${tarifa.perfil}`,
           price: `S/. ${tarifa.precio.toFixed(2)}`,
           quantity: tarifa.cantidad,
         }));
@@ -288,7 +287,7 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
           lugar: eventData.lugar,
           imagenPortada: eventData.imagenPortada,
         },
-        tickets: ticketsSeleccionados, // ← Formato correcto para /buy
+        tickets: ticketsSeleccionados,
         fecha: fechaSeleccionadaObj,
         timestamp: Date.now(),
       };
@@ -373,7 +372,7 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
         {tipoTicketInfo && (
           <div className='ticket-table-header'>
             <h4 className='ticket-type-title'>
-              {tipoTicketInfo.nombreTicket}
+              {tipoTicketInfo.tipoTicket}
               <span className='ticket-validity'>
                 (Vigente hasta {formatFechaCorta(tipoTicketInfo.fechaFin)})
               </span>
@@ -388,13 +387,13 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
               <tr>
                 <th className='perfil-column'></th>
                 {sectores.map(sector => {
-                  const stockDisponible = calcularStockDisponibleSector(sector.idSector);
+                  const stockDisponible = calcularStockDisponibleSector(sector.tipoSector);
                   const isAgotado = stockDisponible <= 0;
                   
                   return (
-                    <th key={sector.idSector} className='sector-column'>
+                    <th key={sector.tipoSector} className='sector-column'>
                       <div className='sector-header'>
-                        <span className='sector-name'>{sector.nombreSector}</span>
+                        <span className='sector-name'>{sector.tipoSector}</span>
                         <span className={`sector-stock ${isAgotado ? 'agotado' : ''}`}>
                           {stockDisponible} disponibles
                         </span>
@@ -406,25 +405,25 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
             </thead>
             <tbody>
               {perfiles.map(perfil => (
-                <tr key={perfil.idPerfil}>
+                <tr key={perfil.perfil}>
                   <td className='perfil-cell'>
-                    <span className='perfil-name'>{perfil.nombrePerfil}</span>
+                    <span className='perfil-name'>{perfil.perfil}</span>
                   </td>
                   {sectores.map(sector => {
-                    const tarifa = getTarifa(sector.idSector, perfil.idPerfil);
-                    const stockDisponible = calcularStockDisponibleSector(sector.idSector);
+                    const tarifa = getTarifa(sector.tipoSector, perfil.perfil);
+                    const stockDisponible = calcularStockDisponibleSector(sector.tipoSector);
                     const isAgotado = stockDisponible <= 0;
 
                     if (!tarifa) {
                       return (
-                        <td key={`${sector.idSector}-${perfil.idPerfil}`} className='tarifa-cell empty'>
+                        <td key={`${sector.tipoSector}-${perfil.perfil}`} className='tarifa-cell empty'>
                           -
                         </td>
                       );
                     }
 
                     return (
-                      <td key={`${sector.idSector}-${perfil.idPerfil}`} className='tarifa-cell'>
+                      <td key={`${sector.tipoSector}-${perfil.perfil}`} className='tarifa-cell'>
                         {isAgotado ? (
                           <div className='tarifa-content agotado'>
                             <span className='material-symbols-outlined lock-icon'>lock</span>
@@ -436,7 +435,7 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
                               <button
                                 type='button'
                                 className='qty-btn'
-                                onClick={() => handleDecrease(sector.idSector, perfil.idPerfil)}
+                                onClick={() => handleDecrease(sector.tipoSector, perfil.perfil)}
                                 disabled={submitting || tarifa.cantidad === 0}
                               >
                                 -
@@ -451,7 +450,7 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
                               <button
                                 type='button'
                                 className='qty-btn'
-                                onClick={() => handleIncrease(sector.idSector, perfil.idPerfil)}
+                                onClick={() => handleIncrease(sector.tipoSector, perfil.perfil)}
                                 disabled={submitting || isAgotado}
                               >
                                 +
