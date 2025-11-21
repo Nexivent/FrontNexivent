@@ -666,9 +666,14 @@ const EventCreator: React.FC = () => {
         throw new Error('No se pudo obtener el URL prefirmado.');
       }
 
-      const presign = (await presignResponse.json()) as { uploadUrl?: string; key?: string };
+      const presign = (await presignResponse.json()) as {
+        uploadUrl?: string;
+        key?: string;
+        fileUrl?: string;
+        publicUrl?: string;
+      };
 
-      if (typeof presign.uploadUrl !== 'string' || typeof presign.key !== 'string') {
+      if (typeof presign.uploadUrl !== 'string') {
         throw new Error('Respuesta invalida del servicio de carga.');
       }
 
@@ -682,7 +687,33 @@ const EventCreator: React.FC = () => {
         throw new Error('Error subiendo el archivo a S3.');
       }
 
-      setForm((previous) => ({ ...previous, [key]: presign.key }));
+      const buildUploadedUrl = () => {
+        const explicitUrl =
+          typeof presign.fileUrl === 'string' && presign.fileUrl.trim().length > 0
+            ? presign.fileUrl
+            : typeof presign.publicUrl === 'string' && presign.publicUrl.trim().length > 0
+              ? presign.publicUrl
+              : '';
+
+        if (explicitUrl.length > 0) return explicitUrl;
+
+        const keyUrl =
+          typeof presign.key === 'string' && presign.key.trim().length > 0
+            ? resolveMediaPreviewUrl(presign.key)
+            : '';
+
+        if (/^https?:\/\//i.test(keyUrl)) return keyUrl;
+
+        return presign.uploadUrl?.split('?')[0];
+      };
+
+      const uploadedUrl = buildUploadedUrl();
+
+      if (uploadedUrl?.trim().length === 0) {
+        throw new Error('No se obtuvo una URL valida para el archivo subido.');
+      }
+
+      setForm((previous) => ({ ...previous, [key]: uploadedUrl }));
     } catch (error) {
       console.error('Error subiendo archivo', error);
       setMediaMeta((previous) => ({
