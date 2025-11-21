@@ -132,10 +132,10 @@ const Page: React.FC = () => {
     setSubmitting(true);
 
     // ========================================================
-    // (sin backend)
+    // SIMULACIÓN (sin backend)
     // Para probar con las APIs, cambiar USE_SIMULATION a false
     // =========================================================
-    const USE_SIMULATION = true; // ← :v
+    const USE_SIMULATION = true; // ← Cambiar a false cuando tengas el backend
 
     if (USE_SIMULATION) {
       try {
@@ -164,16 +164,29 @@ const Page: React.FC = () => {
         console.log('📡 Paso 3: Generando tickets...');
         await new Promise(resolve => setTimeout(resolve, 800));
         
+        // ⚠️ CORRECCIÓN: Generar tickets según la cantidad total
+        const allTickets = [];
+        let ticketCounter = 1;
+        
+        // Por cada tipo de ticket, generar la cantidad especificada
+        reservationData.purchaseData.tickets.forEach(ticketType => {
+          for (let i = 0; i < ticketType.quantity; i++) {
+            allTickets.push({
+              idTicket: `TICKET-${String(ticketCounter).padStart(3, '0')}`,
+              codigoQR: `QR-${Math.random().toString(36).substring(2, 15).toUpperCase()}`,
+              estado: 'Disponible',
+              zona: ticketType.name,
+            });
+            ticketCounter++;
+          }
+        });
+        
         const ticketsData = {
-          tickets: reservationData.purchaseData.tickets.map((ticket, index) => ({
-            idTicket: `TICKET-${String(index + 1).padStart(3, '0')}`,
-            codigoQR: `QR-${Math.random().toString(36).substring(2, 15).toUpperCase()}`,
-            estado: 'Disponible',
-            zona: ticket.name,
-          })),
+          tickets: allTickets, // ← Ahora tiene la cantidad correcta
           orderId: reservationData.orderId,
         };
-        console.log('✅ Tickets simulados generados:', ticketsData);
+        
+        console.log(`✅ ${allTickets.length} tickets simulados generados:`, ticketsData);
 
         sessionStorage.setItem('ticketsData', JSON.stringify({
           tickets: ticketsData.tickets,
@@ -219,8 +232,6 @@ const Page: React.FC = () => {
           body: JSON.stringify({
             orderId: reservationData.orderId,
             idMetodoPago: selectedMethod === 'card' ? 1 : 2, // Ajustar según tu BD
-            // O usar string:
-            // idMetodoPago: selectedMethod === 'card' ? 'TARJETA' : 'YAPE',
           }),
         }
       );
@@ -233,7 +244,7 @@ const Page: React.FC = () => {
       const intentData = await intentResponse.json();
       console.log('✅ Intento de pago registrado:', intentData);
 
-      const paymentId = intentData.paymentId; // Guardar el paymentId
+      const paymentId = intentData.paymentId;
 
       // ===================================
       // Confirmar la orden
@@ -247,11 +258,9 @@ const Page: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Si tienes autenticación:
-            // 'Authorization': `Bearer ${getAuthToken()}`,
           },
           body: JSON.stringify({
-            paymentId: paymentId, // El ID obtenido anteriormente
+            paymentId: paymentId,
           }),
         }
       );
@@ -259,7 +268,6 @@ const Page: React.FC = () => {
       if (!confirmResponse.ok) {
         const errorData = await confirmResponse.json();
         
-        // Manejar errores específicos
         if (confirmResponse.status === 410 || confirmResponse.status === 402 || confirmResponse.status === 409) {
           throw new Error(errorData.error || 'Error al confirmar la orden');
         }
@@ -282,8 +290,6 @@ const Page: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Si tienes autenticación:
-            // 'Authorization': `Bearer ${getAuthToken()}`,
           },
           body: JSON.stringify({
             orderId: reservationData.orderId,

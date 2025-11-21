@@ -62,6 +62,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 textDecoration: 'none',
                 borderRadius: '8px',
                 fontWeight: 600,
+                transition: 'all 0.2s ease',
+                border:
+                  pathname === '/administrator'
+                    ? '1px solid rgba(205, 220, 57, 0.3)'
+                    : '1px solid transparent',
               }}
               onMouseEnter={(e) => {
                 if (pathname !== '/administrator') {
@@ -91,6 +96,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 textDecoration: 'none',
                 borderRadius: '8px',
                 fontWeight: 600,
+                transition: 'all 0.2s ease',
+                border:
+                  pathname === '/administrator/transactions'
+                    ? '1px solid rgba(205, 220, 57, 0.3)'
+                    : '1px solid transparent',
               }}
               onMouseEnter={(e) => {
                 if (pathname !== '/administrator/transactions') {
@@ -105,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <span>💳</span> Transacciones
             </Link>
-            {/* 🔙 Botón para ir a Reportes */}
+            {/* Botón para ir a Reportes */}
             <button
               onClick={() => router.push("/report")}
               className="group relative inline-flex items-center justify-center px-6 py-3 mt-4 

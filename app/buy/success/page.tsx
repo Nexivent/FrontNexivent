@@ -170,7 +170,7 @@ const Page: React.FC = () => {
             <div className='info-box'>
               <span className='material-symbols-outlined'>info</span>
               <div>
-                <strong>Importante:</strong> Presenta tu código QR en el evento para acceder.
+                <strong>Importante:</strong> Presenta tu código QR y documentación requerida en el evento para acceder.
               </div>
             </div>
 
