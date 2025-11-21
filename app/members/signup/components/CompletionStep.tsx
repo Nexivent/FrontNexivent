@@ -12,9 +12,10 @@ import Link from 'next/dist/client/link';
 interface IProps {
   prefilledData: PrefilledData;
   onGoBack: () => void;
+  onVerificationNeeded: (data: { usuarioId: number; correo: string; nombre: string }) => void;
 }
 
-const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack }) => {
+const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack, onVerificationNeeded }) => {
   const {
     register,
     control,
@@ -78,17 +79,40 @@ const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack }) => {
       const result = await response.json();
       console.log('Respuesta del backend:', result);
 
-      if (response.ok) {
-        // El backend retorna el token dentro de la respuesta
-        if (result.token) {
-          localStorage.setItem('auth_token', result.token.token);
-          localStorage.setItem('user', JSON.stringify(result));
+      if (response.ok && result.requiere_verificacion && result.codigo_verificacion) {
+        try {
+          const emailResponse = await fetch('/api/UserAccount', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: result.usuario.correo,
+              code: result.codigo_verificacion,
+              nombre: result.usuario.nombre,
+            }),
+          });
 
-          alert('¡Registro exitoso!');
-          window.location.href = '/dashboards';
-        } else {
-          alert('¡Registro exitoso! Por favor inicia sesión.');
-          window.location.href = '/members/login';
+          if (!emailResponse.ok) {
+            throw new Error('Error al enviar el email');
+          }
+
+          // Guardar datos para verificación
+          sessionStorage.setItem('verification_user_id', result.usuario.id);
+          sessionStorage.setItem('verification_email', result.usuario.correo);
+          sessionStorage.setItem('verification_code', result.codigo_verificacion);
+          sessionStorage.setItem('verification_expiry', String(Date.now() + 15 * 60 * 1000));
+          sessionStorage.setItem('verification_nombre', result.usuario.nombre);
+
+          alert('Registro exitoso! Revisa tu correo para el código de verificación.');
+          onVerificationNeeded({
+            usuarioId: result.usuario.id,
+            correo: result.usuario.correo,
+            nombre: result.usuario.nombre,
+          });
+        } catch (emailError) {
+          console.error('Error al enviar email:', emailError);
+          alert('Usuario registrado pero hubo un error al enviar el email. Contacta soporte.');
         }
       } else {
         throw new Error(result.message || result.error || 'Error al registrar el usuario');
@@ -167,9 +191,16 @@ const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack }) => {
 
           <div className='form-buttons'>
             <Button
+              type='button'
+              text='Atrás'
+              color='gray'
+              onClick={onGoBack}
+              disabled={isSubmitting}
+            />
+            <Button
               type='submit'
               color='yellow-filled'
-              text='Finalizar Registro'
+              text={isSubmitting ? 'Registrando...' : 'Finalizar Registro'}
               disabled={isSubmitting}
             />
           </div>

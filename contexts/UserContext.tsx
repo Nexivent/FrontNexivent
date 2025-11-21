@@ -1,9 +1,20 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi, Usuario, RegisterData } from '@utils/api';
+import { set } from 'zod';
+
+export interface Usuario {
+  id: number;
+  nombre: string;
+  correo: string;
+  tipo_documento: string;
+  num_documento: string;
+  telefono?: string;
+}
 
 interface UserContextType {
   user: Usuario | null;
+  setUser: React.Dispatch<React.SetStateAction<Usuario | null>>;
   loading: boolean;
   login: (email: string, contrasena: string) => Promise<{ success: boolean; message: string }>;
   register: (data: RegisterData) => Promise<{ success: boolean; message: string }>;
@@ -18,8 +29,26 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = authApi.getCurrentUser();
-    setUser(currentUser);
+    const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem('auth_token');
+    if (storedUser && storedUser !== 'undefined' && storedToken && storedToken !== 'undefined') {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser && typeof parsedUser === 'object') {
+          setUser(parsedUser);
+        } else {
+          localStorage.removeItem('user');
+          localStorage.removeItem('auth_token');
+        }
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('auth_token');
+      }
+    } else {
+      if (storedUser === 'undefined') localStorage.removeItem('user');
+      if (storedToken === 'undefined') localStorage.removeItem('auth_token');
+    }
     setLoading(false);
   }, []);
 
@@ -70,15 +99,39 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    authApi.logout();
-    setUser(null);
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+
+      if (token) {
+        await fetch('http://localhost:8098/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión en el backend:', error);
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
+      sessionStorage.removeItem('verification_user_id');
+      sessionStorage.removeItem('verification_email');
+      sessionStorage.removeItem('verification_code');
+      sessionStorage.removeItem('verification_expiry');
+      sessionStorage.removeItem('verification_nombre');
+
+      setUser(null);
+    }
   };
 
   return (
     <UserContext.Provider
       value={{
         user,
+        setUser,
         loading,
         login,
         register,

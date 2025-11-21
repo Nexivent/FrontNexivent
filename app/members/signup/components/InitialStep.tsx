@@ -50,10 +50,10 @@ const initialStepSchema = z
 type InitialStepInputs = z.infer<typeof initialStepSchema>;
 
 interface IProps {
-  onValidateSuccess: (data: PrefilledData) => void;
+  onNext: (data: PrefilledData) => void;
 }
 
-const InitialStep: React.FC<IProps> = ({ onValidateSuccess }) => {
+const InitialStep: React.FC<IProps> = ({ onNext }) => {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -104,7 +104,7 @@ const InitialStep: React.FC<IProps> = ({ onValidateSuccess }) => {
         // Usar nombre_completo o razon_social según el tipo
         const nombre = result.data.nombre_completo || result.data.razon_social || '';
 
-        onValidateSuccess({
+        onNext({
           nombre: nombre,
           tipo_documento: data.tipo_documento,
           ndocumento: data.ndocumento,

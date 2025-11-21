@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { registerSchema } from '@components/Form/validationSchemas';
 import InitialStep from './InitialStep';
 import CompletionStep from './CompletionStep';
+import VerificationStep from './VerificationStep';
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
@@ -18,31 +19,58 @@ export interface PrefilledData {
 }
 
 const Form: React.FC = () => {
-  const [step, setStep] = useState<'initial' | 'completion'>('initial');
-  const [prefilledData, setPrefilledData] = useState<PrefilledData | null>(null);
-
+  const [currentStep, setCurrentStep] = useState<'initial' | 'completion' | 'verification'>(
+    'initial'
+  );
+  const [prefilledData, setPrefilledData] = useState<PrefilledData>({
+    nombre: '',
+    tipo_documento: '',
+    ndocumento: '',
+  });
+  const [verificationData, setVerificationData] = useState<{
+    usuarioId: number;
+    correo: string;
+    nombre: string;
+  } | null>(null);
   const methods = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     mode: 'onChange',
   });
 
-  const handleValidationSuccess = (data: PrefilledData) => {
+  const handleInitialStepComplete = (data: PrefilledData) => {
     setPrefilledData(data);
-    setStep('completion');
+    setCurrentStep('completion');
   };
 
-  const handleGoBack = () => {
-    setStep('initial');
-    setPrefilledData(null);
-    methods.reset();
+  const handleBackToInitial = () => {
+    setCurrentStep('initial');
+  };
+
+  const handleRegistrationComplete = (data: {
+    usuarioId: number;
+    correo: string;
+    nombre: string;
+  }) => {
+    setVerificationData(data);
+    setCurrentStep('verification');
   };
 
   return (
     <FormProvider {...methods}>
-      {step === 'initial' && <InitialStep onValidateSuccess={handleValidationSuccess} />}
-
-      {step === 'completion' && prefilledData && (
-        <CompletionStep prefilledData={prefilledData} onGoBack={handleGoBack} />
+      {currentStep === 'initial' && <InitialStep onNext={handleInitialStepComplete} />}
+      {currentStep === 'completion' && (
+        <CompletionStep
+          prefilledData={prefilledData}
+          onGoBack={handleBackToInitial}
+          onVerificationNeeded={handleRegistrationComplete}
+        />
+      )}
+      {currentStep === 'verification' && verificationData && (
+        <VerificationStep
+          usuarioId={verificationData.usuarioId}
+          correo={verificationData.correo}
+          nombre={verificationData.nombre}
+        />
       )}
     </FormProvider>
   );
