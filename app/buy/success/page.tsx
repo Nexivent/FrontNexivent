@@ -15,76 +15,170 @@ interface TicketInfo {
   idTicket: string;
   codigoQR: string;
   estado: string;
+  zona?: string;
 }
 
-interface TicketsData {
-  tickets: TicketInfo[];
+interface ConfirmedOrderData {
   orderId: string;
+  estado: string;
+  purchaseData: {
+    event: {
+      idEvento: number;
+      titulo: string;
+      lugar: string;
+    };
+    tickets: Array<{
+      id: number;
+      name: string;
+      price: string;
+      quantity: number;
+    }>;
+    fecha: {
+      idFechaEvento: number;
+      fecha: string;
+      horaInicio: string;
+    };
+    entradas?: Array<{
+      idTarifa: number;
+      idSector: number;
+      idPerfil: number;
+      idTipoTicket: number;
+      cantidad: number;
+      precio: number;
+      nombreZona: string;
+    }>;
+  };
   timestamp: number;
-  eventName?: string;
-  eventDate?: string;
-  eventVenue?: string;
 }
 
 const Page: React.FC = () => {
   const router = useRouter();
   const { user } = useUser();
+  
   const [loading, setLoading] = useState(true);
-  const [ticketsData, setTicketsData] = useState<TicketsData | null>(null);
+  const [generatingTickets, setGeneratingTickets] = useState(true);
+  const [tickets, setTickets] = useState<TicketInfo[]>([]);
+  const [orderData, setOrderData] = useState<ConfirmedOrderData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
 
   useEffect(() => {
-    // Recuperar datos de los tickets
-    const storedData = sessionStorage.getItem('ticketsData');
+    const initializeSuccess = async () => {
+      const storedData = sessionStorage.getItem('confirmedOrder');
 
-    if (storedData) {
-      try {
-        const data: TicketsData = JSON.parse(storedData);
-        console.log('Tickets data loaded:', data);
-        setTicketsData(data);
-      } catch (error) {
-        console.error('Error parsing tickets data:', error);
+      if (!storedData) {
+        console.error('No confirmed order data found');
+        router.push('/');
+        return;
       }
-    } else {
-      setTicketsData({
-        orderId: 'ORD-SIMULADO-XYZ',
-        tickets: [{ idTicket: 'TICKET-SIM-001', codigoQR: 'QR-SIMULADO-XYZ', estado: 'activo' }],
+
+      try {
+        const confirmedOrder: ConfirmedOrderData = JSON.parse(storedData);
+        console.log('✅ Orden confirmada cargada:', confirmedOrder);
+        setOrderData(confirmedOrder);
+        setLoading(false);
+
+        // Generar tickets llamando al API
+        await generateTickets(confirmedOrder);
+
+      } catch (error) {
+        console.error('Error al procesar la orden:', error);
+        setError('Error al procesar la orden confirmada');
+        setLoading(false);
+        setGeneratingTickets(false);
+      }
+    };
+
+    initializeSuccess();
+  }, [router]);
+
+  const generateTickets = async (confirmedOrder: ConfirmedOrderData) => {
+    try {
+      console.log('🎫 Generando tickets...');
+
+      const { orderId, purchaseData } = confirmedOrder;
+
+      // Preparar datos para /api/tickets/issue
+      const ticketsPayload = {
+        orderId: parseInt(orderId) || orderId,
+        userId: user?.id ? parseInt(user.id) : 1,
+        idEvento: purchaseData.event.idEvento,
+        idFechaEvento: purchaseData.fecha.idFechaEvento,
+        tickets: purchaseData.tickets.map((ticket, idx) => {
+          const entradaInfo = purchaseData.entradas?.[idx];
+          const precio = parseFloat(ticket.price.replace('S/.', '').replace(',', '').trim());
+          
+          return {
+            idTarifa: ticket.id,
+            idSector: entradaInfo?.idSector || 1,
+            idPerfil: entradaInfo?.idPerfil || 1,
+            idTipoTicket: entradaInfo?.idTipoTicket || 1,
+            cantidad: ticket.quantity,
+            precio: precio,
+            nombreZona: entradaInfo?.nombreZona || ticket.name,
+          };
+        }),
+      };
+
+      console.log('📤 Request a /api/tickets/issue:', ticketsPayload);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098'}/api/tickets/issue`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(ticketsPayload),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al generar tickets');
+      }
+
+      const ticketsData = await response.json();
+      console.log('✅ Tickets generados:', ticketsData);
+
+      setTickets(ticketsData.tickets || []);
+      setGeneratingTickets(false);
+
+      // Guardar tickets en sessionStorage
+      sessionStorage.setItem('ticketsData', JSON.stringify({
+        tickets: ticketsData.tickets,
+        orderId: orderId,
         timestamp: Date.now(),
-        eventName: 'Concierto de Prueba',
-        eventDate: 'Mañana por la noche',
-        eventVenue: 'Estadio Virtual',
-      });
+        eventName: purchaseData.event.titulo,
+        eventDate: purchaseData.fecha.fecha,
+        eventVenue: purchaseData.event.lugar,
+      }));
+
+    } catch (error) {
+      console.error('❌ Error al generar tickets:', error);
+      setError(error instanceof Error ? error.message : 'Error al generar tickets');
+      setGeneratingTickets(false);
     }
-
-    // Limpiar sessionStorage
-    sessionStorage.removeItem('purchaseData');
-    sessionStorage.removeItem('reservationData');
-    // Mantener ticketsData por si el usuario quiere verlos
-
-    setLoading(false);
-  }, []);
+  };
 
   const handleGoHome = () => {
-    // Limpiar todo al volver al inicio
+    sessionStorage.removeItem('confirmedOrder');
     sessionStorage.removeItem('ticketsData');
     router.push('/');
   };
 
   const handleViewTickets = () => {
-    // Navegar a página de "Mis Entradas"
-    // Ajusta la ruta según tu estructura
     router.push('/members/account/tickets');
   };
 
   const handleSendEmail = async () => {
-    if (!ticketsData) {
+    if (!orderData) {
       setEmailStatus('Error: No se encontraron datos de la compra.');
       return;
     }
 
-    // Verificar que el usuario esté autenticado
     if (!user || !user.email) {
       setEmailStatus('Error: Debes iniciar sesión para enviar el correo.');
       return;
@@ -95,10 +189,10 @@ const Page: React.FC = () => {
 
     try {
       const payload = {
-        eventDate: ticketsData.timestamp,
-        eventName: ticketsData.eventName || 'Evento',
-        eventVenue: ticketsData.eventVenue || 'Lugar',
-        orderId: ticketsData.orderId,
+        eventDate: orderData.purchaseData.fecha.fecha,
+        eventName: orderData.purchaseData.event.titulo,
+        eventVenue: orderData.purchaseData.event.lugar,
+        orderId: orderData.orderId,
         userEmail: user.email,
         userName: user.nombre || 'Usuario',
       };
@@ -110,25 +204,51 @@ const Page: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'El servidor respondió con un error.');
+        throw new Error('Error al enviar correo');
       }
 
-      setEmailStatus('¡Correo enviado con éxito a tu dirección registrada!');
+      setEmailStatus('¡Correo enviado con éxito!');
     } catch (error: any) {
-      console.error('Error al enviar el correo:', error);
-      setEmailStatus('Error al enviar el correo. Por favor, intenta de nuevo.');
+      setEmailStatus('Error al enviar el correo.');
     } finally {
       setIsSendingEmail(false);
     }
   };
 
-  if (loading) {
+  if (loading || generatingTickets) {
     return (
       <Master>
         <Section className='gray-background hero-offset'>
           <div className='container'>
-            <Loader type='inline' color='gray' text='Cargando...' />
+            <div className='success-container'>
+              <Loader type='inline' color='gray' text={
+                loading ? 'Cargando...' : 'Generando tus tickets...'
+              } />
+            </div>
+          </div>
+        </Section>
+      </Master>
+    );
+  }
+
+  if (error) {
+    return (
+      <Master>
+        <Section className='gray-background hero-offset'>
+          <div className='container'>
+            <div className='success-container'>
+              <div className='error-icon'>
+                <span className='material-symbols-outlined'>error</span>
+              </div>
+              <Heading type={1} color='white' text='Error' />
+              <p className='error-message'>{error}</p>
+              <Button
+                type='button'
+                color='yellow-filled'
+                text='Volver al inicio'
+                onClick={handleGoHome}
+              />
+            </div>
           </div>
         </Section>
       </Master>
@@ -140,47 +260,38 @@ const Page: React.FC = () => {
       <Section className='gray-background hero-offset'>
         <div className='container'>
           <div className='success-container'>
-            {/* Icono de éxito */}
             <div className='success-icon'>
               <span className='material-symbols-outlined'>check_circle</span>
             </div>
 
-            {/* Título */}
             <Heading type={1} color='white' text='¡Compra exitosa!' />
 
-            {/* Mensaje */}
             <div className='success-message'>
               <p>¡Tu compra se ha procesado correctamente!</p>
-              {ticketsData && ticketsData.tickets && ticketsData.tickets.length > 0 && (
+              {tickets.length > 0 && (
                 <p>
-                  Se generaron <strong>{ticketsData.tickets.length} ticket(s)</strong> con código QR
-                  único.
+                  Se generaron <strong>{tickets.length} ticket(s)</strong> con código QR único.
                 </p>
               )}
               <p>
-                Puedes ver y descargar tus entradas en la sección <strong>"Mis entradas"</strong> de
-                tu perfil.
+                Puedes ver y descargar tus entradas en <strong>"Mis entradas"</strong>.
               </p>
             </div>
 
-            {/* Información de tickets */}
-            {ticketsData && ticketsData.orderId && (
+            {orderData && (
               <div className='order-info'>
-                <p className='order-id'>
-                  <strong>ID de orden:</strong> {ticketsData.orderId}
-                </p>
+                <p><strong>ID de orden:</strong> {orderData.orderId}</p>
+                <p><strong>Evento:</strong> {orderData.purchaseData.event.titulo}</p>
               </div>
             )}
 
-            {/* Información adicional */}
             <div className='info-box'>
               <span className='material-symbols-outlined'>info</span>
               <div>
-                <strong>Importante:</strong> Presenta tu código QR y documentación requerida en el evento para acceder.
+                <strong>Importante:</strong> Presenta tu código QR en el evento para acceder.
               </div>
             </div>
 
-            {/* Botones */}
             <div className='form-buttons'>
               <Button
                 type='button'
@@ -205,7 +316,6 @@ const Page: React.FC = () => {
               />
             </div>
 
-            {/* Mensaje de estado del email */}
             {emailStatus && (
               <div className='email-status-message'>
                 <p>{emailStatus}</p>
@@ -223,30 +333,27 @@ const Page: React.FC = () => {
           text-align: center;
         }
 
-        .success-icon {
-          margin-bottom: 2rem;
-        }
-
         .success-icon .material-symbols-outlined {
           font-size: 5rem;
           color: #cddc39;
           animation: scaleIn 0.5s ease-out;
         }
 
-        @keyframes scaleIn {
-          0% {
-            transform: scale(0);
-          }
-          50% {
-            transform: scale(1.1);
-          }
-          100% {
-            transform: scale(1);
-          }
+        .error-icon .material-symbols-outlined {
+          font-size: 5rem;
+          color: #ff5252;
         }
 
-        .success-message {
+        .error-message {
+          color: #ff5252;
+          font-size: 1.1rem;
           margin: 2rem 0;
+        }
+
+        @keyframes scaleIn {
+          0% { transform: scale(0); }
+          50% { transform: scale(1.1); }
+          100% { transform: scale(1); }
         }
 
         .success-message p {
@@ -264,23 +371,22 @@ const Page: React.FC = () => {
           background: #1a1a1a;
           border: 1px solid #333;
           border-radius: 8px;
-          padding: 1rem;
+          padding: 1.5rem;
           margin: 2rem 0;
+          text-align: left;
         }
 
-        .order-id {
+        .order-info p {
           color: #999;
-          font-size: 0.95rem;
-          margin: 0;
+          margin: 0.5rem 0;
         }
 
-        .order-id strong {
+        .order-info strong {
           color: #fff;
         }
 
         .info-box {
           display: flex;
-          align-items: flex-start;
           gap: 1rem;
           background: rgba(205, 220, 57, 0.1);
           border: 2px solid #cddc39;
@@ -293,18 +399,6 @@ const Page: React.FC = () => {
 
         .info-box .material-symbols-outlined {
           font-size: 1.5rem;
-          flex-shrink: 0;
-          margin-top: 0.2rem;
-        }
-
-        .info-box strong {
-          display: block;
-          margin-bottom: 0.5rem;
-          font-size: 1.1rem;
-        }
-
-        .info-box div {
-          line-height: 1.5;
         }
 
         .form-buttons {
@@ -321,29 +415,6 @@ const Page: React.FC = () => {
           border: 1px solid #cddc39;
           border-radius: 8px;
           color: #cddc39;
-          font-weight: 500;
-        }
-
-        .email-status-message p {
-          margin: 0;
-        }
-
-        @media (max-width: 768px) {
-          .success-container {
-            padding: 2rem 1rem;
-          }
-
-          .success-icon .material-symbols-outlined {
-            font-size: 4rem;
-          }
-
-          .success-message p {
-            font-size: 1rem;
-          }
-
-          .info-box {
-            padding: 1rem;
-          }
         }
       `}</style>
     </Master>
