@@ -63,23 +63,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 borderRadius: '8px',
                 fontWeight: 600,
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                color: pathname === '/administrator' ? '#cddc39' : '#fff',
-                backgroundColor:
-                  pathname === '/administrator' ? 'rgba(205, 220, 57, 0.15)' : 'transparent',
-                textDecoration: 'none',
-                borderRadius: '8px',
-                fontWeight: 600,
-                transition: 'all 0.2s ease',
-                border:
-                  pathname === '/administrator'
-                    ? '1px solid rgba(205, 220, 57, 0.3)'
-                    : '1px solid transparent',
-              }}
               onMouseEnter={(e) => {
                 if (pathname !== '/administrator') {
                   e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
@@ -108,25 +91,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 textDecoration: 'none',
                 borderRadius: '8px',
                 fontWeight: 600,
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                color: pathname === '/administrator/transactions' ? '#cddc39' : '#fff',
-                backgroundColor:
-                  pathname === '/administrator/transactions'
-                    ? 'rgba(205, 220, 57, 0.15)'
-                    : 'transparent',
-                textDecoration: 'none',
-                borderRadius: '8px',
-                fontWeight: 600,
-                transition: 'all 0.2s ease',
-                border:
-                  pathname === '/administrator/transactions'
-                    ? '1px solid rgba(205, 220, 57, 0.3)'
-                    : '1px solid transparent',
               }}
               onMouseEnter={(e) => {
                 if (pathname !== '/administrator/transactions') {

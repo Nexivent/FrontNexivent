@@ -12,7 +12,7 @@ export const generateReport = async (filters: any) => {
   console.log("JSON enviado al backend:", payload);
 
   try {
-    const response = await fetch("https://mi-backend.com/api/reportes", {
+    const response = await fetch("http://localhost:8098/api/admin/reports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

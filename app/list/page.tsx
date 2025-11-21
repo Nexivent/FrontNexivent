@@ -8,7 +8,7 @@ import CircleButtons from "../home/components/CircleButtons";
 import SearchPanel from "./SearchPanelClient";
 
 // función unificada
-import { searchEvents } from "../api/events/search/route";
+import { searchEvents } from "../lib/list/searchEvents";
 
 // --- SERVER CALL (SSR) ---
 async function fetchInitialEvents() {

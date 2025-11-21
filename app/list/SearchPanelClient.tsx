@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { searchEvents } from "../api/events/search/route";
+import { searchEvents } from "../lib/list/searchEvents";
 import EventCard from "@components/Card/EventCard";
 
 export default function SearchPanel({ initialData }: { initialData: any[] }) {
