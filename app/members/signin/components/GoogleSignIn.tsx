@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGoogleLogin } from '@react-oauth/google';
+import { useUser } from '@contexts/UserContext';
 import { set } from 'zod';
 
 declare global {
@@ -48,6 +49,7 @@ const GoogleIcon = () => (
 
 const GoogleSignIn: React.FC<GoogleSignInProps> = ({ mode = 'signin', onGoogleAuth }) => {
   const router = useRouter();
+  const { setUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -253,13 +255,28 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ mode = 'signin', onGoogleAu
         localStorage.setItem('authToken', data.token.token);
         localStorage.setItem('tokenExpiry', data.token.expiry.toString());
         localStorage.setItem('user', JSON.stringify(data.usuario));
+        if (setUser) {
+          setUser(data.usuario);
+        }
         // Mostrar mensaje de éxito
         if (data.is_new_user) {
-          alert('¡Bienvenido! Tu cuenta ha sido creada exitosamente.');
+          // Usuario nuevo registrado con Google
+          if (
+            data.usuario.tipo_documento === 'RUC_PERSONA' ||
+            data.usuario.tipo_documento === 'RUC_EMPRESA'
+          ) {
+            alert(
+              '¡Cuenta creada exitosamente! Tu cuenta está pendiente de aprobación por un administrador.'
+            );
+          } else {
+            alert('¡Bienvenido a Nexivent! Tu cuenta ha sido creada exitosamente.');
+          }
         } else {
+          // Usuario existente que inició sesión
           alert('¡Bienvenido de nuevo!');
         }
         router.push('/');
+        router.refresh();
       } else {
         console.error('❌ Error en autenticación:', data);
         setError(data.message || 'Error al autenticar con Google');
@@ -267,6 +284,11 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ mode = 'signin', onGoogleAu
     } catch (error) {
       console.error('❌ Error:', error);
       setError('Error de conexión con el servidor');
+      if (setUser) {
+        setUser(null);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -274,6 +296,9 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ mode = 'signin', onGoogleAu
     console.error('❌ Error en Google Sign-In');
     setError('Error al iniciar sesión con Google. Por favor, intenta de nuevo.');
     setIsLoading(false);
+    if (setUser) {
+      setUser(null);
+    }
   };
 
   const login = useGoogleLogin({
