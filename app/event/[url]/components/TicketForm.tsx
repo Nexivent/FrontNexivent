@@ -150,19 +150,46 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
   };
 
   // Filtrar tarifas vigentes según la fecha actual
-  const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+// Filtrar tarifas vigentes según la fecha de fin - solo muestra UN tipo de ticket
+const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
 
-    return tarifas.filter(tarifa => {
-      const inicio = new Date(tarifa.fechaIni);
-      const fin = new Date(tarifa.fechaFin);
-      inicio.setHours(0, 0, 0, 0);
-      fin.setHours(23, 59, 59, 999);
+  // Agrupar tarifas por tipoTicket y ordenar por fechaFin
+  const tiposTicket = Array.from(new Set(tarifas.map(t => t.tipoTicket)));
+  
+  // Ordenar tipos de ticket por la fecha de fin más temprana
+  const tiposOrdenados = tiposTicket
+    .map(tipo => {
+      const tarifasTipo = tarifas.filter(t => t.tipoTicket === tipo);
+      const fechaFinMasProxima = tarifasTipo
+        .map(t => new Date(t.fechaFin))
+        .sort((a, b) => a.getTime() - b.getTime())[0];
       
-      return hoy >= inicio && hoy <= fin;
-    });
-  };
+      return {
+        tipo,
+        fechaFin: fechaFinMasProxima,
+        tarifas: tarifasTipo
+      };
+    })
+    .sort((a, b) => a.fechaFin.getTime() - b.fechaFin.getTime());
+
+  // Buscar el primer tipo de ticket cuya fecha de fin no haya pasado
+  for (const tipoData of tiposOrdenados) {
+    const fin = new Date(tipoData.fechaFin);
+    fin.setHours(23, 59, 59, 999);
+    
+    if (hoy <= fin) {
+      // Retornar solo las tarifas de este tipo de ticket
+      console.log(`✅ Mostrando tarifas de tipo: ${tipoData.tipo} (vigente hasta ${tipoData.fechaFin.toLocaleDateString()})`);
+      return tipoData.tarifas;
+    }
+  }
+
+  // Si ningún tipo está vigente, retornar array vacío
+  console.warn('⚠️ No hay tarifas vigentes');
+  return [];
+};
 
   const countTickets = (): number => {
     return tarifasConCantidad.reduce((sum, tarifa) => sum + tarifa.cantidad, 0);
@@ -212,15 +239,21 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
     const stockDisponibleSector = calcularStockDisponibleSector(tipoSector);
     
     if (stockDisponibleSector <= 0) {
-      showAlert({ type: 'error', text: 'No hay más entradas disponibles en este sector.' });
+      // Usar setTimeout para ejecutar fuera del render
+      setTimeout(() => {
+        showAlert({ type: 'error', text: 'No hay más entradas disponibles en este sector.' });
+      }, 0);
       return;
     }
-
+  
     setTarifasConCantidad(prev => {
       return prev.map(tarifa => {
         if (tarifa.tipoSector === tipoSector && tarifa.perfil === perfil) {
           if (tarifa.cantidad >= 9) {
-            showAlert({ type: 'error', text: 'Máximo 9 entradas por tipo.' });
+            // Usar setTimeout para ejecutar fuera del render
+            setTimeout(() => {
+              showAlert({ type: 'error', text: 'Máximo 9 entradas por tipo.' });
+            }, 0);
             return tarifa;
           }
           return { ...tarifa, cantidad: tarifa.cantidad + 1 };

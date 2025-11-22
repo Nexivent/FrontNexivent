@@ -9,6 +9,17 @@ const nextConfig = {
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
   },
+  // Configuración para imágenes externas del backend
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8098',
+        pathname: '/**',
+      },
+    ],
+  },
   // Configurar rewrites si es necesario
   async rewrites() {
     return [

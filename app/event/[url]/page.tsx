@@ -28,14 +28,14 @@ interface Fecha {
 }
 
 interface Tarifa {
-  idTarifa: number;        // ID único de la tarifa
+  idTarifa: number;
   precio: number;
-  tipoSector: string;      // ej: "VIP", "General", "Platino"
+  tipoSector: string;
   stockDisponible: number;
-  tipoTicket: string;      // ej: "Preventa", "Regular"
+  tipoTicket: string;
   fechaIni: string;
   fechaFin: string;
-  perfil: string;          // ej: "Profesional", "Estudiante", "Founder"
+  perfil: string;
 }
 
 interface EventData {
@@ -47,139 +47,6 @@ interface EventData {
   lugar: string;
   fechas: Fecha[];
   tarifas: Tarifa[];
-}
-
-// =================================
-// DATOS MOCK PARA PRUEBAS
-// =================================
-
-const MOCK_EVENT_DATA: EventData = {
-  idEvento: 1,
-  titulo: 'SKILLBEA - 4MAR',
-  descripcion: 'Skillbea presenta su nuevo single 4MAR junto a artistas invitados y más sorpresas para el público. Una noche inolvidable con lo mejor de la música urbana peruana.',
-  descripcionArtista: 'Skillbea es uno de los artistas más destacados de la escena urbana peruana, conocido por sus letras auténticas y su estilo único que fusiona trap, reggaetón y hip hop.',
-  imagenPortada: '/portadaSkillbea.jpg',
-  lugar: 'Vichama Conciertos',
-  fechas: [
-    {
-      idFechaEvento: 1,
-      fecha: '2024-10-09',
-      horaInicio: '20:00',
-      horaFin: '23:00',
-    },
-    {
-      idFechaEvento: 2,
-      fecha: '2024-10-10',
-      horaInicio: '21:00',
-      horaFin: '00:00',
-    }
-  ],
-  tarifas: [
-    // VIP - Profesional
-    {
-      idTarifa: 1,
-      precio: 80,
-      tipoSector: 'VIP',
-      stockDisponible: 50, // Stock total del sector VIP
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Profesional',
-    },
-    // VIP - Estudiante
-    {
-      idTarifa: 2,
-      precio: 60,
-      tipoSector: 'VIP',
-      stockDisponible: 50, // Mismo stock (se comparte entre todos los perfiles del sector)
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Estudiante',
-    },
-    // VIP - Founder
-    {
-      idTarifa: 3,
-      precio: 70,
-      tipoSector: 'VIP',
-      stockDisponible: 50, // Mismo stock
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Founder',
-    },
-    // General - Profesional
-    {
-      idTarifa: 4,
-      precio: 50,
-      tipoSector: 'General',
-      stockDisponible: 100, // Stock total del sector General
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Profesional',
-    },
-    // General - Estudiante
-    {
-      idTarifa: 5,
-      precio: 35,
-      tipoSector: 'General',
-      stockDisponible: 100, // Mismo stock
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Estudiante',
-    },
-    // General - Founder
-    {
-      idTarifa: 6,
-      precio: 45,
-      tipoSector: 'General',
-      stockDisponible: 100, // Mismo stock
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Founder',
-    },
-    // Platino - Profesional (AGOTADO)
-    {
-      idTarifa: 7,
-      precio: 120,
-      tipoSector: 'Platino',
-      stockDisponible: 0, // Sector Platino AGOTADO
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Profesional',
-    },
-    // Platino - Estudiante (AGOTADO)
-    {
-      idTarifa: 8,
-      precio: 90,
-      tipoSector: 'Platino',
-      stockDisponible: 0, // Sector Platino AGOTADO
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Estudiante',
-    },
-    // Platino - Founder (AGOTADO)
-    {
-      idTarifa: 9,
-      precio: 100,
-      tipoSector: 'Platino',
-      stockDisponible: 0, // Sector Platino AGOTADO
-      tipoTicket: 'Preventa',
-      fechaIni: '2024-01-01',
-      fechaFin: '2025-12-31',
-      perfil: 'Founder',
-    },
-  ],
-};
-
-// Función para obtener datos mock
-function getMockEventData(eventId: number): EventData {
-  return MOCK_EVENT_DATA;
 }
 
 // =================================
@@ -218,36 +85,41 @@ function formatMultipleDates(fechas: Fecha[]): string {
 // FUNCIÓN PARA OBTENER DATOS DEL EVENTO
 // =================================
 
-// VERSION CON API (comentada para pruebas con mock)
-/*
 async function getEventData(eventId: number): Promise<EventData> {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/events/:id/summary`,
-    {
-      cache: 'no-store',
-    }
-  );
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+  const url = `${apiUrl}/api/events/${eventId}/summary`;
+  
+  console.log('=== FETCHING EVENT DATA ===');
+  console.log('URL:', url);
+  console.log('Event ID:', eventId);
+  
+  const response = await fetch(url, {
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  console.log('Response Status:', response.status);
+  console.log('Response OK:', response.ok);
 
   if (!response.ok) {
-    throw new Error('Evento no encontrado');
+    console.error('Response not OK');
+    if (response.status === 404) {
+      throw new Error('Evento no encontrado');
+    }
+    throw new Error(`Error al obtener el evento: ${response.status}`);
   }
 
   const data = await response.json();
   
+  console.log('=== API RESPONSE DATA ===');
+  console.log('Full data:', JSON.stringify(data, null, 2));
+  console.log('Has idEvento:', !!data.idEvento, data.idEvento);
+  console.log('Has fechas:', !!data.fechas, Array.isArray(data.fechas));
+  console.log('Has tarifas:', !!data.tarifas, Array.isArray(data.tarifas));
+  
   return data;
-}
-*/
-
-// VERSION CON MOCK (para pruebas)
-async function getEventData(eventId: number): Promise<EventData> {
-  // Simular delay de red
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  if (eventId !== 1) {
-    throw new Error('Evento no encontrado');
-  }
-  
-  return getMockEventData(eventId);
 }
 
 // =================================
@@ -266,16 +138,14 @@ export default async function Page({ params }: PageProps) {
   try {
     eventData = await getEventData(eventId);
   } catch (error) {
+    console.error('Error loading event:', error);
     notFound();
   }
 
-  // Para mock, usar imagen local directamente
-  const eventImage = eventData.imagenPortada || '/portadaSkillbea.jpg';
-  
-  // Para API, descomentar esto:
-  // const eventImage = eventData.imagenPortada 
-  //   ? `${process.env.NEXT_PUBLIC_API_URL}${eventData.imagenPortada}`
-  //   : '/portadaSkillbea.jpg';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+  const eventImage = eventData.imagenPortada 
+    ? `${apiUrl}${eventData.imagenPortada}`
+    : '/portadaSkillbea.jpg';
 
   return (
     <Master>
@@ -358,13 +228,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const description = `Compra tus entradas para ${eventData.titulo} en ${eventData.lugar}`;
     const canonical = `https://nexivent.com/event/${eventData.idEvento}`;
     
-    // Para mock, usar imagen local
-    const imageUrl = eventData.imagenPortada || 'https://nexivent.com/logo192.png';
-    
-    // Para API, descomentar esto:
-    // const imageUrl = eventData.imagenPortada 
-    //   ? `${process.env.NEXT_PUBLIC_API_URL}${eventData.imagenPortada}`
-    //   : 'https://nexivent.com/logo192.png';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+    const imageUrl = eventData.imagenPortada 
+      ? `${apiUrl}${eventData.imagenPortada}`
+      : 'https://nexivent.com/logo192.png';
 
     return {
       title,
