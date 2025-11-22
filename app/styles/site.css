@@ -1674,7 +1674,7 @@ button.button.blue-filled {
   font-size: 0.8em;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--yellow);
+  color: var(--yellow) !important;
   margin-bottom: 4px;
   font-weight: bolder;
 }
@@ -1693,6 +1693,10 @@ button.button.blue-filled {
   border: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 24px;
   transition: border-color 0.2s ease;
+}
+
+.event-report h3 {
+  color: var(--yellow) !important;
 }
 
 .event-report:hover {
@@ -1731,7 +1735,7 @@ button.button.blue-filled {
 
 .event-summary-grid .label {
   font-size: 0.85em;
-  color: var(--yellow);
+  color: var(--yellow) !important;
   display: block;
   margin-bottom: 4px;
 }
@@ -1785,7 +1789,7 @@ button.button.blue-filled {
 .event-card h4 {
   margin-bottom: 16px;
   font-size: 1em;
-  color: var(--yellow);
+  color: var(--yellow) !important;
 }
 
 .event-card table {
