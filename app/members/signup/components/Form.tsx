@@ -46,6 +46,10 @@ const Form: React.FC = () => {
     setCurrentStep('initial');
   };
 
+  const handleGoogleSuccess = () => {
+    console.log('Registro con Google exitoso - omitiendo verificación');
+  };
+
   const handleRegistrationComplete = (data: {
     usuarioId: number;
     correo: string;
@@ -62,6 +66,7 @@ const Form: React.FC = () => {
         <CompletionStep
           prefilledData={prefilledData}
           onGoBack={handleBackToInitial}
+          onGoogleSuccess={handleGoogleSuccess}
           onVerificationNeeded={handleRegistrationComplete}
         />
       )}

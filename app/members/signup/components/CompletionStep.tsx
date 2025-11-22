@@ -8,14 +8,22 @@ import Input from '@components/Form/Input';
 import Switch from '@components/Form/Switch';
 import Button from '@components/Button/Button';
 import Link from 'next/dist/client/link';
+import GoogleSignIn from '../../signin/components/GoogleSignIn';
+import { id } from 'zod/locales';
 
 interface IProps {
   prefilledData: PrefilledData;
   onGoBack: () => void;
+  onGoogleSuccess: () => void;
   onVerificationNeeded: (data: { usuarioId: number; correo: string; nombre: string }) => void;
 }
 
-const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack, onVerificationNeeded }) => {
+const CompletionStep: React.FC<IProps> = ({
+  prefilledData,
+  onGoBack,
+  onGoogleSuccess,
+  onVerificationNeeded,
+}) => {
   const {
     register,
     control,
@@ -37,6 +45,53 @@ const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack, onVerificat
     setValue('ndocumento', prefilledData.ndocumento);
     setValue('tos', false);
   }, [prefilledData, setValue]);
+
+  const handleGoogleAuth = async (response: any) => {
+    try {
+      console.log('Respuesta de Google recibida en CompletionStep:', response);
+      // Asociar el documento validado con la cuenta de Google
+      const googleResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: response.userInfo.email,
+          name: response.userInfo.name,
+          picture: response.userInfo.picture,
+          email_verified: response.userInfo.email_verified,
+          sub: response.userInfo.sub,
+          access_token: response.access_token,
+          tipo_documento: prefilledData.tipo_documento,
+          num_documento: prefilledData.ndocumento,
+        }),
+      });
+
+      const result = await googleResponse.json();
+
+      if (googleResponse.ok) {
+        console.log('Google account associated successfully:', result);
+        // Guardar token y redirigir
+        localStorage.setItem('authToken', result.token.token);
+        localStorage.setItem('tokenExpiry', result.token.expiry.toString());
+        localStorage.setItem('user', JSON.stringify(result.usuario));
+        // Si es nuevo usuario y no requiere verificación, ir directo al dashboard
+        if (result.skip_verification) {
+          onGoogleSuccess();
+          window.location.href = '/';
+        } else {
+          // Usuario existente
+          window.location.href = '/members/signin';
+        }
+      } else {
+        console.error('Error associating Google account:', result);
+        alert(result.message || 'Error al asociar cuenta de Google');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error de conexión con el servidor');
+    }
+  };
 
   const onFinalSubmit = async (data: any) => {
     try {
@@ -135,9 +190,7 @@ const CompletionStep: React.FC<IProps> = ({ prefilledData, onGoBack, onVerificat
                 <div className='or-line'>
                   <hr />
                 </div>
-                <button type='button' className='google-button'>
-                  <span>Continuar con Google</span>
-                </button>
+                <GoogleSignIn mode='signup' onGoogleAuth={handleGoogleAuth} />
                 <div style={{ height: '30px' }}></div>
                 <div className='or-line'>
                   <hr />

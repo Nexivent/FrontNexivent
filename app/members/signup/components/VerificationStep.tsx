@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@components/Button/Button';
 
@@ -18,6 +18,7 @@ const VerificationStep: React.FC<IProps> = ({ usuarioId, correo, nombre }) => {
   const [countdown, setCountdown] = useState(60);
   const [codigoReal, setCodigoReal] = useState('');
   const [expiryTime, setExpiryTime] = useState(0);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     // Cargar código y tiempo de expiración desde sessionStorage
@@ -38,6 +39,10 @@ const VerificationStep: React.FC<IProps> = ({ usuarioId, correo, nombre }) => {
       setCanResend(true);
     }
   }, [countdown]);
+
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, []);
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -120,7 +125,17 @@ const VerificationStep: React.FC<IProps> = ({ usuarioId, correo, nombre }) => {
         localStorage.setItem('auth_token', result.token.token);
         localStorage.setItem('user', JSON.stringify(result.usuario));
 
-        alert('¡Email verificado exitosamente!');
+        //selectiva para mostrar mensaje basico si es usuario con DNI o CE, o mensaje de esperar confirmacion de administrador si es RUC
+        if (
+          result.usuario.tipo_documento === 'RUC_PERSONA' ||
+          result.usuario.tipo_documento === 'RUC_EMPRESA'
+        ) {
+          alert(
+            '¡Correo verificado exitosamente! Tu cuenta está pendiente de aprobación por un administrador.'
+          );
+        } else {
+          alert('¡Correo verificado exitosamente! Bienvenido a Nexivent.');
+        }
         router.push('/');
         router.refresh();
       } else {

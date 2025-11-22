@@ -95,58 +95,32 @@ const EmailPasswordSignInForm: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        await api.post('/login/google', { accessToken: tokenResponse.access_token });
-        window.location.href = '/';
-      } catch (error) {
-        console.error('Google login failed:', error);
-      }
-    },
-    onError: () => {
-      console.error('Google Login Failed');
-    },
-  });
   return (
-    <>
-      <div className='google-signin-container'>
-        <button type='button' className='google-signin-button' onClick={() => handleGoogleLogin()}>
-          <GoogleIcon />
-          <span>Iniciar sesión con Google</span>
-        </button>
-      </div>
-      {/*espacio para separar or-line de boton superior */}
-      <div style={{ height: '40px' }}></div>
-      <div className='or-line'>
-        <hr />
-      </div>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className='form-elements'>
-          <Input
-            label='Correo electrónico'
-            type='email'
-            error={errors.email?.message}
-            {...register('email')}
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className='form-elements'>
+        <Input
+          label='Correo electrónico'
+          type='email'
+          error={errors.email?.message}
+          {...register('email')}
+        />
+        <Input
+          label='Contraseña'
+          type='password'
+          isPassword
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <div className='form-buttons'>
+          <Button
+            type='submit'
+            text='Iniciar Sesión'
+            color='yellow-filled'
+            disabled={isSubmitting}
           />
-          <Input
-            label='Contraseña'
-            type='password'
-            isPassword
-            error={errors.password?.message}
-            {...register('password')}
-          />
-          <div className='form-buttons'>
-            <Button
-              type='submit'
-              text='Iniciar Sesión'
-              color='yellow-filled'
-              disabled={isSubmitting}
-            />
-          </div>
         </div>
-      </form>
-    </>
+      </div>
+    </form>
   );
 };
 
@@ -154,7 +128,7 @@ const EmailPasswordSignIn: React.FC = () => (
   <GoogleOAuthProvider
     clientId={
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-      '357817738890-69lfoqffbuj9r3ku3bdtc1ah3no5jc6s.apps.googleusercontent.com'
+      '357817738890-4psm8ecl33dpmjv8339m8duvcdg3adii.apps.googleusercontent.com'
     }
   >
     <EmailPasswordSignInForm />
