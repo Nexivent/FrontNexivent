@@ -50,6 +50,23 @@ interface EventData {
 }
 
 // =================================
+// FUNCIÓN HELPER PARA IMÁGENES
+// =================================
+
+function getImageUrl(imagePath: string, fallback: string = '/portadaSkillbea.jpg'): string {
+  if (!imagePath) return fallback;
+  
+  // Si ya es una URL completa, devolverla tal cual
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // Si es una ruta relativa, concatenar con la URL de la API
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+  return `${apiUrl}${imagePath}`;
+}
+
+// =================================
 // FUNCIONES AUXILIARES
 // =================================
 
@@ -89,10 +106,6 @@ async function getEventData(eventId: number): Promise<EventData> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
   const url = `${apiUrl}/api/events/${eventId}/summary`;
   
-  console.log('=== FETCHING EVENT DATA ===');
-  console.log('URL:', url);
-  console.log('Event ID:', eventId);
-  
   const response = await fetch(url, {
     cache: 'no-store',
     headers: {
@@ -100,11 +113,7 @@ async function getEventData(eventId: number): Promise<EventData> {
     },
   });
 
-  console.log('Response Status:', response.status);
-  console.log('Response OK:', response.ok);
-
   if (!response.ok) {
-    console.error('Response not OK');
     if (response.status === 404) {
       throw new Error('Evento no encontrado');
     }
@@ -113,11 +122,11 @@ async function getEventData(eventId: number): Promise<EventData> {
 
   const data = await response.json();
   
-  console.log('=== API RESPONSE DATA ===');
-  console.log('Full data:', JSON.stringify(data, null, 2));
-  console.log('Has idEvento:', !!data.idEvento, data.idEvento);
-  console.log('Has fechas:', !!data.fechas, Array.isArray(data.fechas));
-  console.log('Has tarifas:', !!data.tarifas, Array.isArray(data.tarifas));
+  // Validar solo que existan fechas y tarifas
+  if (!data.fechas || !data.tarifas) {
+    console.error('Estructura de respuesta inválida:', data);
+    throw new Error('Respuesta del servidor inválida');
+  }
   
   return data;
 }
@@ -142,10 +151,8 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
-  const eventImage = eventData.imagenPortada 
-    ? `${apiUrl}${eventData.imagenPortada}`
-    : '/portadaSkillbea.jpg';
+  // Usar la función helper
+  const eventImage = getImageUrl(eventData.imagenPortada);
 
   return (
     <Master>
@@ -179,17 +186,21 @@ export default async function Page({ params }: PageProps) {
                 </p>
               </div>
 
-              <Heading type={4} color='gray' text='Sobre el artista' />
-              <div className='paragraph-container gray'>
-                <p>
-                  {eventData.descripcionArtista || 'Información del artista próximamente.'}
-                </p>
-              </div>
+              {/* Solo mostrar si hay descripción del artista */}
+              {eventData.descripcionArtista && (
+                <>
+                  <Heading type={4} color='gray' text='Sobre el artista' />
+                  <div className='paragraph-container gray'>
+                    <p>
+                      {eventData.descripcionArtista}
+                    </p>
+                  </div>
+                </>
+              )}
 
               <Heading type={4} color='gray' text='Lugar' />
               <Heading type={6} color='gray' text={eventData.lugar} />
             </div>
-
             <div>
               <div className='ticket-box'>
                 <div className='ticket-box-header'>
@@ -228,10 +239,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const description = `Compra tus entradas para ${eventData.titulo} en ${eventData.lugar}`;
     const canonical = `https://nexivent.com/event/${eventData.idEvento}`;
     
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
-    const imageUrl = eventData.imagenPortada 
-      ? `${apiUrl}${eventData.imagenPortada}`
-      : 'https://nexivent.com/logo192.png';
+    // Usar la función helper
+    const imageUrl = getImageUrl(eventData.imagenPortada, 'https://nexivent.com/logo192.png');
 
     return {
       title,

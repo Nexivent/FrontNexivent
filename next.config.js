@@ -18,6 +18,14 @@ const nextConfig = {
         port: '8098',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '**', // acepta cualquier dominio HTTPS
+      },
+      {
+        protocol: 'http',
+        hostname: '**', // acepta cualquier dominio HTTP 
+      },
     ],
   },
   // Configurar rewrites si es necesario
