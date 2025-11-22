@@ -36,6 +36,9 @@ const TicketCard: React.FC<IProps> = ({
   const [cancelling, setCancelling] = useState(false);
 
   const handleDownload = async () => {
+    // Construimos el URL aquí
+    const downloadUrl = `/api/tickets/download?eventName=${eventName}&eventWhen=${eventWhen}&eventVenue=${eventVenue}`;
+
     try {
       const res = await fetch(downloadUrl);
       const blob = await res.blob();

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@contexts/UserContext';
 
 // components
 import Master from '@components/Layout/Master';
@@ -45,6 +46,7 @@ interface PurchaseData {
 
 const Page: React.FC = () => {
   const router = useRouter();
+  const { user } = useUser();
   const { showAlert } = useAlert();
   
   const [loading, setLoading] = useState(true);
@@ -111,47 +113,33 @@ const Page: React.FC = () => {
       return;
     }
 
+    // Verificar si hay usuario
+    const userId = user?.id ? parseInt(user.id) : 1; // Fallback a 1 si no hay usuario
+
     setSubmitting(true);
 
     try {
       // Preparar datos para la API
       const orderData = {
-        idEvento: event.idEvento,
-        idFechaEvento: fecha.idFechaEvento,
-        idUsuario: 'user-temp-id', // TODO: Obtener del contexto de auth
-        entradas: tickets.map(ticket => ({
-          idTarifa: ticket.id,
+        IdEvento: event.idEvento,
+        IdFechaEvento: fecha.idFechaEvento,
+        IdUsuario: userId,
+        Entradas: tickets.map(ticket => ({
+          idTipoTicket: ticket.id,
+          idPerfil: 1, // TODO: Extraer del ticket.name o guardar en ticket data
+          idSector: 1, // TODO: Extraer del ticket.name o guardar en ticket data
           cantidad: ticket.quantity,
         })),
       };
 
       console.log('📡 Enviando solicitud de reserva:', orderData);
 
-      // =========================================================================
-      // SIMULACIÓN - Reemplazar con llamada real al API
-      // =========================================================================
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const mockReservationData = {
-        orderId: 'ORDER-' + Date.now(),
-        estado: 'TEMPORAL',
-        remainingSeconds: 600, // 10 minutos
-      };
-
-      console.log('Reserva simulada exitosa:', mockReservationData);
-
-      // =========================================================================
-      // VERSION CON API - Descomentar cuando esté lista
-      // =========================================================================
-      /*
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/orders/hold`,
+        `${process.env.NEXT_PUBLIC_API_URL}/orden_de_compra/hold`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Si tienes autenticación:
-            // 'Authorization': `Bearer ${getAuthToken()}`,
           },
           body: JSON.stringify(orderData),
         }
@@ -159,25 +147,21 @@ const Page: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al reservar las entradas');
+        throw new Error(errorData.Message || errorData.error || 'Error al reservar las entradas');
       }
 
       const reservaData = await response.json();
-      console.log('Reserva exitosa:', reservaData);
+      console.log('✅ Reserva exitosa:', reservaData);
 
-      const mockReservationData = {
-        orderId: reservaData.orderId,
-        estado: reservaData.estado,
-        remainingSeconds: reservaData.remainingSeconds,
-      };
-      */
+      // Calcular tiempo de expiración
+      const expiresAt = Date.now() + (reservaData.ttlSeconds * 1000);
 
       // Guardar información de la reserva
       sessionStorage.setItem('reservationData', JSON.stringify({
-        orderId: mockReservationData.orderId,
-        estado: mockReservationData.estado,
-        remainingSeconds: mockReservationData.remainingSeconds,
-        expiresAt: Date.now() + (mockReservationData.remainingSeconds * 1000),
+        orderId: reservaData.orderId,
+        estado: reservaData.estado,
+        remainingSeconds: reservaData.ttlSeconds,
+        expiresAt: expiresAt,
         purchaseData: purchaseData,
       }));
 
