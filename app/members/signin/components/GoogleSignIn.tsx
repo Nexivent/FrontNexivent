@@ -255,11 +255,36 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ mode = 'signin', onGoogleAu
         localStorage.setItem('authToken', data.token.token);
         localStorage.setItem('tokenExpiry', data.token.expiry.toString());
         localStorage.setItem('user', JSON.stringify(data.usuario));
+
         if (setUser) {
           setUser(data.usuario);
         }
+
         // Mostrar mensaje de éxito
         if (data.is_new_user) {
+          console.log('📧 Enviando correo de bienvenida...');
+
+          try {
+            const emailResponse = await fetch('/api/welcome', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: data.usuario.correo,
+                nombre: data.usuario.nombre,
+              }),
+            });
+
+            if (!emailResponse.ok) {
+              console.warn('⚠️ No se pudo enviar el correo de bienvenida');
+            } else {
+              console.log('✅ Correo de bienvenida enviado exitosamente');
+            }
+          } catch (emailError) {
+            console.error('❌ Error al enviar correo de bienvenida:', emailError);
+            // No bloquear el login si falla el correo
+          }
           // Usuario nuevo registrado con Google
           if (
             data.usuario.tipo_documento === 'RUC_PERSONA' ||

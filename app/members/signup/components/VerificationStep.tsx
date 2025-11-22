@@ -114,6 +114,31 @@ const VerificationStep: React.FC<IProps> = ({ usuarioId, correo, nombre }) => {
       const result = await response.json();
 
       if (response.ok && result.token) {
+        console.log('✅ Email verificado exitosamente');
+
+        console.log('📧 Enviando correo de bienvenida...');
+
+        try {
+          const emailResponse = await fetch('/api/welcome', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: correo,
+              nombre: nombre,
+            }),
+          });
+
+          if (!emailResponse.ok) {
+            console.warn('⚠️ No se pudo enviar el correo de bienvenida');
+          } else {
+            console.log('✅ Correo de bienvenida enviado');
+          }
+        } catch (emailError) {
+          console.error('❌ Error al enviar correo:', emailError);
+          // No bloquear el flujo si falla el correo
+        }
         // Limpiar sessionStorage
         sessionStorage.removeItem('verification_user_id');
         sessionStorage.removeItem('verification_email');
