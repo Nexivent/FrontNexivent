@@ -215,7 +215,7 @@ const baseMetadataTimestamp = new Date().toISOString();
 
 const baseEvent: OrganizerEvent = {
   idEvento: 1,
-  idOrganizador: 44,
+  idOrganizador: 1,
   idCategoria: 1,
   titulo: 'Showcase de bandas indie',
   descripcion:
@@ -358,8 +358,10 @@ export async function GET(request: NextRequest) {
     organizerId > 0 ? buildEndpoint(apiBaseUrl, `/evento/filter?organizadorId=${organizerId}`) : '';
 
   if (apiBaseUrl.length === 0 || endpoint.length === 0) {
+    // Return base event in mock mode, ensuring we always have at least one event
+    const mockEvents = events.length > 0 ? events : [baseEvent];
     return NextResponse.json({
-      data: events,
+      data: mockEvents,
       metadata: {
         serverTime: new Date().toISOString(),
         source: 'mock:organizer-events',
@@ -483,8 +485,8 @@ export async function POST(request: NextRequest) {
 
     const candidateData =
       upstreamBody !== null &&
-      typeof upstreamBody === 'object' &&
-      'data' in (upstreamBody as Record<string, unknown>)
+        typeof upstreamBody === 'object' &&
+        'data' in (upstreamBody as Record<string, unknown>)
         ? (upstreamBody as Record<string, unknown>).data
         : upstreamBody;
 

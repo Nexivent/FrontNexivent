@@ -36,6 +36,20 @@ const Page: React.FC = () => (
             />
           </div>
           <div className='organizer-hub-card'>
+            <span className='material-symbols-outlined'>manage_search</span>
+            <h3>Gestión de eventos</h3>
+            <p>
+              Edita eventos en borrador y cancela eventos futuros desde un panel centralizado con
+              filtros por estado.
+            </p>
+            <ButtonLink
+              color='gray-overlay'
+              text='Ir a gestión'
+              rightIcon='arrow_forward'
+              url='organizer/manage'
+            />
+          </div>
+          <div className='organizer-hub-card'>
             <span className='material-symbols-outlined'>confirmation_number</span>
             <h3>Cupones y promociones</h3>
             <p>

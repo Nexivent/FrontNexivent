@@ -27,7 +27,7 @@ export type OrganizerEvent = {
 
 const baseEvent: OrganizerEvent = {
   idEvento: 1,
-  idOrganizador: 44,
+  idOrganizador: 1,
   idCategoria: 1,
   titulo: 'Showcase de bandas indie',
   descripcion:
