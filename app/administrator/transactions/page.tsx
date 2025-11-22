@@ -19,7 +19,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
   {
     id: 'T-1001',
     fecha: '2025-10-01T10:12:00Z',
-    organizadorId: 44,
+    organizadorId: 1,
     organizadorNombre: 'Vichama Producciones',
     eventoId: 1,
     eventoNombre: 'SKILLBEA - 4MAR',
@@ -30,7 +30,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
   {
     id: 'T-1002',
     fecha: '2025-10-02T12:00:00Z',
-    organizadorId: 44,
+    organizadorId: 1,
     organizadorNombre: 'Vichama Producciones',
     eventoId: 2,
     eventoNombre: 'JAZE - QUIZAS',
