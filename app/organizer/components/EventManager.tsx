@@ -90,8 +90,8 @@ const EventManager: React.FC = () => {
                     estado: 'CANCELADO',
                 }),
             });
-
-            if (!response.ok) throw new Error('No se pudo cancelar el evento');
+            console.log(response);
+            //if (!response.ok) throw new Error('No se pudo cancelar el evento');
 
             await fetchEvents();
             alert('Evento cancelado exitosamente');
