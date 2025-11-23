@@ -22,14 +22,17 @@ interface Fecha {
 }
 
 interface Tarifa {
-  idTarifa: number;        // ID único de la tarifa
+  idTarifa: number;
   precio: number;
-  tipoSector: string;      // ej: "VIP", "General", "Platino"
+  idTipoSector: number;    
+  tipoSector: string;
   stockDisponible: number;
-  tipoTicket: string;      // ej: "Preventa", "Regular"
+  idTipoTicket: number;    
+  tipoTicket: string;
   fechaIni: string;
   fechaFin: string;
-  perfil: string;          // ej: "Profesional", "Estudiante", "Founder"
+  idPerfil: number;        
+  perfil: string;
 }
 
 interface EventData {
@@ -266,9 +269,9 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     hideAlert();
-
+  
     const quantity = countTickets();
-
+  
     if (quantity === 0) {
       showAlert({ 
         type: 'error', 
@@ -276,7 +279,7 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
       });
       return;
     }
-
+  
     if (!fechaSeleccionada) {
       showAlert({ 
         type: 'error', 
@@ -284,15 +287,14 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
       });
       return;
     }
-
+  
     setSubmitting(true);
-
+  
     try {
-      // Encontrar la fecha seleccionada
       const fechaSeleccionadaObj = eventData.fechas.find(
         f => f.idFechaEvento === fechaSeleccionada
       );
-
+  
       if (!fechaSeleccionadaObj) {
         showAlert({ 
           type: 'error', 
@@ -301,8 +303,8 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
         setSubmitting(false);
         return;
       }
-
-      // Filtrar solo las tarifas con cantidad > 0 y formatear para /buy
+  
+      
       const ticketsSeleccionados = tarifasConCantidad
         .filter(tarifa => tarifa.cantidad > 0)
         .map(tarifa => ({
@@ -310,9 +312,12 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
           name: `${tarifa.tipoSector} - ${tarifa.perfil}`,
           price: `S/. ${tarifa.precio.toFixed(2)}`,
           quantity: tarifa.cantidad,
+          
+          idSector: tarifa.idTipoSector,     
+          idPerfil: tarifa.idPerfil,         
+          idTipoTicket: tarifa.idTipoTicket, 
         }));
-
-      // Crear objeto con la estructura que espera /buy/page.tsx
+  
       const purchaseData = {
         event: {
           idEvento: eventData.idEvento,
@@ -324,22 +329,18 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
         fecha: fechaSeleccionadaObj,
         timestamp: Date.now(),
       };
-
+  
       console.log('Saving purchase data:', purchaseData);
-
-      // Guardar en sessionStorage
+  
       sessionStorage.setItem('purchaseData', JSON.stringify(purchaseData));
-
-      // Verificar que se guardó
+  
       const saved = sessionStorage.getItem('purchaseData');
       console.log('Verified saved data:', saved);
-
-      // Pequeño delay para asegurar que se guardó
+  
       await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Navegar a /buy
+  
       router.push('/buy');
-
+  
     } catch (error) {
       console.error('Error saving purchase data:', error);
       showAlert({ 

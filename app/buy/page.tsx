@@ -19,6 +19,9 @@ interface TicketData {
   name: string;
   price: string;
   quantity: number;
+  idSector: number;       
+  idPerfil: number;       
+  idTipoTicket: number;   
 }
 
 interface FechaData {
@@ -102,9 +105,9 @@ const Page: React.FC = () => {
 
   const handleContinue = async () => {
     if (!purchaseData) return;
-
+  
     const { event, tickets, fecha } = purchaseData;
-
+  
     if (!event.idEvento || !fecha.idFechaEvento || tickets.length === 0) {
       showAlert({ 
         type: 'error', 
@@ -112,28 +115,27 @@ const Page: React.FC = () => {
       });
       return;
     }
-
-    // Verificar si hay usuario
-    const userId = user?.id ? parseInt(user.id) : 1; // Fallback a 1 si no hay usuario
-
+  
+    const userId = user?.id ? parseInt(user.id) : 1;
+  
     setSubmitting(true);
-
+  
     try {
-      // Preparar datos para la API
+      
       const orderData = {
         IdEvento: event.idEvento,
         IdFechaEvento: fecha.idFechaEvento,
         IdUsuario: userId,
         Entradas: tickets.map(ticket => ({
-          idTipoTicket: ticket.id,
-          idPerfil: 1, // TODO: Extraer del ticket.name o guardar en ticket data
-          idSector: 1, // TODO: Extraer del ticket.name o guardar en ticket data
+          idTipoTicket: ticket.idTipoTicket || ticket.id,  
+          idPerfil: ticket.idPerfil || 1,                   
+          idSector: ticket.idSector || 1,                   
           cantidad: ticket.quantity,
         })),
       };
-
+  
       console.log('📡 Enviando solicitud de reserva:', orderData);
-
+  
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/orden_de_compra/hold`,
         {
@@ -144,19 +146,17 @@ const Page: React.FC = () => {
           body: JSON.stringify(orderData),
         }
       );
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.Message || errorData.error || 'Error al reservar las entradas');
       }
-
+  
       const reservaData = await response.json();
       console.log('✅ Reserva exitosa:', reservaData);
-
-      // Calcular tiempo de expiración
+  
       const expiresAt = Date.now() + (reservaData.ttlSeconds * 1000);
-
-      // Guardar información de la reserva
+  
       sessionStorage.setItem('reservationData', JSON.stringify({
         orderId: reservaData.orderId,
         estado: reservaData.estado,
@@ -164,10 +164,9 @@ const Page: React.FC = () => {
         expiresAt: expiresAt,
         purchaseData: purchaseData,
       }));
-
-      // Navegar a la página de checkout
+  
       router.push('/buy/checkout');
-
+  
     } catch (error) {
       console.error('❌ Error al reservar tickets:', error);
       

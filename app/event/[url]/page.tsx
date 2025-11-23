@@ -31,11 +31,14 @@ interface Fecha {
 interface Tarifa {
   idTarifa: number;
   precio: number;
+  idTipoSector: number;  
   tipoSector: string;
   stockDisponible: number;
+  idTipoTicket: number;  
   tipoTicket: string;
   fechaIni: string;
   fechaFin: string;
+  idPerfil: number;        
   perfil: string;
 }
 
