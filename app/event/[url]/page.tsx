@@ -9,6 +9,7 @@ import EventCard from '@components/Card/EventCard';
 import CardGroup from '@components/Card/CardGroup';
 
 import TicketForm from './components/TicketForm';
+import LugarInfo from './components/LugarInfo';
 
 interface PageProps {
   params: Promise<{
@@ -45,6 +46,7 @@ interface EventData {
   descripcionArtista: string;
   imagenPortada: string;
   lugar: string;
+  imagenLugar?: string;
   fechas: Fecha[];
   tarifas: Tarifa[];
 }
@@ -104,31 +106,50 @@ function formatMultipleDates(fechas: Fecha[]): string {
 
 async function getEventData(eventId: number): Promise<EventData> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
-  const url = `${apiUrl}/api/events/${eventId}/summary`;
   
-  const response = await fetch(url, {
+  // Primero obtenemos el summary
+  const summaryUrl = `${apiUrl}/api/events/${eventId}/summary`;
+  const summaryResponse = await fetch(summaryUrl, {
     cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
     },
   });
 
-  if (!response.ok) {
-    if (response.status === 404) {
+  if (!summaryResponse.ok) {
+    if (summaryResponse.status === 404) {
       throw new Error('Evento no encontrado');
     }
-    throw new Error(`Error al obtener el evento: ${response.status}`);
+    throw new Error(`Error al obtener el evento: ${summaryResponse.status}`);
   }
 
-  const data = await response.json();
+  const summaryData = await summaryResponse.json();
   
   // Validar solo que existan fechas y tarifas
-  if (!data.fechas || !data.tarifas) {
-    console.error('Estructura de respuesta inválida:', data);
+  if (!summaryData.fechas || !summaryData.tarifas) {
+    console.error('Estructura de respuesta inválida:', summaryData);
     throw new Error('Respuesta del servidor inválida');
   }
   
-  return data;
+  // Ahora obtenemos la imagen del lugar
+  try {
+    const detailUrl = `${apiUrl}/evento/${eventId}/`;
+    const detailResponse = await fetch(detailUrl, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (detailResponse.ok) {
+      const detailData = await detailResponse.json();
+      summaryData.imagenLugar = detailData.imagenLugar || '';
+    }
+  } catch (error) {
+    console.warn('No se pudo obtener la imagen del lugar:', error);
+  }
+  
+  return summaryData;
 }
 
 // =================================
@@ -199,7 +220,11 @@ export default async function Page({ params }: PageProps) {
               )}
 
               <Heading type={4} color='gray' text='Lugar' />
-              <Heading type={6} color='gray' text={eventData.lugar} />
+              <LugarInfo 
+                lugar={eventData.lugar} 
+                imagenLugar={eventData.imagenLugar ? getImageUrl(eventData.imagenLugar) : undefined} 
+              />
+              
             </div>
             <div>
               <div className='ticket-box'>
