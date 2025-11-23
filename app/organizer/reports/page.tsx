@@ -57,6 +57,16 @@ const statusColor: Record<EventReport['estado'], string> = {
 
 const formatCurrency = (value: number) => `S/ ${value.toLocaleString()}`;
 
+const resolveOrganizerUserId = () => {
+  const envValue = Number(process.env.NEXT_PUBLIC_ORGANIZER_ID);
+  if (!Number.isNaN(envValue) && envValue > 0) return envValue;
+  const serverValue = Number(process.env.ORGANIZER_ID);
+  if (!Number.isNaN(serverValue) && serverValue > 0) return serverValue;
+  return 1;
+};
+
+const organizerUserId = resolveOrganizerUserId();
+
 const ReportsDashboard: React.FC = () => {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [events, setEvents] = useState<EventReport[]>([]);
@@ -73,30 +83,41 @@ const ReportsDashboard: React.FC = () => {
       try {
         setStatus('loading');
         const params = new URLSearchParams();
-        if (start) params.set('start', start);
-        if (end) params.set('end', end);
+        params.set('organizerId', String(organizerUserId));
+        if (start) params.set('fechaDesde', start);
+        if (end) params.set('fechaHasta', end);
         if (eventId !== 'all') params.set('eventId', String(eventId));
         const response = await fetch(
-          `/api/organizer/reports${params.size > 0 ? `?${params.toString()}` : ''}`
+          `/api/organizer/reports${params.size > 0 ? `?${params.toString()}` : ''}`,
+          { cache: 'no-store' }
         );
         if (!response.ok) throw new Error('No se pudieron obtener los reportes');
         const data = (await response.json()) as ReportResponse;
-        setSummary(data.resumen);
-        setEvents(data.eventos);
+        const eventsList = data.eventos ?? [];
+        setSummary(
+          data.resumen ?? {
+            eventosActivos: 0,
+            ingresosTotales: 0,
+            ticketsVendidos: 0,
+            promedioOcupacion: 0,
+          }
+        );
+        setEvents(eventsList);
         setEventOptions((previous) => {
           const merged = new Map<number, string>();
           [
             ...previous,
-            ...data.eventos.map((event) => ({ id: event.idEvento, nombre: event.nombre })),
+            ...eventsList.map((event) => ({ id: event.idEvento, nombre: event.nombre })),
           ].forEach((entry) => merged.set(entry.id, entry.nombre));
           return Array.from(merged, ([id, nombre]) => ({ id, nombre }));
         });
         setStatus('idle');
-      } catch {
+      } catch (error) {
+        console.error('Organizer reports fetch failed', error);
         setStatus('error');
       }
     },
-    []
+    [organizerUserId]
   );
 
   useEffect(() => {
@@ -115,16 +136,16 @@ const ReportsDashboard: React.FC = () => {
   }, [events]);
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
   const toggleEvent = (eventId: number) => {
-  setExpandedEvents((prev) => {
-    const next = new Set(prev);
-    if (next.has(eventId)) {
-      next.delete(eventId);
-    } else {
-      next.add(eventId);
-    }
-    return next;
-  });
-};
+    setExpandedEvents((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  };
   return (
     <Master>
       <Section className='organizer-hero hero-offset'>

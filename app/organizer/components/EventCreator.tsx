@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Button from '@components/Button/Button';
 
 type CategoryOption = {
@@ -192,11 +193,15 @@ const normalizeIdentifier = (label: string, fallbackPrefix: string) => {
   return slug.length > 0 ? slug : `${fallbackPrefix}-${Date.now()}`;
 };
 const EventCreator: React.FC = () => {
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get('eventId');
+
   const [form, setForm] = useState<OrganizerEventForm>(() => createInitialForm());
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoryStatus, setCategoryStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [loadingEvent, setLoadingEvent] = useState<boolean>(false);
 
   const [newSectorName, setNewSectorName] = useState('');
   const [newSectorCapacity, setNewSectorCapacity] = useState('');
@@ -229,6 +234,70 @@ const EventCreator: React.FC = () => {
     imagenLugar: false,
     videoUrl: false,
   });
+
+  // Load event data if eventId is present in URL
+  useEffect(() => {
+    if (!eventId) return;
+
+    let mounted = true;
+    setLoadingEvent(true);
+
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+    const eventEndpoint = `${apiBaseUrl}/evento/${eventId}/`;
+
+    fetch(eventEndpoint)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('No se pudo obtener el evento');
+        return response.json();
+      })
+      .then((event) => {
+        if (!mounted) return;
+
+        if (event) {
+          // Map eventDates from API response
+          const eventDates = (event.eventDates ?? []).map((fecha: any) => ({
+            idFechaEvento: fecha.idFechaEvento ?? fecha.idFecha,
+            idFecha: fecha.idFecha,
+            fecha: fecha.fecha,
+            horaInicio: fecha.horaInicio,
+            horaFin: fecha.horaFin === "" ? fecha.horaInicio : fecha.horaFin,
+          }));
+
+          setForm({
+            idEvento: event.idEvento,
+            idOrganizador: event.idOrganizador ?? 2,
+            idCategoria: event.idCategoria ?? 0,
+            titulo: event.titulo ?? '',
+            descripcion: event.descripcion ?? '',
+            lugar: event.lugar ?? '',
+            estado: event.estado ?? 'BORRADOR',
+            likes: event.likes ?? 0,
+            noInteres: event.noInteres ?? 0,
+            cantVendidasTotal: event.cantVendidasTotal ?? 0,
+            totalRecaudado: event.totalRecaudado ?? 0,
+            imagenPortada: event.imagenPortada ?? '',
+            imagenLugar: event.imagenLugar ?? '',
+            videoUrl: event.videoUrl ?? '',
+            eventDates,
+            perfiles: event.perfiles ?? defaultProfiles,
+            sectores: event.sectores ?? defaultSectors,
+            tiposTicket: event.tiposTicket ?? defaultTicketTypes,
+            precios: event.precios ?? {},
+          });
+        }
+        console.log('Evento recibido del API:', event);
+        console.log('Fechas del evento:', event.fechas);
+        setLoadingEvent(false);
+      })
+      .catch((error) => {
+        console.error('Error loading event:', error);
+        if (mounted) setLoadingEvent(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [eventId]);
 
   useEffect(() => {
     let mounted = true;
@@ -819,35 +888,47 @@ const EventCreator: React.FC = () => {
           ? 'No se pudo guardar el evento.'
           : null;
 
+  if (loadingEvent) {
+    return (
+      <div className='organizer-builder'>
+        <div className='organizer-panel' style={{ marginTop: '100px', textAlign: 'center' }}>
+          <p className='gray'>Cargando evento...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className='organizer-builder'>
       <header className="header">
-          <div className="header-content">
-            <div className="header-top">
-              <div className="header-title">
-                <p className="eyebrow">Panel de organizadores</p>
-                <h1>Crear Nuevo Evento</h1>
-                <p className="header-subtitle">
-                  Configura todos los detalles de tu evento, define precios y prepáralo para publicar en Nexivent
-                </p>
-              </div>
-            </div>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <span className="stat-label">Capacidad Total</span>
-                <strong className="stat-value">{stats.totalCapacity.toLocaleString()}</strong>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Recaudación Potencial</span>
-                <strong className="stat-value">{formatCurrency(stats.potentialRevenue)}</strong>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Estado</span>
-                <strong className="stat-value">{form.estado}</strong>
-              </div>
+        <div className="header-content">
+          <div className="header-top">
+            <div className="header-title">
+              <p className="eyebrow">Panel de organizadores</p>
+              <h1>{eventId ? 'Editar Evento' : 'Crear Nuevo Evento'}</h1>
+              <p className="header-subtitle">
+                {eventId
+                  ? 'Actualiza los detalles de tu evento y guarda los cambios'
+                  : 'Configura todos los detalles de tu evento, define precios y prepáralo para publicar en Nexivent'}
+              </p>
             </div>
           </div>
-        </header>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-label">Capacidad Total</span>
+              <strong className="stat-value">{stats.totalCapacity.toLocaleString()}</strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Recaudación Potencial</span>
+              <strong className="stat-value">{formatCurrency(stats.potentialRevenue)}</strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Estado</span>
+              <strong className="stat-value">{form.estado}</strong>
+            </div>
+          </div>
+        </div>
+      </header>
 
       <form className='organizer-form' onSubmit={(event) => void handleSubmit(event)}>
         <div className='organizer-grid'>
@@ -1289,15 +1370,15 @@ const EventCreator: React.FC = () => {
               </div>
             </section>
             {validationErrors.length > 0 && (
-          <div className='validation-errors'>
-            <p>Por favor corrige los siguientes campos:</p>
-            <ul>
-              {validationErrors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+              <div className='validation-errors'>
+                <p>Por favor corrige los siguientes campos:</p>
+                <ul>
+                  {validationErrors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <section className='organizer-panel organizer-actions'>
               <div className='button-row'>
                 <Button
@@ -1326,25 +1407,25 @@ const EventCreator: React.FC = () => {
                 <h3>Resumen</h3>
               </div>
               <table className="summary-table">
-              <tbody>
-                <tr>
-                  <th>Capacidad total</th>
-                  <td><strong>{stats.totalCapacity.toLocaleString()}</strong></td>
-                </tr>
-                <tr>
-                  <th>Tarifa mínima</th>
-                  <td><strong>{formatCurrency(stats.minPrice)}</strong></td>
-                </tr>
-                <tr>
-                  <th>Tarifa máxima</th>
-                  <td><strong>{formatCurrency(stats.maxPrice)}</strong></td>
-                </tr>
-                <tr>
-                  <th>Recaudación potencial</th>
-                  <td><strong>{formatCurrency(stats.potentialRevenue)}</strong></td>
-                </tr>
-              </tbody>
-            </table>
+                <tbody>
+                  <tr>
+                    <th>Capacidad total</th>
+                    <td><strong>{stats.totalCapacity.toLocaleString()}</strong></td>
+                  </tr>
+                  <tr>
+                    <th>Tarifa mínima</th>
+                    <td><strong>{formatCurrency(stats.minPrice)}</strong></td>
+                  </tr>
+                  <tr>
+                    <th>Tarifa máxima</th>
+                    <td><strong>{formatCurrency(stats.maxPrice)}</strong></td>
+                  </tr>
+                  <tr>
+                    <th>Recaudación potencial</th>
+                    <td><strong>{formatCurrency(stats.potentialRevenue)}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
 
 
               <div className='organizer-tags'>

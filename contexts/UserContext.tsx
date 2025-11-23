@@ -31,11 +31,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('auth_token');
+    const storedExpiry = localStorage.getItem('token_expiry');
     if (storedUser && storedUser !== 'undefined' && storedToken && storedToken !== 'undefined') {
       try {
         const parsedUser = JSON.parse(storedUser);
         if (parsedUser && typeof parsedUser === 'object') {
-          setUser(parsedUser);
+          if (storedExpiry && Date.now() < parseInt(storedExpiry)) {
+            setUser(JSON.parse(storedUser));
+            console.log('Usuario cargado desde localStorage');
+          } else {
+            console.log('Token expirado, limpiando sesion');
+            logout();
+          }
         } else {
           localStorage.removeItem('user');
           localStorage.removeItem('auth_token');
