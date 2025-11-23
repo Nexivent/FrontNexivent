@@ -9,7 +9,7 @@ import Switch from '@components/Form/Switch';
 import Button from '@components/Button/Button';
 import Link from 'next/dist/client/link';
 import GoogleSignIn from '../../signin/components/GoogleSignIn';
-import { id } from 'zod/locales';
+import PasswordConditions from '@components/Form/PasswordStrengthIndicator';
 
 interface IProps {
   prefilledData: PrefilledData;
@@ -36,6 +36,7 @@ const CompletionStep: React.FC<IProps> = ({
   const isDNI = tipoDoc === 'DNI';
   const isCE = tipoDoc === 'CE';
   const isRUC = tipoDoc === 'RUC_PERSONA' || tipoDoc === 'RUC_EMPRESA';
+  const passwordValue = watch('contraseña') || '';
 
   const showGoogleOption = isDNI || isCE;
 
@@ -95,7 +96,7 @@ const CompletionStep: React.FC<IProps> = ({
 
   const onFinalSubmit = async (data: any) => {
     try {
-      console.log('Datos del formulario:', data); // Para debugging
+      console.log('Datos del formulario:', data);
       const tosValue = watch('tos');
       console.log('TOS value (watch):', tosValue);
 
@@ -123,7 +124,8 @@ const CompletionStep: React.FC<IProps> = ({
 
       console.log('Enviando payload:', payload);
 
-      const response = await fetch('http://localhost:8098/register', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -209,6 +211,7 @@ const CompletionStep: React.FC<IProps> = ({
           <Input label='Correo electrónico' type='email' {...register('correo')} />
           <Input label='Teléfono' type='tel' {...register('telefono')} />
           <Input label='Contraseña' type='password' isPassword {...register('contraseña')} />
+          <PasswordConditions password={passwordValue} />
           <Input
             label='Confirmar Contraseña'
             type='password'

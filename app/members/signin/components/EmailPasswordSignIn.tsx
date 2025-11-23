@@ -58,7 +58,8 @@ const EmailPasswordSignInForm: React.FC = () => {
 
   const onSubmit = async (data: FormInputs) => {
     try {
-      const response = await fetch('http://localhost:8098/login', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

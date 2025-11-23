@@ -2,9 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { set, z } from 'zod';
 import { rucLoginSchema } from '@components/Form/validationSchemas';
-import api from '@utils/api';
 import { useUser } from '@contexts/UserContext';
 import { useState } from 'react';
 
@@ -30,17 +28,62 @@ const RucSignInForm: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8098/login', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const response = await fetch(`${API_URL}/loginorg`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          correo: data.ruc,
+          ruc: data.ruc,
           contrasenha: data.password,
         }),
       });
       const result = await response.json();
+      console.log('Respuesta del servidor:', result);
+
+      if (response.status === 403) {
+        // Cuenta no activa o deshabilitada
+        if (result.error === 'ACCOUNT_NOT_ACTIVE') {
+          setError(
+            'Tu cuenta está pendiente de aprobación por un administrador. Recibirás un correo cuando sea activada.'
+          );
+          alert('⏳ Cuenta pendiente de aprobación\n\n' + result.message);
+        } else if (result.error === 'ACCOUNT_DISABLED') {
+          setError('Tu cuenta ha sido deshabilitada. Por favor, contacta al soporte.');
+          alert('❌ Cuenta deshabilitada\n\n' + result.message);
+        } else {
+          setError(result.message || 'No tienes permiso para acceder');
+          alert(result.message || 'No tienes permiso para acceder');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          if (result.error === 'ACCOUNT_NOT_ACTIVE') {
+            setError('Tu cuenta está pendiente de aprobación por un administrador.');
+            alert('⏳ Cuenta pendiente de aprobación\n\n' + result.message);
+          } else if (result.error === 'ACCOUNT_DISABLED') {
+            setError('Tu cuenta ha sido deshabilitada. Contacta al soporte.');
+            alert('❌ Cuenta deshabilitada\n\n' + result.message);
+          } else {
+            setError(result.message || 'No tienes permiso para acceder');
+          }
+        } else if (response.status === 400) {
+          setError(result.message || 'Datos inválidos');
+          alert('❌ ' + (result.message || 'Verifica que el RUC tenga 11 dígitos'));
+        } else if (response.status === 401) {
+          setError('RUC o contraseña incorrectos');
+          alert('❌ Credenciales incorrectas\n\nVerifica tu RUC y contraseña');
+        } else {
+          setError(result.message || 'Error al iniciar sesión');
+          alert('❌ Error: ' + (result.message || 'Error desconocido'));
+        }
+        setIsLoading(false);
+        return;
+      }
 
       if (response.ok && result.token) {
         // Guardar token y usuario en localStorage
@@ -53,7 +96,7 @@ const RucSignInForm: React.FC = () => {
         }
 
         alert('¡Inicio de sesión exitoso!');
-        router.push('/');
+        router.push('/organizer');
       } else {
         throw new Error(result.message || 'Credenciales incorrectas');
       }

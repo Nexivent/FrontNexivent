@@ -101,7 +101,7 @@ const VerificationStep: React.FC<IProps> = ({ usuarioId, correo, nombre }) => {
 
     try {
       // Llamar al backend solo para marcar como verificado y obtener token
-      const response = await fetch('http://localhost:8098/verify-email', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/verify-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,29 +116,6 @@ const VerificationStep: React.FC<IProps> = ({ usuarioId, correo, nombre }) => {
       if (response.ok && result.token) {
         console.log('✅ Email verificado exitosamente');
 
-        console.log('📧 Enviando correo de bienvenida...');
-
-        try {
-          const emailResponse = await fetch('/api/welcome', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: correo,
-              nombre: nombre,
-            }),
-          });
-
-          if (!emailResponse.ok) {
-            console.warn('⚠️ No se pudo enviar el correo de bienvenida');
-          } else {
-            console.log('✅ Correo de bienvenida enviado');
-          }
-        } catch (emailError) {
-          console.error('❌ Error al enviar correo:', emailError);
-          // No bloquear el flujo si falla el correo
-        }
         // Limpiar sessionStorage
         sessionStorage.removeItem('verification_user_id');
         sessionStorage.removeItem('verification_email');
@@ -161,7 +138,7 @@ const VerificationStep: React.FC<IProps> = ({ usuarioId, correo, nombre }) => {
         } else {
           alert('¡Correo verificado exitosamente! Bienvenido a Nexivent.');
         }
-        router.push('/');
+        router.push('/members/signin');
         router.refresh();
       } else {
         setError('Error al completar la verificación');
@@ -179,7 +156,8 @@ const VerificationStep: React.FC<IProps> = ({ usuarioId, correo, nombre }) => {
 
     try {
       // Generar nuevo código solicitándolo al backend
-      const response = await fetch('http://localhost:8098/register', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

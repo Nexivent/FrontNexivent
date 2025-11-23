@@ -1,7 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi, Usuario, RegisterData } from '@utils/api';
-import { set } from 'zod';
 
 
 interface UserContextType {
@@ -103,7 +102,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = localStorage.getItem('auth_token');
 
       if (token) {
-        await fetch('http://localhost:8098/logout', {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+        await fetch(`${API_URL}/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

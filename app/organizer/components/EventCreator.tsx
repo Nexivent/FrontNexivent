@@ -260,7 +260,7 @@ const EventCreator: React.FC = () => {
             idFecha: fecha.idFecha,
             fecha: fecha.fecha,
             horaInicio: fecha.horaInicio,
-            horaFin: fecha.horaFin === "" ? fecha.horaInicio : fecha.horaFin,
+            horaFin: fecha.horaFin === '' ? fecha.horaInicio : fecha.horaFin,
           }));
 
           setForm({
@@ -859,7 +859,8 @@ const EventCreator: React.FC = () => {
     setSavingState('saving');
     try {
       console.log('Payload enviado:', JSON.stringify(payload));
-      const response = await fetch('http://localhost:8098/evento/', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const response = await fetch(`${API_URL}/evento/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -900,31 +901,31 @@ const EventCreator: React.FC = () => {
 
   return (
     <div className='organizer-builder'>
-      <header className="header">
-        <div className="header-content">
-          <div className="header-top">
-            <div className="header-title">
-              <p className="eyebrow">Panel de organizadores</p>
+      <header className='header'>
+        <div className='header-content'>
+          <div className='header-top'>
+            <div className='header-title'>
+              <p className='eyebrow'>Panel de organizadores</p>
               <h1>{eventId ? 'Editar Evento' : 'Crear Nuevo Evento'}</h1>
-              <p className="header-subtitle">
+              <p className='header-subtitle'>
                 {eventId
                   ? 'Actualiza los detalles de tu evento y guarda los cambios'
                   : 'Configura todos los detalles de tu evento, define precios y prepáralo para publicar en Nexivent'}
               </p>
             </div>
           </div>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-label">Capacidad Total</span>
-              <strong className="stat-value">{stats.totalCapacity.toLocaleString()}</strong>
+          <div className='stats-grid'>
+            <div className='stat-card'>
+              <span className='stat-label'>Capacidad Total</span>
+              <strong className='stat-value'>{stats.totalCapacity.toLocaleString()}</strong>
             </div>
-            <div className="stat-card">
-              <span className="stat-label">Recaudación Potencial</span>
-              <strong className="stat-value">{formatCurrency(stats.potentialRevenue)}</strong>
+            <div className='stat-card'>
+              <span className='stat-label'>Recaudación Potencial</span>
+              <strong className='stat-value'>{formatCurrency(stats.potentialRevenue)}</strong>
             </div>
-            <div className="stat-card">
-              <span className="stat-label">Estado</span>
-              <strong className="stat-value">{form.estado}</strong>
+            <div className='stat-card'>
+              <span className='stat-label'>Estado</span>
+              <strong className='stat-value'>{form.estado}</strong>
             </div>
           </div>
         </div>
@@ -1406,27 +1407,34 @@ const EventCreator: React.FC = () => {
               <div className='organizer-panel__header'>
                 <h3>Resumen</h3>
               </div>
-              <table className="summary-table">
+              <table className='summary-table'>
                 <tbody>
                   <tr>
                     <th>Capacidad total</th>
-                    <td><strong>{stats.totalCapacity.toLocaleString()}</strong></td>
+                    <td>
+                      <strong>{stats.totalCapacity.toLocaleString()}</strong>
+                    </td>
                   </tr>
                   <tr>
                     <th>Tarifa mínima</th>
-                    <td><strong>{formatCurrency(stats.minPrice)}</strong></td>
+                    <td>
+                      <strong>{formatCurrency(stats.minPrice)}</strong>
+                    </td>
                   </tr>
                   <tr>
                     <th>Tarifa máxima</th>
-                    <td><strong>{formatCurrency(stats.maxPrice)}</strong></td>
+                    <td>
+                      <strong>{formatCurrency(stats.maxPrice)}</strong>
+                    </td>
                   </tr>
                   <tr>
                     <th>Recaudación potencial</th>
-                    <td><strong>{formatCurrency(stats.potentialRevenue)}</strong></td>
+                    <td>
+                      <strong>{formatCurrency(stats.potentialRevenue)}</strong>
+                    </td>
                   </tr>
                 </tbody>
               </table>
-
 
               <div className='organizer-tags'>
                 <span className='organizer-chip'>
@@ -1497,4 +1505,3 @@ const EventCreator: React.FC = () => {
 };
 
 export default EventCreator;
-
