@@ -39,6 +39,21 @@ type RawEventoApi = {
   descripcion?: string;
   Lugar?: string;
   lugar?: string;
+  Fecha?: string | { Fecha?: string; FechaEvento?: string };
+  fecha?: unknown;
+  FechaEvento?: string;
+  fechaEvento?: string;
+  EventoFechas?: Array<{
+    ID?: number | string;
+    Fecha?: string;
+    FechaEvento?: string;
+    Tarifas?: Array<{
+      Precio?: number;
+      PrecioBase?: number;
+      Tarifa?: number;
+    }>;
+    Tarifa?: number;
+  }>;
   ImagenDescripcion?: string;
   ImagenPortada?: string;
   ImagenEscenario?: string;
@@ -48,7 +63,6 @@ type RawEventoApi = {
   CantMeGusta?: number;
   CantNoInteresa?: number;
   FechaCreacion?: string;
-  fecha?: string;
   fechaCreacion?: string;
   Fechas?: Array<{
     Fecha?: string;
@@ -58,6 +72,12 @@ type RawEventoApi = {
   TiposTicket?: Array<{
     Precio?: number;
     PrecioBase?: number;
+  }>;
+  Tarifa?: number;
+  Tarifas?: Array<{
+    Precio?: number;
+    PrecioBase?: number;
+    Tarifa?: number;
   }>;
 };
 
@@ -121,11 +141,70 @@ const fallbackEventos: Evento[] = [
   },
 ];
 
-const formatEventDate = (value?: string) => {
-  if (!value) return 'Fecha por definir';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatEventDate = (value: unknown) => {
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString('es-PE', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  if (value && typeof value === 'object') {
+    const nested =
+      (value as { FechaEvento?: string; Fecha?: string; fecha?: string }).FechaEvento ??
+      (value as { FechaEvento?: string; Fecha?: string; fecha?: string }).Fecha ??
+      (value as { FechaEvento?: string; Fecha?: string; fecha?: string }).fecha;
+
+    if (nested) return formatEventDate(nested);
+  }
+
+  return 'Fecha por definir';
+};
+
+const resolvePrimaryDate = (raw: RawEventoApi): string | undefined => {
+  const nestedDate =
+    (typeof raw.Fecha === 'object' && raw.Fecha !== null
+      ? (raw.Fecha as { Fecha?: string; FechaEvento?: string }).Fecha ??
+        (raw.Fecha as { Fecha?: string; FechaEvento?: string }).FechaEvento
+      : undefined) ??
+    (typeof raw.fecha === 'object' && raw.fecha !== null
+      ? (raw.fecha as { Fecha?: string; FechaEvento?: string }).Fecha ??
+        (raw.fecha as { Fecha?: string; FechaEvento?: string }).FechaEvento
+      : undefined);
+
+  return (
+    raw.FechaEvento ??
+    raw.fechaEvento ??
+    raw.Fecha ??
+    nestedDate ??
+    raw.Fechas?.[0]?.Fecha ??
+    raw.EventoFechas?.[0]?.FechaEvento ??
+    raw.EventoFechas?.[0]?.Fecha ??
+    raw.FechaCreacion ??
+    (typeof raw.fecha === 'string' ? raw.fecha : undefined) ??
+    raw.fechaCreacion
+  );
+};
+
+const resolvePrice = (raw: RawEventoApi): number => {
+  const candidates: Array<number | undefined> = [
+    raw.Tarifa,
+    raw.Tarifas?.[0]?.Precio,
+    raw.Tarifas?.[0]?.PrecioBase,
+    raw.Tarifas?.[0]?.Tarifa,
+    raw.EventoFechas?.[0]?.Tarifas?.[0]?.Precio,
+    raw.EventoFechas?.[0]?.Tarifas?.[0]?.PrecioBase,
+    raw.EventoFechas?.[0]?.Tarifas?.[0]?.Tarifa,
+    raw.TiposTicket?.[0]?.Precio,
+    raw.TiposTicket?.[0]?.PrecioBase,
+    raw.TotalRecaudado,
+  ];
+
+  const firstDefined = candidates.find((value) => typeof value === 'number' && !Number.isNaN(value));
+  return firstDefined ?? 0;
 };
 
 const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
@@ -139,13 +218,8 @@ const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
     raw.ImagenEscenario,
   ].find((value) => typeof value === 'string' && value.trim().length > 0);
   const media = (mediaCandidate ?? '').trim();
-  const priceCandidate =
-    raw.TiposTicket?.[0]?.Precio ??
-    raw.TiposTicket?.[0]?.PrecioBase ??
-    raw.TotalRecaudado ??
-    0;
-  const firstDate =
-    raw.Fechas?.[0]?.Fecha ?? raw.FechaCreacion ?? raw.fecha ?? raw.fechaCreacion;
+  const priceCandidate = resolvePrice(raw);
+  const firstDate = resolvePrimaryDate(raw);
 
   const titulo = raw.Titulo ?? raw.titulo ?? 'Evento sin titulo';
   const descripcion = raw.Descripcion ?? raw.descripcion ?? 'Evento sin descripcion';
