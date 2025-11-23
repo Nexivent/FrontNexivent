@@ -254,13 +254,13 @@ const EventCreator: React.FC = () => {
         if (!mounted) return;
 
         if (event) {
-          // Map fechas to eventDates
-          const eventDates = (event.fechas ?? []).map((fecha: any) => ({
+          // Map eventDates from API response
+          const eventDates = (event.eventDates ?? []).map((fecha: any) => ({
             idFechaEvento: fecha.idFechaEvento ?? fecha.idFecha,
             idFecha: fecha.idFecha,
             fecha: fecha.fecha,
             horaInicio: fecha.horaInicio,
-            horaFin: fecha.horaFin,
+            horaFin: fecha.horaFin === "" ? fecha.horaInicio : fecha.horaFin,
           }));
 
           setForm({
@@ -285,7 +285,8 @@ const EventCreator: React.FC = () => {
             precios: event.precios ?? {},
           });
         }
-
+        console.log('Evento recibido del API:', event);
+        console.log('Fechas del evento:', event.fechas);
         setLoadingEvent(false);
       })
       .catch((error) => {
