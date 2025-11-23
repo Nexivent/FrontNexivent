@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Heart,
   X,
@@ -27,7 +27,50 @@ interface Evento {
   interes: boolean | null;
 }
 
-const eventos: Evento[] = [
+type RawEventoApi = {
+  ID?: number | string;
+  Id?: number | string;
+  IdEvento?: number | string;
+  idEvento?: number | string;
+  id?: number | string;
+  Titulo?: string;
+  titulo?: string;
+  Descripcion?: string;
+  descripcion?: string;
+  Lugar?: string;
+  lugar?: string;
+  ImagenDescripcion?: string;
+  ImagenPortada?: string;
+  ImagenEscenario?: string;
+  VideoPresentacion?: string;
+  TotalRecaudado?: number;
+  CantVendidoTotal?: number;
+  CantMeGusta?: number;
+  CantNoInteresa?: number;
+  FechaCreacion?: string;
+  fecha?: string;
+  fechaCreacion?: string;
+  Fechas?: Array<{
+    Fecha?: string;
+    HoraInicio?: string;
+    HoraFin?: string;
+  }>;
+  TiposTicket?: Array<{
+    Precio?: number;
+    PrecioBase?: number;
+  }>;
+};
+
+const FEED_ENDPOINT = (() => {
+  const base =
+    (process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? '').replace(
+      /\/+$/,
+      ''
+    );
+  return base ? `${base}/evento/filter?estado=PUBLICADO` : '/evento/filter?estado=PUBLICADO';
+})();
+
+const fallbackEventos: Evento[] = [
   {
     id: 1,
     titulo: 'SKILLBEA - 4MAR',
@@ -78,8 +121,54 @@ const eventos: Evento[] = [
   },
 ];
 
+const formatEventDate = (value?: string) => {
+  if (!value) return 'Fecha por definir';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
+  const candidateId =
+    raw.ID ?? raw.Id ?? raw.IdEvento ?? raw.idEvento ?? raw.id ?? index + 1;
+  const numericId = typeof candidateId === 'number' ? candidateId : Number(candidateId);
+  const mediaCandidate = [
+    raw.VideoPresentacion,
+    raw.ImagenPortada,
+    raw.ImagenDescripcion,
+    raw.ImagenEscenario,
+  ].find((value) => typeof value === 'string' && value.trim().length > 0);
+  const media = (mediaCandidate ?? '').trim();
+  const priceCandidate =
+    raw.TiposTicket?.[0]?.Precio ??
+    raw.TiposTicket?.[0]?.PrecioBase ??
+    raw.TotalRecaudado ??
+    0;
+  const firstDate =
+    raw.Fechas?.[0]?.Fecha ?? raw.FechaCreacion ?? raw.fecha ?? raw.fechaCreacion;
+
+  const titulo = raw.Titulo ?? raw.titulo ?? 'Evento sin titulo';
+  const descripcion = raw.Descripcion ?? raw.descripcion ?? 'Evento sin descripcion';
+  const lugar = raw.Lugar ?? raw.lugar ?? 'Ubicacion por definir';
+  const isVideo =
+    (typeof raw.VideoPresentacion === 'string' && raw.VideoPresentacion.trim().length > 0) ||
+    media.toLowerCase().endsWith('.mp4');
+
+  return {
+    id: Number.isNaN(numericId) ? index + 1 : numericId,
+    titulo,
+    fecha: formatEventDate(firstDate),
+    lugar,
+    descripcion,
+    precio: String(priceCandidate ?? 0),
+    tipo: isVideo ? 'video' : 'imagen',
+    media: media.length > 0 ? media : '/eventoHH.jpg',
+    interes: null,
+  };
+};
+
 const NexiventFeed: React.FC = () => {
-  const [eventosState, setEventosState] = useState<Evento[]>(eventos);
+  const [eventosState, setEventosState] = useState<Evento[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(true);
@@ -90,14 +179,55 @@ const NexiventFeed: React.FC = () => {
   const touchStartY = useRef<number>(0);
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const router = useRouter();
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadFeed = async () => {
+      try {
+        setStatus('loading');
+        const response = await fetch(FEED_ENDPOINT, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`API respondio ${response.status}`);
+
+        const payload = await response.json();
+        const rawEventos = Array.isArray(payload) ? payload : payload?.eventos ?? payload?.data ?? [];
+        if (!Array.isArray(rawEventos)) throw new Error('Formato de respuesta inesperado');
+
+        const mapped = rawEventos
+          .map((item: RawEventoApi, index: number) => mapApiEvent(item, index))
+          .filter((item) => Boolean(item));
+
+        if (mapped.length === 0) throw new Error('Sin eventos publicados');
+
+        videoRefs.current = [];
+        setEventosState(mapped);
+        setCurrentIndex(0);
+        setStatus('ready');
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error('No se pudo cargar el feed de eventos', error);
+        setEventosState(fallbackEventos);
+        setCurrentIndex(0);
+        setStatus('error');
+      }
+    };
+
+    void loadFeed();
+
+    return () => controller.abort();
+  }, []);
 
   const handleTouchStart = (e: any): void => {
     touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = (e: any): void => {
-    if (isScrolling) return;
+    if (isScrolling || eventosState.length === 0) return;
 
     const touchEndY = e.changedTouches[0].clientY;
     const diff = touchStartY.current - touchEndY;
@@ -112,7 +242,7 @@ const NexiventFeed: React.FC = () => {
   };
 
   const handleWheel = (e: any): void => {
-    if (isScrolling) return;
+    if (isScrolling || eventosState.length === 0) return;
 
     e.preventDefault();
     if (e.deltaY > 0 && currentIndex < eventosState.length - 1) {
@@ -144,7 +274,10 @@ const NexiventFeed: React.FC = () => {
   };
 
   const handleNoInteres = (): void => {
-    toggleInteres(eventoActual.id, false);
+    const current = eventosState[currentIndex];
+    if (!current) return;
+
+    toggleInteres(current.id, false);
     if (currentIndex < eventosState.length - 1) {
       scrollToIndex(currentIndex + 1);
     }
@@ -160,10 +293,18 @@ const NexiventFeed: React.FC = () => {
     }
   };
 
-  const eventoActual = eventosState[currentIndex];
-
   return (
     <div className='fixed inset-0 w-screen h-screen bg-black overflow-hidden'>
+      {status !== 'ready' && (
+        <div className='absolute top-5 left-5 z-50 px-4 py-2 rounded-lg bg-black/70 text-white text-sm'>
+          {status === 'loading' ? 'Cargando eventos...' : 'Mostrando eventos de respaldo'}
+        </div>
+      )}
+      {eventosState.length === 0 && (
+        <div className='absolute inset-0 flex items-center justify-center text-white z-40 pointer-events-none'>
+          {status === 'loading' ? 'Cargando eventos...' : 'No hay eventos publicados'}
+        </div>
+      )}
       <div
         className='fixed inset-0 w-screen h-screen'
         onTouchStart={handleTouchStart}
