@@ -221,11 +221,9 @@ const CompletionStep: React.FC<IProps> = ({
             defaultValue={false}
             render={({ field: { value, onChange, ref } }) => (
               <Switch
-                ref={ref}
                 checked={value}
                 onChange={(e: any) => {
                   const newValue = typeof e === 'boolean' ? e : e?.target?.checked || false;
-                  console.log('Switch changed to:', newValue);
                   onChange(newValue);
                   setValue('tos', newValue, { shouldValidate: true });
                 }}

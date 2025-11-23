@@ -22,7 +22,7 @@ const FormPhoto: React.FC = () => {
     try {
       // Simulación de upload — reemplaza esto con tu endpoint real
       const newPhotoUrl = URL.createObjectURL(file);
-      setUser({ ...user, foto: newPhotoUrl });
+      setUser(prev => prev ? { ...prev, foto: newPhotoUrl } : prev);
 
       showAlert({ type: 'success', text: 'Foto de perfil actualizada!' });
     } catch {
@@ -50,7 +50,7 @@ const FormPhoto: React.FC = () => {
         <label htmlFor='image'>
           <span className='material-symbols-outlined'>edit</span>
         </label>
-        <ProfilePhoto image={user.foto || '/default-avatar.jpg'} size='large' />
+        <ProfilePhoto image={user?.foto || '/default-avatar.jpg'} size='large' />
       </div>
     </form>
   );

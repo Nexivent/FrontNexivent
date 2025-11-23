@@ -9,6 +9,7 @@ export interface RegisterData {
   contrasena: string;
   telefono?: string;
   fecha_nacimiento?: string;
+
 }
 
 export interface LoginData {
@@ -22,6 +23,7 @@ export interface Usuario {
   email: string;
   telefono?: string;
   fecha_nacimiento?: string;
+  foto?: string;
 }
 
 export interface AuthResponse {

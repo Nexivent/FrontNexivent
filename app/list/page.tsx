@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 
+export const dynamic = "force-dynamic";
+
 // components
 import Master from "@components/Layout/Master";
 import Section from "@components/Section/Section";

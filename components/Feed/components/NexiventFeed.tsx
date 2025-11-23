@@ -165,29 +165,34 @@ const formatEventDate = (value: unknown) => {
 };
 
 const resolvePrimaryDate = (raw: RawEventoApi): string | undefined => {
+  const getString = (value: unknown): string | undefined =>
+    typeof value === 'string' ? value : undefined;
+
   const nestedDate =
-    (typeof raw.Fecha === 'object' && raw.Fecha !== null
-      ? (raw.Fecha as { Fecha?: string; FechaEvento?: string }).Fecha ??
-        (raw.Fecha as { Fecha?: string; FechaEvento?: string }).FechaEvento
+    (raw.Fecha && typeof raw.Fecha === 'object'
+      ? getString(raw.Fecha.Fecha) ?? getString(raw.Fecha.FechaEvento)
       : undefined) ??
-    (typeof raw.fecha === 'object' && raw.fecha !== null
-      ? (raw.fecha as { Fecha?: string; FechaEvento?: string }).Fecha ??
-        (raw.fecha as { Fecha?: string; FechaEvento?: string }).FechaEvento
+    (raw.fecha && typeof raw.fecha === 'object'
+      ? getString((raw.fecha as any).Fecha) ??
+      getString((raw.fecha as any).FechaEvento)
       : undefined);
 
-  return (
-    raw.FechaEvento ??
-    raw.fechaEvento ??
-    raw.Fecha ??
-    nestedDate ??
-    raw.Fechas?.[0]?.Fecha ??
-    raw.EventoFechas?.[0]?.FechaEvento ??
-    raw.EventoFechas?.[0]?.Fecha ??
-    raw.FechaCreacion ??
-    (typeof raw.fecha === 'string' ? raw.fecha : undefined) ??
-    raw.fechaCreacion
-  );
+  const candidates = [
+    getString(raw.FechaEvento),
+    getString(raw.fechaEvento),
+    getString(raw.Fecha),          // <-- ahora no devuelve objetos
+    nestedDate,
+    getString(raw.Fechas?.[0]?.Fecha),
+    getString(raw.EventoFechas?.[0]?.FechaEvento),
+    getString(raw.EventoFechas?.[0]?.Fecha),
+    getString(raw.FechaCreacion),
+    getString(raw.fecha),
+    getString(raw.fechaCreacion),
+  ];
+
+  return candidates.find((c): c is string => typeof c === 'string');
 };
+
 
 const resolvePrice = (raw: RawEventoApi): number => {
   const candidates: Array<number | undefined> = [
@@ -462,11 +467,10 @@ const NexiventFeed: React.FC = () => {
                     className='flex flex-col items-center gap-1 group'
                   >
                     <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                        evento.interes === true
-                          ? 'bg-green-500'
-                          : 'bg-white/10 backdrop-blur-sm group-hover:bg-white/20'
-                      }`}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${evento.interes === true
+                        ? 'bg-green-500'
+                        : 'bg-white/10 backdrop-blur-sm group-hover:bg-white/20'
+                        }`}
                     >
                       <Heart
                         size={22}
@@ -481,11 +485,10 @@ const NexiventFeed: React.FC = () => {
                     className='flex flex-col items-center gap-1 group'
                   >
                     <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                        evento.interes === false
-                          ? 'bg-orange-500'
-                          : 'bg-white/10 backdrop-blur-sm group-hover:bg-white/20'
-                      }`}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${evento.interes === false
+                        ? 'bg-orange-500'
+                        : 'bg-white/10 backdrop-blur-sm group-hover:bg-white/20'
+                        }`}
                     >
                       <X size={22} className='text-white' />
                     </div>

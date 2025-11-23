@@ -1,4 +1,5 @@
 import { type Metadata } from 'next';
+import { Suspense } from 'react';
 
 import Master from '@components/Layout/Master';
 import Section from '@components/Section/Section';
@@ -18,19 +19,23 @@ const Page: React.FC = () => (
             lugar antes de publicar en Nexivent.
           </p>
           <div className='organizer-cta-row'>
-              <ButtonLink
-                color='yellow-filled'
-                text='Volver al inicio'
-                leftIcon='chevron_left'
-                url='organizer'
-              />
-            </div>
+            <ButtonLink
+              color='yellow-filled'
+              text='Volver al inicio'
+              leftIcon='chevron_left'
+              url='organizer'
+            />
+          </div>
         </div>
       </div>
     </Section>
+
     <Section>
       <div className='container'>
-        <EventCreator />
+        {/* 🟡 Suspense obligatorio para componentes client con useSearchParams */}
+        <Suspense fallback={<div>Cargando...</div>}>
+          <EventCreator />
+        </Suspense>
       </div>
     </Section>
   </Master>

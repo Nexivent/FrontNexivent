@@ -3,14 +3,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi, Usuario, RegisterData } from '@utils/api';
 import { set } from 'zod';
 
-export interface Usuario {
-  id: number;
-  nombre: string;
-  correo: string;
-  tipo_documento: string;
-  num_documento: string;
-  telefono?: string;
-}
 
 interface UserContextType {
   user: Usuario | null;

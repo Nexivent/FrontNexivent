@@ -15,7 +15,7 @@ export async function searchEvents(params: any = {}, useAbsolute = false) {
 
     const finalUrl = `${baseUrl}?${query.toString()}`;
 
-    console.log("🔎 GET enviado al backend:", finalUrl);
+    console.log("🔎 GET enviado al backend desde searchEvents:", finalUrl);
 
     try {
         const res = await fetch(finalUrl, { method: "GET", cache: "no-store" });

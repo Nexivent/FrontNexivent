@@ -77,7 +77,7 @@ export default function SearchPanel({ initialData }: { initialData: any[] }) {
             when={ev.fechaHoraInicio}
             name={ev.Titulo}
             venue={ev.Lugar}
-            image={ev.imagenPrincipal ?? "/logo6.png"}
+            image={ev.ImagenPortada ?? "/logo6.png"}
           />
         ))}
       </div>
