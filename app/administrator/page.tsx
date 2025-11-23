@@ -17,14 +17,6 @@ interface Role {
   nombre: string;
 }
 
-// Interfaces para las respuestas de la API
-interface ApiResponse<T> {
-  items?: T[];
-  roles?: Role[];
-  message?: string;
-  error?: string;
-}
-
 const styles = {
   container: { maxWidth: '1400px' },
   header: {
@@ -102,6 +94,32 @@ const styles = {
     fontWeight: 600,
     backgroundColor: '#cddc39',
     color: '#000',
+    marginRight: '8px',
+  },
+  btnStatusActive: {
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: 600,
+    backgroundColor: '#4caf50',
+    color: '#fff',
+    marginRight: '8px',
+  },
+  btnStatusInactive: {
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: 600,
+    backgroundColor: '#f44336',
+    color: '#fff',
+    marginRight: '8px',
+  },
+  actionsCell: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
   },
   modalOverlay: {
     position: 'fixed' as const,
@@ -182,12 +200,6 @@ const styles = {
     padding: '40px',
     fontSize: '16px',
   },
-  errorText: {
-    color: '#f44336',
-    textAlign: 'center' as const,
-    padding: '40px',
-    fontSize: '16px',
-  },
   successMessage: {
     padding: '12px 20px',
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
@@ -218,19 +230,16 @@ export default function UsersManagement() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Función auxiliar para manejar errores de API
   const handleApiError = (err: any, defaultMessage: string): string => {
     if (err.message) return err.message;
     if (typeof err === 'string') return err;
     return defaultMessage;
   };
 
-  // Cargar datos iniciales
   useEffect(() => {
     loadData();
   }, [selectedRoleFilter]);
 
-  // Limpiar mensajes después de 5 segundos
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(null), 5000);
@@ -250,71 +259,41 @@ export default function UsersManagement() {
     setError(null);
 
     try {
-      // 1. Obtener todos los roles disponibles
-      // GET /roles/ - Devuelve los roles disponibles
       const rolesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/roles/`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
-
-      console.log('📡 Roles response status:', rolesRes.status);
 
       if (!rolesRes.ok) {
         throw new Error(`Error al cargar roles: ${rolesRes.status}`);
       }
 
       const rolesData = await rolesRes.json();
-      console.log('📦 Roles recibidos:', rolesData);
-      
-      // El backend puede devolver un array directo o un objeto con 'items'
       const roles = Array.isArray(rolesData) ? rolesData : (rolesData.items || []);
-      
-      // Validar que roles sea un array válido
-      if (!Array.isArray(roles)) {
-        console.error('La respuesta de roles no es un array:', rolesData);
-        setAvailableRoles([]);
-      } else {
-        setAvailableRoles(roles);
-      }
+      setAvailableRoles(Array.isArray(roles) ? roles : []);
 
-      // 2. Obtener usuarios (con o sin filtro de rol)
-      // GET /api/users?rol - Devuelve usuarios filtrados por rol
       let usersUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/users`;
-      
       if (selectedRoleFilter) {
         usersUrl += `?rol=${selectedRoleFilter}`;
       }
 
       const usersRes = await fetch(usersUrl, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
-
-      console.log('📡 Users response status:', usersRes.status);
 
       if (!usersRes.ok) {
         throw new Error(`Error al cargar usuarios: ${usersRes.status}`);
       }
 
       const usersData = await usersRes.json();
-      console.log('📦 Usuarios recibidos:', usersData);
-      
-      // Según la documentación, la API devuelve un array directo de usuarios
       const usersList = Array.isArray(usersData) ? usersData : (usersData.items || usersData.users || []);
 
-      // Validar que usersList sea un array
       if (!Array.isArray(usersList)) {
-        console.error('La respuesta de usuarios no es un array:', usersData);
         setUsers([]);
         return;
       }
 
-      // 3. Para cada usuario, obtener sus roles específicos
-      // GET /api/users/:id/roles - Devuelve: { "idUsuario": "", "roles": [...] }
       const usersWithRoles = await Promise.all(
         usersList.map(async (user: any) => {
           try {
@@ -322,39 +301,20 @@ export default function UsersManagement() {
               `${process.env.NEXT_PUBLIC_API_URL}/api/users/${user.idUsuario}/roles`,
               {
                 method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
               }
             );
 
-            if (userRolesRes.ok) {
-              const userRolesData = await userRolesRes.json();
-              console.log(`📦 Roles del usuario ${user.idUsuario}:`, userRolesData);
-              
-              // El backend devuelve: { "idUsuario": "", "roles": [...] }
-              const userRoles = userRolesData.roles || [];
+            const userRoles = userRolesRes.ok ? (await userRolesRes.json()).roles || [] : [];
 
-              return {
-                idUsuario: user.idUsuario,
-                nombre: user.nombre,
-                correo: user.correo,
-                // El estado puede venir como número (1) o string ("activo")
-                estado: user.estado === 1 || user.estado === '1' || user.estado === 'activo' ? 'activo' : 'inactivo',
-                roles: Array.isArray(userRoles) ? userRoles : [],
-              };
-            } else {
-              console.warn(`No se pudieron cargar roles para usuario ${user.idUsuario}`);
-              return {
-                idUsuario: user.idUsuario,
-                nombre: user.nombre,
-                correo: user.correo,
-                estado: user.estado === 1 || user.estado === '1' || user.estado === 'activo' ? 'activo' : 'inactivo',
-                roles: [],
-              };
-            }
+            return {
+              idUsuario: user.idUsuario,
+              nombre: user.nombre,
+              correo: user.correo,
+              estado: user.estado === 1 || user.estado === '1' || user.estado === 'activo' ? 'activo' : 'inactivo',
+              roles: Array.isArray(userRoles) ? userRoles : [],
+            };
           } catch (err) {
-            console.error(`Error obteniendo roles del usuario ${user.idUsuario}:`, err);
             return {
               idUsuario: user.idUsuario,
               nombre: user.nombre,
@@ -368,7 +328,6 @@ export default function UsersManagement() {
 
       setUsers(usersWithRoles);
     } catch (err: any) {
-      console.error('💥 Error cargando datos:', err);
       setError(handleApiError(err, 'Error al cargar los datos del servidor'));
     } finally {
       setLoading(false);
@@ -381,53 +340,27 @@ export default function UsersManagement() {
     setSuccessMessage(null);
 
     try {
-      // POST /api/roles/assign
-      // Body: { "idUsuario": "", "idRol": "" }
-      // Success: 201 - { "message": "Rol asignado correctamente" }
-      // Errors: 404/409/400 - { "error": "mensaje de error" }
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/roles/assign`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          idUsuario: userId,
-          idRol: roleId,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idUsuario: userId, idRol: roleId }),
       });
 
-      // Primero obtener el texto de la respuesta
       const responseText = await response.text();
-      console.log('📤 Respuesta de assign:', responseText);
-      
-      // Intentar parsear como JSON
-      let result: any = {};
-      try {
-        result = responseText ? JSON.parse(responseText) : {};
-      } catch (e) {
-        console.warn('Respuesta no es JSON válido:', responseText);
-      }
+      const result = responseText ? JSON.parse(responseText) : {};
 
       if (!response.ok) {
-        // Según la documentación, los errores vienen en formato: { "error": "mensaje" }
         throw new Error(result.error || `Error ${response.status}: No se pudo asignar el rol`);
       }
 
-      // Según la documentación, el éxito viene en formato: { "message": "..." }
       setSuccessMessage(result.message || 'Rol asignado correctamente');
-
-      // Recargar datos para reflejar cambios
       await loadData();
 
-      // Actualizar usuario seleccionado en el modal si está abierto
       if (selectedUser && selectedUser.idUsuario === userId) {
         const updatedUser = users.find((u) => u.idUsuario === userId);
-        if (updatedUser) {
-          setSelectedUser({ ...updatedUser });
-        }
+        if (updatedUser) setSelectedUser({ ...updatedUser });
       }
     } catch (err: any) {
-      console.error('Error asignando rol:', err);
       setError(handleApiError(err, 'Error al asignar el rol'));
     } finally {
       setActionLoading(false);
@@ -435,63 +368,67 @@ export default function UsersManagement() {
   };
 
   const handleRevokeRole = async (userId: number, roleId: number) => {
-    if (!confirm('¿Estás seguro de que deseas revocar este rol?')) {
-      return;
-    }
+    if (!confirm('¿Estás seguro de que deseas revocar este rol?')) return;
 
     setActionLoading(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      // DELETE /api/roles/revoke
-      // Body: { "idUsuario": "", "idRol": "" }
-      // Success: 200 - { "message": "Rol revocado correctamente" }
-      // Errors: 404/400 - { "error": "mensaje de error" }
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/roles/revoke`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          idUsuario: userId,
-          idRol: roleId,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idUsuario: userId, idRol: roleId }),
       });
 
-      // Primero obtener el texto de la respuesta
       const responseText = await response.text();
-      console.log('📤 Respuesta de revoke:', responseText);
-      
-      // Intentar parsear como JSON
-      let result: any = {};
-      try {
-        result = responseText ? JSON.parse(responseText) : {};
-      } catch (e) {
-        console.warn('Respuesta no es JSON válido:', responseText);
-      }
+      const result = responseText ? JSON.parse(responseText) : {};
 
       if (!response.ok) {
-        // Según la documentación, los errores vienen en formato: { "error": "mensaje" }
         throw new Error(result.error || `Error ${response.status}: No se pudo revocar el rol`);
       }
 
-      // Según la documentación, el éxito viene en formato: { "message": "..." }
       setSuccessMessage(result.message || 'Rol revocado correctamente');
-
-      // Recargar datos
       await loadData();
 
-      // Actualizar usuario seleccionado en el modal si está abierto
       if (selectedUser && selectedUser.idUsuario === userId) {
         const updatedUser = users.find((u) => u.idUsuario === userId);
-        if (updatedUser) {
-          setSelectedUser({ ...updatedUser });
-        }
+        if (updatedUser) setSelectedUser({ ...updatedUser });
       }
     } catch (err: any) {
-      console.error('Error revocando rol:', err);
       setError(handleApiError(err, 'Error al revocar el rol'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ✨ NUEVA FUNCIÓN: Cambiar estado de usuario
+  const handleChangeUserStatus = async (userId: number, newStatus: 'activo' | 'inactivo') => {
+    const action = newStatus === 'activo' ? 'activar' : 'desactivar';
+    if (!confirm(`¿Estás seguro de que deseas ${action} este usuario?`)) return;
+
+    setActionLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: newStatus === 'activo' ? 1 : 0 }),
+      });
+
+      const responseText = await response.text();
+      const result = responseText ? JSON.parse(responseText) : {};
+
+      if (!response.ok) {
+        throw new Error(result.error || `Error ${response.status}: No se pudo cambiar el estado`);
+      }
+
+      setSuccessMessage(result.message || `Usuario ${newStatus === 'activo' ? 'activado' : 'desactivado'} correctamente`);
+      await loadData();
+    } catch (err: any) {
+      setError(handleApiError(err, 'Error al cambiar el estado del usuario'));
     } finally {
       setActionLoading(false);
     }
@@ -530,7 +467,7 @@ export default function UsersManagement() {
           >
             <option value=''>Todos los usuarios</option>
             <option value='transactions'>Ver transacciones</option>
-            {availableRoles && availableRoles.length > 0 && availableRoles.map((role) => (
+            {availableRoles.map((role) => (
               <option key={role.id} value={role.id.toString()}>
                 Usuarios con rol: {role.nombre}
               </option>
@@ -583,20 +520,51 @@ export default function UsersManagement() {
                     </div>
                   </td>
                   <td style={styles.td}>
-                    <button
-                      style={{
-                        ...styles.btnAction,
-                        opacity: actionLoading ? 0.6 : 1,
-                        cursor: actionLoading ? 'not-allowed' : 'pointer',
-                      }}
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowModal(true);
-                      }}
-                      disabled={actionLoading}
-                    >
-                      Asignar Rol
-                    </button>
+                    <div style={styles.actionsCell}>
+                      <button
+                        style={{
+                          ...styles.btnAction,
+                          opacity: actionLoading ? 0.6 : 1,
+                          cursor: actionLoading ? 'not-allowed' : 'pointer',
+                        }}
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowModal(true);
+                        }}
+                        disabled={actionLoading}
+                      >
+                        Asignar Rol
+                      </button>
+                      
+                      
+                      {user.estado === 'activo' ? (
+                        <button
+                          style={{
+                            ...styles.btnStatusInactive,
+                            opacity: actionLoading ? 0.6 : 1,
+                            cursor: actionLoading ? 'not-allowed' : 'pointer',
+                          }}
+                          onClick={() => handleChangeUserStatus(user.idUsuario, 'inactivo')}
+                          disabled={actionLoading}
+                          title="Desactivar usuario"
+                        >
+                          Desactivar
+                        </button>
+                      ) : (
+                        <button
+                          style={{
+                            ...styles.btnStatusActive,
+                            opacity: actionLoading ? 0.6 : 1,
+                            cursor: actionLoading ? 'not-allowed' : 'pointer',
+                          }}
+                          onClick={() => handleChangeUserStatus(user.idUsuario, 'activo')}
+                          disabled={actionLoading}
+                          title="Activar usuario"
+                        >
+                          Activar
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
