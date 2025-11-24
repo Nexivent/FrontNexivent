@@ -1,7 +1,7 @@
 export async function searchEvents(params: any = {}, useAbsolute = false) {
     const baseUrl = useAbsolute
         ? `${process.env.NEXT_PUBLIC_BASE_URL}/evento/filter`
-        : `${process.env.NEXT_PUBLIC_BASE_URL}/evento/filter`;
+        : `https://nexivent-backend-production.up.railway.app/evento/filter`;
 
     const query = new URLSearchParams();
 
