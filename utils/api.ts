@@ -23,6 +23,11 @@ export interface Usuario {
   telefono?: string;
   fecha_nacimiento?: string;
   foto?: string;
+  roles?: Array<{ id: number; nombre: string }>;
+  rol?: string;
+  idUsuario?: number;
+  tipo_documento?: string;
+  tipoUsuario?: string;
 }
 
 export interface AuthResponse {
