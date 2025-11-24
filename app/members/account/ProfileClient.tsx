@@ -17,9 +17,9 @@ const ProfileClient: React.FC = () => {
       {/* 🔹 Datos dinámicos */}
       <FormMain
         data={{
-          name: user.nombre || 'Mario',
-          lastname: user.apellido || 'Bros',
-          email: user.correo || 'mariobros@gmail.com',
+          name: user?.nombre || 'Mario',
+          lastname: user?.nombre || 'Bros',
+          email: user?.email || 'mariobros@gmail.com',
         }}
       />
     </>

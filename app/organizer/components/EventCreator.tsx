@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Button from '@components/Button/Button';
 
 type CategoryOption = {
@@ -102,8 +103,8 @@ const defaultPricePreset: PriceMatrix = {
 };
 
 const createInitialForm = (): OrganizerEventForm => ({
-  idEvento: Date.now(),
-  idOrganizador: 44,
+  idEvento: 0,
+  idOrganizador: 2,
   idCategoria: 0,
   titulo: '',
   descripcion: '',
@@ -160,13 +161,28 @@ const formatCurrency = (value: number) =>
 const formatSize = (size: number | null) =>
   size !== null ? `${(size / 1024).toFixed(1)} KB` : undefined;
 
-const readFileAsDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result?.toString() ?? '');
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+const getApiBaseUrl = () => (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
+
+const buildUploadUrl = (path: string) => {
+  const base = getApiBaseUrl();
+  if (base.length === 0) {
+    throw new Error('Configura NEXT_PUBLIC_API_URL para subir archivos.');
+  }
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${normalizedPath}`;
+};
+
+const resolveMediaPreviewUrl = (value: string) => {
+  if (value.trim().length === 0) return '';
+  if (/^https?:\/\//i.test(value)) return value;
+  const previewBase = (
+    process.env.NEXT_PUBLIC_UPLOAD_BASE_URL ??
+    process.env.NEXT_PUBLIC_CDN_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    ''
+  ).replace(/\/+$/, '');
+  return previewBase.length > 0 ? `${previewBase}/${value.replace(/^\/+/, '')}` : value;
+};
 
 const normalizeIdentifier = (label: string, fallbackPrefix: string) => {
   const slug = label
@@ -177,11 +193,15 @@ const normalizeIdentifier = (label: string, fallbackPrefix: string) => {
   return slug.length > 0 ? slug : `${fallbackPrefix}-${Date.now()}`;
 };
 const EventCreator: React.FC = () => {
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get('eventId');
+
   const [form, setForm] = useState<OrganizerEventForm>(() => createInitialForm());
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoryStatus, setCategoryStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [loadingEvent, setLoadingEvent] = useState<boolean>(false);
 
   const [newSectorName, setNewSectorName] = useState('');
   const [newSectorCapacity, setNewSectorCapacity] = useState('');
@@ -215,6 +235,70 @@ const EventCreator: React.FC = () => {
     videoUrl: false,
   });
 
+  // Load event data if eventId is present in URL
+  useEffect(() => {
+    if (!eventId) return;
+
+    let mounted = true;
+    setLoadingEvent(true);
+
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+    const eventEndpoint = `${apiBaseUrl}/evento/${eventId}/`;
+
+    fetch(eventEndpoint)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('No se pudo obtener el evento');
+        return response.json();
+      })
+      .then((event) => {
+        if (!mounted) return;
+
+        if (event) {
+          // Map eventDates from API response
+          const eventDates = (event.eventDates ?? []).map((fecha: any) => ({
+            idFechaEvento: fecha.idFechaEvento ?? fecha.idFecha,
+            idFecha: fecha.idFecha,
+            fecha: fecha.fecha,
+            horaInicio: fecha.horaInicio,
+            horaFin: fecha.horaFin === '' ? fecha.horaInicio : fecha.horaFin,
+          }));
+
+          setForm({
+            idEvento: event.idEvento,
+            idOrganizador: event.idOrganizador ?? 2,
+            idCategoria: event.idCategoria ?? 0,
+            titulo: event.titulo ?? '',
+            descripcion: event.descripcion ?? '',
+            lugar: event.lugar ?? '',
+            estado: event.estado ?? 'BORRADOR',
+            likes: event.likes ?? 0,
+            noInteres: event.noInteres ?? 0,
+            cantVendidasTotal: event.cantVendidasTotal ?? 0,
+            totalRecaudado: event.totalRecaudado ?? 0,
+            imagenPortada: event.imagenPortada ?? '',
+            imagenLugar: event.imagenLugar ?? '',
+            videoUrl: event.videoUrl ?? '',
+            eventDates,
+            perfiles: event.perfiles ?? defaultProfiles,
+            sectores: event.sectores ?? defaultSectors,
+            tiposTicket: event.tiposTicket ?? defaultTicketTypes,
+            precios: event.precios ?? {},
+          });
+        }
+        console.log('Evento recibido del API:', event);
+        console.log('Fechas del evento:', event.fechas);
+        setLoadingEvent(false);
+      })
+      .catch((error) => {
+        console.error('Error loading event:', error);
+        if (mounted) setLoadingEvent(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [eventId]);
+
   useEffect(() => {
     let mounted = true;
     setCategoryStatus('loading');
@@ -240,6 +324,12 @@ const EventCreator: React.FC = () => {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    setForm((previous) =>
+      previous.idEvento === 0 ? { ...previous, idEvento: Date.now() } : previous
+    );
   }, []);
 
   const selectedCategory = categories.find((category) => category.id === form.idCategoria);
@@ -298,12 +388,8 @@ const EventCreator: React.FC = () => {
           date.horaFin.trim().length > 0
       );
 
-    const publishReady =
-      infoComplete &&
-      mediaComplete &&
-      ticketMatrixComplete &&
-      datesComplete &&
-      form.estado !== 'BORRADOR';
+    const publishReady = infoComplete && mediaComplete && ticketMatrixComplete && datesComplete;
+    const publishComplete = publishReady && form.estado !== 'BORRADOR';
 
     return {
       totalCapacity,
@@ -316,6 +402,7 @@ const EventCreator: React.FC = () => {
       entitiesReady,
       datesComplete,
       publishReady,
+      publishComplete,
     };
   }, [form]);
 
@@ -354,7 +441,7 @@ const EventCreator: React.FC = () => {
       id: 'publish',
       label: 'Listo para publicar',
       description: 'Estado distinto a borrador y validaciones completas.',
-      completed: stats.publishReady,
+      completed: stats.publishComplete,
     },
   ];
   const handleSectorCapacityChange = (sectorId: string, value: string) => {
@@ -635,14 +722,78 @@ const EventCreator: React.FC = () => {
   const handleMediaUpload = async (key: MediaKey, file: File | null | undefined) => {
     if (!file) return;
     setMediaUploading((previous) => ({ ...previous, [key]: true }));
+    setMediaMeta((previous) => ({ ...previous, [key]: { name: file.name, size: file.size } }));
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      setForm((previous) => ({ ...previous, [key]: dataUrl }));
-      setMediaMeta((previous) => ({ ...previous, [key]: { name: file.name, size: file.size } }));
-    } catch {
+      const uploadEndpoint = buildUploadUrl('/media/upload-url');
+      const presignResponse = await fetch(uploadEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type }),
+      });
+
+      if (!presignResponse.ok) {
+        throw new Error('No se pudo obtener el URL prefirmado.');
+      }
+
+      const presign = (await presignResponse.json()) as {
+        uploadUrl?: string;
+        key?: string;
+        fileUrl?: string;
+        publicUrl?: string;
+      };
+
+      if (typeof presign.uploadUrl !== 'string') {
+        throw new Error('Respuesta invalida del servicio de carga.');
+      }
+
+      const uploadResponse = await fetch(presign.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Error subiendo el archivo a S3.');
+      }
+
+      const buildUploadedUrl = () => {
+        const explicitUrl =
+          typeof presign.fileUrl === 'string' && presign.fileUrl.trim().length > 0
+            ? presign.fileUrl
+            : typeof presign.publicUrl === 'string' && presign.publicUrl.trim().length > 0
+              ? presign.publicUrl
+              : '';
+
+        if (explicitUrl.length > 0) return explicitUrl;
+
+        const keyUrl =
+          typeof presign.key === 'string' && presign.key.trim().length > 0
+            ? resolveMediaPreviewUrl(presign.key)
+            : '';
+
+        if (/^https?:\/\//i.test(keyUrl)) return keyUrl;
+
+        return presign.uploadUrl?.split('?')[0];
+      };
+
+      const uploadedUrl = buildUploadedUrl();
+
+      if (uploadedUrl?.trim().length === 0) {
+        throw new Error('No se obtuvo una URL valida para el archivo subido.');
+      }
+
+      setForm((previous) => ({ ...previous, [key]: uploadedUrl }));
+    } catch (error) {
+      console.error('Error subiendo archivo', error);
       setMediaMeta((previous) => ({
         ...previous,
-        [key]: { name: 'Error al procesar el archivo', size: null },
+        [key]: {
+          name:
+            error instanceof Error
+              ? error.message
+              : 'No se pudo subir el archivo. Intenta nuevamente.',
+          size: null,
+        },
       }));
     } finally {
       setMediaUploading((previous) => ({ ...previous, [key]: false }));
@@ -707,7 +858,9 @@ const EventCreator: React.FC = () => {
 
     setSavingState('saving');
     try {
-      const response = await fetch('/api/organizer/events', {
+      console.log('Payload enviado:', JSON.stringify(payload));
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const response = await fetch(`${API_URL}/evento/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -736,35 +889,47 @@ const EventCreator: React.FC = () => {
           ? 'No se pudo guardar el evento.'
           : null;
 
+  if (loadingEvent) {
+    return (
+      <div className='organizer-builder'>
+        <div className='organizer-panel' style={{ marginTop: '100px', textAlign: 'center' }}>
+          <p className='gray'>Cargando evento...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className='organizer-builder'>
-      <header className="header">
-          <div className="header-content">
-            <div className="header-top">
-              <div className="header-title">
-                <p className="eyebrow">Panel de organizadores</p>
-                <h1>Crear Nuevo Evento</h1>
-                <p className="header-subtitle">
-                  Configura todos los detalles de tu evento, define precios y prepáralo para publicar en Nexivent
-                </p>
-              </div>
-            </div>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <span className="stat-label">Capacidad Total</span>
-                <strong className="stat-value">{stats.totalCapacity.toLocaleString()}</strong>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Recaudación Potencial</span>
-                <strong className="stat-value">{formatCurrency(stats.potentialRevenue)}</strong>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Estado</span>
-                <strong className="stat-value">{form.estado}</strong>
-              </div>
+      <header className='header'>
+        <div className='header-content'>
+          <div className='header-top'>
+            <div className='header-title'>
+              <p className='eyebrow'>Panel de organizadores</p>
+              <h1>{eventId ? 'Editar Evento' : 'Crear Nuevo Evento'}</h1>
+              <p className='header-subtitle'>
+                {eventId
+                  ? 'Actualiza los detalles de tu evento y guarda los cambios'
+                  : 'Configura todos los detalles de tu evento, define precios y prepáralo para publicar en Nexivent'}
+              </p>
             </div>
           </div>
-        </header>
+          <div className='stats-grid'>
+            <div className='stat-card'>
+              <span className='stat-label'>Capacidad Total</span>
+              <strong className='stat-value'>{stats.totalCapacity.toLocaleString()}</strong>
+            </div>
+            <div className='stat-card'>
+              <span className='stat-label'>Recaudación Potencial</span>
+              <strong className='stat-value'>{formatCurrency(stats.potentialRevenue)}</strong>
+            </div>
+            <div className='stat-card'>
+              <span className='stat-label'>Estado</span>
+              <strong className='stat-value'>{form.estado}</strong>
+            </div>
+          </div>
+        </div>
+      </header>
 
       <form className='organizer-form' onSubmit={(event) => void handleSubmit(event)}>
         <div className='organizer-grid'>
@@ -942,55 +1107,58 @@ const EventCreator: React.FC = () => {
                 <h3>Medios subidos</h3>
               </div>
               <div className='media-upload-grid'>
-                {mediaKeys.map((key) => (
-                  <div key={key} className='media-upload-card'>
-                    <div
-                      className={`media-preview ${key === 'videoUrl' ? 'video' : ''}`}
-                      style={
-                        key !== 'videoUrl' && form[key].trim().length > 0
-                          ? { backgroundImage: `url(${form[key]})` }
-                          : undefined
-                      }
-                    >
-                      <span className='material-symbols-outlined'>{mediaConfig[key].icon}</span>
-                      <p>
-                        {form[key].trim().length > 0
-                          ? 'Contenido listo'
-                          : 'Aún no has cargado un archivo'}
-                      </p>
-                    </div>
-                    <div className='media-upload-controls'>
-                      <label className='upload-trigger'>
+                {mediaKeys.map((key) => {
+                  const previewUrl = resolveMediaPreviewUrl(form[key]);
+                  return (
+                    <div key={key} className='media-upload-card'>
+                      <div
+                        className={`media-preview ${key === 'videoUrl' ? 'video' : ''}`}
+                        style={
+                          key !== 'videoUrl' && previewUrl.trim().length > 0
+                            ? { backgroundImage: `url(${previewUrl})` }
+                            : undefined
+                        }
+                      >
+                        <span className='material-symbols-outlined'>{mediaConfig[key].icon}</span>
+                        <p>
+                          {form[key].trim().length > 0
+                            ? 'Contenido listo'
+                            : 'Aun no has cargado un archivo'}
+                        </p>
+                      </div>
+                      <div className='media-upload-controls'>
+                        <label className='upload-trigger'>
+                          <input
+                            type='file'
+                            accept={mediaConfig[key].accept}
+                            onChange={(event) => {
+                              void handleMediaUpload(key, event.target.files?.[0]);
+                              event.currentTarget.value = '';
+                            }}
+                          />
+                          <span>Cargar archivo</span>
+                        </label>
                         <input
-                          type='file'
-                          accept={mediaConfig[key].accept}
-                          onChange={(event) => {
-                            void handleMediaUpload(key, event.target.files?.[0]);
-                            event.currentTarget.value = '';
-                          }}
+                          className='input-text'
+                          type='text'
+                          value={form[key]}
+                          placeholder='O pega un enlace publico'
+                          onChange={(event) => handleMediaUrlChange(key, event.target.value)}
                         />
-                        <span>Cargar archivo</span>
-                      </label>
-                      <input
-                        className='input-text'
-                        type='text'
-                        value={form[key]}
-                        placeholder='O pega un enlace público'
-                        onChange={(event) => handleMediaUrlChange(key, event.target.value)}
-                      />
-                      <span className='field-hint'>{mediaConfig[key].helper}</span>
-                      <div className='media-meta'>
-                        {mediaUploading[key]
-                          ? 'Procesando archivo...'
-                          : (mediaMeta[key].name ??
-                            'Sin archivo adjunto (se permite sólo enlace o archivo)')}
-                        {mediaMeta[key].size !== null && (
-                          <span className='media-size'>{formatSize(mediaMeta[key].size)}</span>
-                        )}
+                        <span className='field-hint'>{mediaConfig[key].helper}</span>
+                        <div className='media-meta'>
+                          {mediaUploading[key]
+                            ? 'Procesando archivo...'
+                            : (mediaMeta[key].name ??
+                              'Sin archivo adjunto (se permite solo enlace o archivo)')}
+                          {mediaMeta[key].size !== null && (
+                            <span className='media-size'>{formatSize(mediaMeta[key].size)}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
             <section className='organizer-panel'>
@@ -1203,15 +1371,15 @@ const EventCreator: React.FC = () => {
               </div>
             </section>
             {validationErrors.length > 0 && (
-          <div className='validation-errors'>
-            <p>Por favor corrige los siguientes campos:</p>
-            <ul>
-              {validationErrors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+              <div className='validation-errors'>
+                <p>Por favor corrige los siguientes campos:</p>
+                <ul>
+                  {validationErrors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <section className='organizer-panel organizer-actions'>
               <div className='button-row'>
                 <Button
@@ -1239,27 +1407,34 @@ const EventCreator: React.FC = () => {
               <div className='organizer-panel__header'>
                 <h3>Resumen</h3>
               </div>
-              <table className="summary-table">
-              <tbody>
-                <tr>
-                  <th>Capacidad total</th>
-                  <td><strong>{stats.totalCapacity.toLocaleString()}</strong></td>
-                </tr>
-                <tr>
-                  <th>Tarifa mínima</th>
-                  <td><strong>{formatCurrency(stats.minPrice)}</strong></td>
-                </tr>
-                <tr>
-                  <th>Tarifa máxima</th>
-                  <td><strong>{formatCurrency(stats.maxPrice)}</strong></td>
-                </tr>
-                <tr>
-                  <th>Recaudación potencial</th>
-                  <td><strong>{formatCurrency(stats.potentialRevenue)}</strong></td>
-                </tr>
-              </tbody>
-            </table>
-
+              <table className='summary-table'>
+                <tbody>
+                  <tr>
+                    <th>Capacidad total</th>
+                    <td>
+                      <strong>{stats.totalCapacity.toLocaleString()}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Tarifa mínima</th>
+                    <td>
+                      <strong>{formatCurrency(stats.minPrice)}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Tarifa máxima</th>
+                    <td>
+                      <strong>{formatCurrency(stats.maxPrice)}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Recaudación potencial</th>
+                    <td>
+                      <strong>{formatCurrency(stats.potentialRevenue)}</strong>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
               <div className='organizer-tags'>
                 <span className='organizer-chip'>
@@ -1276,7 +1451,7 @@ const EventCreator: React.FC = () => {
                 </span>
                 <span className='organizer-chip muted'>
                   <span className='material-symbols-outlined'>tag</span>
-                  Evento #{form.idEvento}
+                  Evento #{form.idEvento === 0 ? 'Pendiente' : form.idEvento}
                 </span>
                 <span className='organizer-chip muted'>
                   <span className='material-symbols-outlined'>badge</span>

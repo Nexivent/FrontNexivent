@@ -10,7 +10,7 @@ const Page: React.FC = () => (
     <Section className='organizer-hero hero-offset'>
       <div className='container'>
         <div className='organizer-hero__content'>
-          <Heading type={1} color='white' text='Inicio del organizador' />
+          <Heading type={1} color='white' text='Bienvenido al panel del organizador' />
           <p className='gray'>
             Accede rápidamente a la creación de eventos, campañas promocionales y reportes desde un
             mismo panel.
@@ -33,6 +33,20 @@ const Page: React.FC = () => (
               text='Ir al creador'
               rightIcon='arrow_forward'
               url='organizer/events'
+            />
+          </div>
+          <div className='organizer-hub-card'>
+            <span className='material-symbols-outlined'>manage_search</span>
+            <h3>Gestión de eventos</h3>
+            <p>
+              Edita eventos en borrador y cancela eventos futuros desde un panel centralizado con
+              filtros por estado.
+            </p>
+            <ButtonLink
+              color='gray-overlay'
+              text='Ir a gestión'
+              rightIcon='arrow_forward'
+              url='organizer/manage'
             />
           </div>
           <div className='organizer-hub-card'>

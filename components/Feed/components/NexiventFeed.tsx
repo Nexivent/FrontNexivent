@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Heart,
   X,
@@ -27,7 +27,70 @@ interface Evento {
   interes: boolean | null;
 }
 
-const eventos: Evento[] = [
+type RawEventoApi = {
+  ID?: number | string;
+  Id?: number | string;
+  IdEvento?: number | string;
+  idEvento?: number | string;
+  id?: number | string;
+  Titulo?: string;
+  titulo?: string;
+  Descripcion?: string;
+  descripcion?: string;
+  Lugar?: string;
+  lugar?: string;
+  Fecha?: string | { Fecha?: string; FechaEvento?: string };
+  fecha?: unknown;
+  FechaEvento?: string;
+  fechaEvento?: string;
+  EventoFechas?: Array<{
+    ID?: number | string;
+    Fecha?: string;
+    FechaEvento?: string;
+    Tarifas?: Array<{
+      Precio?: number;
+      PrecioBase?: number;
+      Tarifa?: number;
+    }>;
+    Tarifa?: number;
+  }>;
+  ImagenDescripcion?: string;
+  ImagenPortada?: string;
+  ImagenEscenario?: string;
+  VideoPresentacion?: string;
+  TotalRecaudado?: number;
+  CantVendidoTotal?: number;
+  CantMeGusta?: number;
+  CantNoInteresa?: number;
+  FechaCreacion?: string;
+  fechaCreacion?: string;
+  Fechas?: Array<{
+    Fecha?: string;
+    HoraInicio?: string;
+    HoraFin?: string;
+  }>;
+  TiposTicket?: Array<{
+    Precio?: number;
+    PrecioBase?: number;
+  }>;
+  Tarifa?: number;
+  Tarifas?: Array<{
+    Precio?: number;
+    PrecioBase?: number;
+    Tarifa?: number;
+  }>;
+};
+
+const FEED_ENDPOINT = (() => {
+  const base =
+    (process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? '').replace(
+      /\/+$/,
+      ''
+    );
+  return base ? `${base}/evento/filter?estado=PUBLICADO` : '/evento/filter?estado=PUBLICADO';
+})();
+
+const fallbackEventos: Evento[] = [
   {
     id: 1,
     titulo: 'SKILLBEA - 4MAR',
@@ -78,8 +141,113 @@ const eventos: Evento[] = [
   },
 ];
 
+const formatEventDate = (value: unknown) => {
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString('es-PE', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  if (value && typeof value === 'object') {
+    const nested =
+      (value as { FechaEvento?: string; Fecha?: string; fecha?: string }).FechaEvento ??
+      (value as { FechaEvento?: string; Fecha?: string; fecha?: string }).Fecha ??
+      (value as { FechaEvento?: string; Fecha?: string; fecha?: string }).fecha;
+
+    if (nested) return formatEventDate(nested);
+  }
+
+  return 'Fecha por definir';
+};
+
+const resolvePrimaryDate = (raw: RawEventoApi): string | undefined => {
+  const getString = (value: unknown): string | undefined =>
+    typeof value === 'string' ? value : undefined;
+
+  const nestedDate =
+    (raw.Fecha && typeof raw.Fecha === 'object'
+      ? getString(raw.Fecha.Fecha) ?? getString(raw.Fecha.FechaEvento)
+      : undefined) ??
+    (raw.fecha && typeof raw.fecha === 'object'
+      ? getString((raw.fecha as any).Fecha) ??
+      getString((raw.fecha as any).FechaEvento)
+      : undefined);
+
+  const candidates = [
+    getString(raw.FechaEvento),
+    getString(raw.fechaEvento),
+    getString(raw.Fecha),          // <-- ahora no devuelve objetos
+    nestedDate,
+    getString(raw.Fechas?.[0]?.Fecha),
+    getString(raw.EventoFechas?.[0]?.FechaEvento),
+    getString(raw.EventoFechas?.[0]?.Fecha),
+    getString(raw.FechaCreacion),
+    getString(raw.fecha),
+    getString(raw.fechaCreacion),
+  ];
+
+  return candidates.find((c): c is string => typeof c === 'string');
+};
+
+
+const resolvePrice = (raw: RawEventoApi): number => {
+  const candidates: Array<number | undefined> = [
+    raw.Tarifa,
+    raw.Tarifas?.[0]?.Precio,
+    raw.Tarifas?.[0]?.PrecioBase,
+    raw.Tarifas?.[0]?.Tarifa,
+    raw.EventoFechas?.[0]?.Tarifas?.[0]?.Precio,
+    raw.EventoFechas?.[0]?.Tarifas?.[0]?.PrecioBase,
+    raw.EventoFechas?.[0]?.Tarifas?.[0]?.Tarifa,
+    raw.TiposTicket?.[0]?.Precio,
+    raw.TiposTicket?.[0]?.PrecioBase,
+    raw.TotalRecaudado,
+  ];
+
+  const firstDefined = candidates.find((value) => typeof value === 'number' && !Number.isNaN(value));
+  return firstDefined ?? 0;
+};
+
+const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
+  const candidateId =
+    raw.ID ?? raw.Id ?? raw.IdEvento ?? raw.idEvento ?? raw.id ?? index + 1;
+  const numericId = typeof candidateId === 'number' ? candidateId : Number(candidateId);
+  const mediaCandidate = [
+    raw.VideoPresentacion,
+    raw.ImagenPortada,
+    raw.ImagenDescripcion,
+    raw.ImagenEscenario,
+  ].find((value) => typeof value === 'string' && value.trim().length > 0);
+  const media = (mediaCandidate ?? '').trim();
+  const priceCandidate = resolvePrice(raw);
+  const firstDate = resolvePrimaryDate(raw);
+
+  const titulo = raw.Titulo ?? raw.titulo ?? 'Evento sin titulo';
+  const descripcion = raw.Descripcion ?? raw.descripcion ?? 'Evento sin descripcion';
+  const lugar = raw.Lugar ?? raw.lugar ?? 'Ubicacion por definir';
+  const isVideo =
+    (typeof raw.VideoPresentacion === 'string' && raw.VideoPresentacion.trim().length > 0) ||
+    media.toLowerCase().endsWith('.mp4');
+
+  return {
+    id: Number.isNaN(numericId) ? index + 1 : numericId,
+    titulo,
+    fecha: formatEventDate(firstDate),
+    lugar,
+    descripcion,
+    precio: String(priceCandidate ?? 0),
+    tipo: isVideo ? 'video' : 'imagen',
+    media: media.length > 0 ? media : '/eventoHH.jpg',
+    interes: null,
+  };
+};
+
 const NexiventFeed: React.FC = () => {
-  const [eventosState, setEventosState] = useState<Evento[]>(eventos);
+  const [eventosState, setEventosState] = useState<Evento[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(true);
@@ -90,14 +258,55 @@ const NexiventFeed: React.FC = () => {
   const touchStartY = useRef<number>(0);
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const router = useRouter();
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadFeed = async () => {
+      try {
+        setStatus('loading');
+        const response = await fetch(FEED_ENDPOINT, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`API respondio ${response.status}`);
+
+        const payload = await response.json();
+        const rawEventos = Array.isArray(payload) ? payload : payload?.eventos ?? payload?.data ?? [];
+        if (!Array.isArray(rawEventos)) throw new Error('Formato de respuesta inesperado');
+
+        const mapped = rawEventos
+          .map((item: RawEventoApi, index: number) => mapApiEvent(item, index))
+          .filter((item) => Boolean(item));
+
+        if (mapped.length === 0) throw new Error('Sin eventos publicados');
+
+        videoRefs.current = [];
+        setEventosState(mapped);
+        setCurrentIndex(0);
+        setStatus('ready');
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error('No se pudo cargar el feed de eventos', error);
+        setEventosState(fallbackEventos);
+        setCurrentIndex(0);
+        setStatus('error');
+      }
+    };
+
+    void loadFeed();
+
+    return () => controller.abort();
+  }, []);
 
   const handleTouchStart = (e: any): void => {
     touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = (e: any): void => {
-    if (isScrolling) return;
+    if (isScrolling || eventosState.length === 0) return;
 
     const touchEndY = e.changedTouches[0].clientY;
     const diff = touchStartY.current - touchEndY;
@@ -112,7 +321,7 @@ const NexiventFeed: React.FC = () => {
   };
 
   const handleWheel = (e: any): void => {
-    if (isScrolling) return;
+    if (isScrolling || eventosState.length === 0) return;
 
     e.preventDefault();
     if (e.deltaY > 0 && currentIndex < eventosState.length - 1) {
@@ -144,7 +353,10 @@ const NexiventFeed: React.FC = () => {
   };
 
   const handleNoInteres = (): void => {
-    toggleInteres(eventoActual.id, false);
+    const current = eventosState[currentIndex];
+    if (!current) return;
+
+    toggleInteres(current.id, false);
     if (currentIndex < eventosState.length - 1) {
       scrollToIndex(currentIndex + 1);
     }
@@ -160,253 +372,18 @@ const NexiventFeed: React.FC = () => {
     }
   };
 
-  const eventoActual = eventosState[currentIndex];
-
   return (
     <div className='fixed inset-0 w-screen h-screen bg-black overflow-hidden'>
-      {/* Panel de Filtros*/}
-      <div
-        className={`fixed left-0 top-0 bottom-0 w-80 bg-black/40 backdrop-blur-xl border-r border-white/10 z-40 transform transition-transform duration-300 ease-out ${
-          showFilters ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className='h-full flex flex-col'>
-          {/* Header del panel */}
-          <div className='px-5 pt-20 pb-4 border-b border-white/10'>
-            <h2 className='text-white text-xl font-bold'>Filtros</h2>
-            <p className='text-white/50 text-xs mt-1'>Personaliza tu búsqueda</p>
-          </div>
-
-          {/* Contenido de filtros */}
-          <div className='flex-1 overflow-y-auto px-5 py-4 space-y-6'>
-            {/* ¿Dónde? */}
-            <div>
-              <div className='flex items-center gap-2 mb-3'>
-                <MapPin size={16} className='text-yellow-300' />
-                <h3 className='text-white text-sm font-semibold'>¿Dónde?</h3>
-              </div>
-              <button className='w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/10'>
-                <div className='flex items-center gap-2'>
-                  <div className='w-6 h-6 rounded-full bg-yellow-300/20 flex items-center justify-center'>
-                    <MapPin size={12} className='text-yellow-300' />
-                  </div>
-                  <div className='text-left'>
-                    <p className='text-white text-xs font-medium'>Lima, Perú</p>
-                  </div>
-                </div>
-                <span className='text-yellow-300 text-xs font-medium'>Cambiar</span>
-              </button>
-              <div className='mt-3'>
-                <div className='flex items-center justify-between mb-2'>
-                  <span className='text-white/50 text-[10px]'>Radio de búsqueda</span>
-                  <span className='text-yellow-300 text-xs font-bold'>+{distanciaKm} km</span>
-                </div>
-                <input
-                  type='range'
-                  min='0'
-                  max='50'
-                  value={distanciaKm}
-                  onChange={(e) => setDistanciaKm(parseInt(e.target.value))}
-                  className='w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer slider-km'
-                  style={{
-                    background: `linear-gradient(to right, #fde047 0%, #fde047 ${(distanciaKm / 50) * 100}%, rgba(255,255,255,0.1) ${(distanciaKm / 50) * 100}%, rgba(255,255,255,0.1) 100%)`,
-                  }}
-                />
-                <div className='flex justify-between text-white/30 text-[10px] mt-1'>
-                  <span>0 km</span>
-                  <span>50 km</span>
-                </div>
-              </div>
-
-              <style jsx>{`
-                .slider-km::-webkit-slider-thumb {
-                  appearance: none;
-                  width: 14px;
-                  height: 14px;
-                  border-radius: 50%;
-                  background: #fde047;
-                  cursor: pointer;
-                  border: 2px solid #000;
-                }
-                .slider-km::-moz-range-thumb {
-                  width: 14px;
-                  height: 14px;
-                  border-radius: 50%;
-                  background: #fde047;
-                  cursor: pointer;
-                  border: 2px solid #000;
-                }
-              `}</style>
-            </div>
-
-            {/* Fecha */}
-            <div>
-              <div className='flex items-center gap-2 mb-3'>
-                <Calendar size={16} className='text-yellow-300' />
-                <h3 className='text-white text-sm font-semibold'>Fecha</h3>
-              </div>
-              <div className='space-y-2'>
-                <div className='relative'>
-                  <input
-                    type='date'
-                    className='w-full px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 text-white text-xs focus:outline-none focus:border-yellow-300 transition-all'
-                  />
-                  <label className='absolute -top-2 left-2 px-1 bg-black/60 text-white/50 text-[10px]'>
-                    Desde
-                  </label>
-                </div>
-                <div className='relative'>
-                  <input
-                    type='date'
-                    className='w-full px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 text-white text-xs focus:outline-none focus:border-yellow-300 transition-all'
-                  />
-                  <label className='absolute -top-2 left-2 px-1 bg-black/60 text-white/50 text-[10px]'>
-                    Hasta
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Categorías */}
-            <div>
-              <div className='flex items-center gap-2 mb-3'>
-                <Music size={16} className='text-yellow-300' />
-                <h3 className='text-white text-sm font-semibold'>Categorías</h3>
-              </div>
-              <div className='flex flex-wrap gap-2'>
-                {['Música', 'Deportes', 'Arte', 'Teatro', 'Tecnología', 'Gastronomía'].map(
-                  (cat) => (
-                    <button
-                      key={cat}
-                      className='px-3 py-1 bg-white/5 hover:bg-yellow-300/20 border border-white/10 hover:border-yellow-300/50 rounded-full text-white text-xs transition-all'
-                    >
-                      {cat}
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* Precio */}
-            <div>
-              <div className='flex items-center gap-2 mb-3'>
-                <DollarSign size={16} className='text-yellow-300' />
-                <h3 className='text-white text-sm font-semibold'>Precio</h3>
-              </div>
-              <div className='flex items-center gap-3'>
-                <div className='flex-1'>
-                  <label className='text-white/50 text-[10px] mb-1 block'>Mínimo</label>
-                  <div className='relative'>
-                    <span className='absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs'>
-                      S/
-                    </span>
-                    <input
-                      type='number'
-                      min='0'
-                      max={precioMax}
-                      value={precioMin}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        if (val <= precioMax) setPrecioMin(val);
-                      }}
-                      className='w-full pl-8 pr-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 focus:border-yellow-300 rounded-lg text-white text-sm focus:outline-none transition-all'
-                    />
-                  </div>
-                </div>
-
-                <div className='text-white/30 pt-5'>—</div>
-
-                <div className='flex-1'>
-                  <label className='text-white/50 text-[10px] mb-1 block'>Máximo</label>
-                  <div className='relative'>
-                    <span className='absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs'>
-                      S/
-                    </span>
-                    <input
-                      type='number'
-                      min={precioMin}
-                      max='500'
-                      value={precioMax}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 200;
-                        if (val >= precioMin) setPrecioMax(val);
-                      }}
-                      className='w-full pl-8 pr-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 focus:border-yellow-300 rounded-lg text-white text-sm focus:outline-none transition-all'
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Opciones rápidas de precio*/}
-              <div className='mt-3 flex flex-wrap gap-2'>
-                <button
-                  onClick={() => {
-                    setPrecioMin(0);
-                    setPrecioMax(30);
-                  }}
-                  className='px-2 py-1 bg-white/5 hover:bg-yellow-300/20 border border-white/10 rounded text-white/70 text-[10px] transition-all'
-                >
-                  Hasta S/30
-                </button>
-                <button
-                  onClick={() => {
-                    setPrecioMin(30);
-                    setPrecioMax(60);
-                  }}
-                  className='px-2 py-1 bg-white/5 hover:bg-yellow-300/20 border border-white/10 rounded text-white/70 text-[10px] transition-all'
-                >
-                  S/30 - S/60
-                </button>
-                <button
-                  onClick={() => {
-                    setPrecioMin(60);
-                    setPrecioMax(500);
-                  }}
-                  className='px-2 py-1 bg-white/5 hover:bg-yellow-300/20 border border-white/10 rounded text-white/70 text-[10px] transition-all'
-                >
-                  Más de S/60
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer del panel con perfil de usuario */}
-          <div className='px-5 py-3 border-t border-white/10 space-y-3'>
-            <button className='w-full py-2 bg-yellow-300 hover:bg-yellow-400 rounded-lg text-black text-sm font-semibold transition-all'>
-              Aplicar Filtros
-            </button>
-            <button className='w-full py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/70 text-sm font-medium transition-all'>
-              Limpiar
-            </button>
-
-            {/* Usuario */}
-            <div className='pt-3 border-t border-white/10'>
-              <div className='flex items-center gap-3'>
-                <div className='w-10 h-10 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-400 flex items-center justify-center'>
-                  <span className='text-black text-sm font-bold'>U</span>
-                </div>
-                <div className='flex-1'>
-                  <p className='text-white text-sm font-medium'>Usuario</p>
-                  <p className='text-white/50 text-xs'>Ver perfil</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      {status !== 'ready' && (
+        <div className='absolute top-5 left-5 z-50 px-4 py-2 rounded-lg bg-black/70 text-white text-sm'>
+          {status === 'loading' ? 'Cargando eventos...' : 'Mostrando eventos de respaldo'}
         </div>
-      </div>
-
-      {showFilters && (
-        <button
-          type='button'
-          aria-label='Cerrar filtros'
-          className='fixed inset-0 bg-black/50 z-30'
-          onClick={() => setShowFilters(false)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setShowFilters(false);
-          }}
-        ></button>
       )}
-
+      {eventosState.length === 0 && (
+        <div className='absolute inset-0 flex items-center justify-center text-white z-40 pointer-events-none'>
+          {status === 'loading' ? 'Cargando eventos...' : 'No hay eventos publicados'}
+        </div>
+      )}
       <div
         className='fixed inset-0 w-screen h-screen'
         onTouchStart={handleTouchStart}
@@ -490,11 +467,10 @@ const NexiventFeed: React.FC = () => {
                     className='flex flex-col items-center gap-1 group'
                   >
                     <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                        evento.interes === true
-                          ? 'bg-green-500'
-                          : 'bg-white/10 backdrop-blur-sm group-hover:bg-white/20'
-                      }`}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${evento.interes === true
+                        ? 'bg-green-500'
+                        : 'bg-white/10 backdrop-blur-sm group-hover:bg-white/20'
+                        }`}
                     >
                       <Heart
                         size={22}
@@ -509,11 +485,10 @@ const NexiventFeed: React.FC = () => {
                     className='flex flex-col items-center gap-1 group'
                   >
                     <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                        evento.interes === false
-                          ? 'bg-orange-500'
-                          : 'bg-white/10 backdrop-blur-sm group-hover:bg-white/20'
-                      }`}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${evento.interes === false
+                        ? 'bg-orange-500'
+                        : 'bg-white/10 backdrop-blur-sm group-hover:bg-white/20'
+                        }`}
                     >
                       <X size={22} className='text-white' />
                     </div>

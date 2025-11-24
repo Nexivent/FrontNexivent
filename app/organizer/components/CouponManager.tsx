@@ -3,13 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Button from '@components/Button/Button';
 
-type CouponType = 'PORCENTAJE' | 'MONTO';
-
 type CouponForm = {
   idCupon: number;
   idEvento: number;
   descripcion: string;
-  tipo: CouponType;
+  tipo: 0 | 1; // 0 porcentaje, 1 monto fijo
   activo: 0 | 1;
   valor: number;
   codigo: string;
@@ -26,6 +24,18 @@ type OrganizerEventSummary = {
 
 type FetchState = 'idle' | 'loading' | 'error';
 
+const resolveOrganizerUserId = () => {
+  const envValue = Number(process.env.NEXT_PUBLIC_ORGANIZER_ID);
+  if (!Number.isNaN(envValue) && envValue > 0) return envValue;
+  return 1; // Default organizer ID for development
+};
+
+const organizerUserId = resolveOrganizerUserId();
+const couponsListEndpoint = `/api/organizer/coupons?organizerId=${organizerUserId}`;
+const couponCreateEndpoint = `/api/organizer/coupons?usuarioCreacion=${organizerUserId}`;
+const couponUpdateEndpoint = `/api/organizer/coupons?usuarioModificacion=${organizerUserId}`;
+const eventsListEndpoint = `/api/organizer/events?organizadorId=${organizerUserId}`;
+
 const createEmptyCoupon = (): CouponForm => {
   const today = new Date();
   const nextMonth = new Date(today);
@@ -35,7 +45,7 @@ const createEmptyCoupon = (): CouponForm => {
     idCupon: Date.now(),
     idEvento: 0,
     descripcion: '',
-    tipo: 'PORCENTAJE',
+    tipo: 0,
     activo: 1,
     valor: 10,
     codigo: '',
@@ -61,20 +71,28 @@ const CouponManager: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    setFetchState('loading');
-    fetch('/api/organizer/coupons')
-      .then(async (response) => {
-        if (!response.ok) throw new Error('No se pudieron obtener los cupones');
-        return response.json();
-      })
-      .then((payload) => {
+    const loadCoupons = async () => {
+      setFetchState('loading');
+      try {
+        const response = await fetch(couponsListEndpoint, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`No se pudieron obtener los cupones (${response.status}).`);
+        }
+        const payload = await response.json();
         if (!mounted) return;
         setCoupons(payload?.data ?? []);
         setFetchState('idle');
-      })
-      .catch(() => {
-        if (mounted) setFetchState('error');
-      });
+      } catch (error) {
+        if (mounted) {
+          setFetchState('error');
+          setFeedback(
+            error instanceof Error ? error.message : 'No se pudieron obtener los cupones.'
+          );
+        }
+      }
+    };
+
+    void loadCoupons();
 
     return () => {
       mounted = false;
@@ -84,17 +102,21 @@ const CouponManager: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     setEventsState('loading');
-    fetch('/api/organizer/events')
+    fetch(eventsListEndpoint)
       .then(async (response) => {
         if (!response.ok) throw new Error('No se pudieron obtener los eventos');
+        console.log('Events response:', response.body);
         return response.json();
       })
       .then((payload) => {
         if (!mounted) return;
-        const normalized: OrganizerEventSummary[] = (payload?.data ?? []).map((event: any) => ({
-          idEvento: event.idEvento,
-          titulo: event.titulo,
-        }));
+        const normalized: OrganizerEventSummary[] = (payload?.data ?? []).map((event: any) => {
+          const eventId = Number(event.idEvento ?? event.id ?? 0);
+          return {
+            idEvento: Number.isNaN(eventId) ? 0 : eventId,
+            titulo: event.titulo ?? event.nombre ?? `Evento #${eventId || ''}`,
+          };
+        });
         setEvents(normalized);
         setEventsState('idle');
       })
@@ -172,15 +194,28 @@ const CouponManager: React.FC = () => {
     setFeedback(null);
 
     try {
-      const response = await fetch('/api/organizer/coupons', {
-        method: 'POST',
+      const isEditing = selectedCouponId !== null;
+      const endpoint = isEditing ? couponUpdateEndpoint : couponCreateEndpoint;
+      const method = isEditing ? 'PUT' : 'POST';
+      console.log('Submitting to', endpoint, 'with method', method, 'and form', JSON.stringify(form));
+      const response = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      if (!response.ok) throw new Error('No se pudo guardar el cupón');
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        const errorMessage =
+          errorPayload !== null &&
+          typeof (errorPayload as { message?: unknown }).message === 'string' &&
+          (errorPayload as { message: string }).message.length > 0
+            ? (errorPayload as { message: string }).message
+            : `No se pudo guardar el cupon (${response.status}).`;
+        throw new Error(errorMessage);
+      }
 
       const payload = await response.json();
-      const savedCoupon = payload?.data as CouponForm;
+      const savedCoupon = (payload?.data ?? payload) as CouponForm;
       setCoupons((previous) => {
         const filtered = previous.filter((coupon) => coupon.idCupon !== savedCoupon.idCupon);
         return [savedCoupon, ...filtered];
@@ -188,10 +223,17 @@ const CouponManager: React.FC = () => {
       setSelectedCouponId(savedCoupon.idCupon);
       setForm(savedCoupon);
       setSavingState('success');
-      setFeedback('Cupón guardado correctamente.');
-    } catch {
+      setFeedback(
+        (typeof payload?.message === 'string' && payload.message.length > 0
+          ? payload.message
+          : null) ??
+          (isEditing ? 'Cupon actualizado correctamente.' : 'Cupon guardado correctamente.')
+      );
+    } catch (error) {
       setSavingState('error');
-      setFeedback('No se pudo guardar el cupón. Intenta nuevamente.');
+      setFeedback(
+        error instanceof Error ? error.message : 'No se pudo guardar el cupon. Intenta nuevamente.'
+      );
     } finally {
       setTimeout(() => {
         setSavingState((current) => (current === 'success' ? 'idle' : current));
@@ -287,7 +329,6 @@ const CouponManager: React.FC = () => {
                 <tr>
                   <th>Código</th>
                   <th>Evento</th>
-                  <th>Tipo</th>
                   <th>Valor</th>
                   <th>Estado</th>
                   <th>Uso por usuario</th>
@@ -308,9 +349,9 @@ const CouponManager: React.FC = () => {
                     >
                       <td>{coupon.codigo}</td>
                       <td>{eventName}</td>
-                      <td>{coupon.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto fijo'}</td>
+                      
                       <td>
-                        {coupon.tipo === 'PORCENTAJE'
+                        {coupon.tipo === 0
                           ? `${coupon.valor}%`
                           : `S/ ${coupon.valor.toFixed(2)}`}
                       </td>
@@ -365,6 +406,7 @@ const CouponManager: React.FC = () => {
                       onChange={(event) =>
                         handleInputChange('codigo', event.target.value.toUpperCase())
                       }
+                      disabled={selectedCouponId !== null}
                     />
                   </label>
                   <label className='field'>
@@ -375,6 +417,7 @@ const CouponManager: React.FC = () => {
                       onChange={(event) =>
                         handleInputChange('idEvento', Number(event.target.value))
                       }
+                      disabled={selectedCouponId !== null}
                     >
                       {eventOptions.length === 0 ? (
                         <option value={form.idEvento || 0}>
@@ -416,11 +459,12 @@ const CouponManager: React.FC = () => {
                       className='input-text'
                       value={form.tipo}
                       onChange={(event) =>
-                        handleInputChange('tipo', event.target.value as CouponType)
+                        handleInputChange('tipo', Number(event.target.value) === 1 ? 1 : 0)
                       }
+                      disabled={selectedCouponId !== null}
                     >
-                      <option value='PORCENTAJE'>Porcentaje</option>
-                      <option value='MONTO'>Monto fijo</option>
+                      <option value={0}>Porcentaje</option>
+                      <option value={1}>Monto fijo</option>
                     </select>
                   </label>
 
@@ -432,6 +476,7 @@ const CouponManager: React.FC = () => {
                       min={0}
                       value={form.valor}
                       onChange={(event) => handleInputChange('valor', Number(event.target.value))}
+                      disabled={selectedCouponId !== null}
                     />
                   </label>
 

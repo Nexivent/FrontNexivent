@@ -1,45 +1,152 @@
 'use client';
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authApi, Usuario, RegisterData } from '@utils/api';
 
-// 1️⃣ Tipo de los datos de usuario
-export type User = {
-  idUsuario: number;
-  nombre: string;
-  apellido: string;
-  ndocumento: string;
-  tipo_documento: string;
-  correo: string;
-  foto: string;
-  telefono: string;
-  idRolUsuarios: number;
-};
 
-// 2️⃣ Crea el contexto
-const UserContext = createContext<{
-  user: User;
-  setUser: React.Dispatch<React.SetStateAction<User>>;
-} | null>(null);
+interface UserContextType {
+  user: Usuario | null;
+  setUser: React.Dispatch<React.SetStateAction<Usuario | null>>;
+  loading: boolean;
+  login: (email: string, contrasena: string) => Promise<{ success: boolean; message: string }>;
+  register: (data: RegisterData) => Promise<{ success: boolean; message: string }>;
+  logout: () => void;
+  isAuthenticated: boolean;
+}
 
-// 3️⃣ Proveedor del contexto
+const UserContext = createContext<UserContextType | undefined>(undefined);
+
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>({
-    idUsuario: 1,
-    nombre: 'Mario',
-    apellido: 'Bros',
-    ndocumento: '123456789',
-    tipo_documento: 'DNI',
-    correo: 'mario_bros@gmail.com',
-    foto: 'https://www.desura.games/files/images/49/49eee8a55fe13133dc5d8ae33106c74b.jpg',
-    telefono: '123-456-7890',
-    idRolUsuarios: 2,
-  });
+  const [user, setUser] = useState<Usuario | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  return <UserContext.Provider value={{ user, setUser }}>{children}</UserContext.Provider>;
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem('auth_token');
+    const storedExpiry = localStorage.getItem('token_expiry');
+    if (storedUser && storedUser !== 'undefined' && storedToken && storedToken !== 'undefined') {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser && typeof parsedUser === 'object') {
+          if (storedExpiry && Date.now() < parseInt(storedExpiry)) {
+            setUser(JSON.parse(storedUser));
+            console.log('Usuario cargado desde localStorage');
+          } else {
+            console.log('Token expirado, limpiando sesion');
+            logout();
+          }
+        } else {
+          localStorage.removeItem('user');
+          localStorage.removeItem('auth_token');
+        }
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('auth_token');
+      }
+    } else {
+      if (storedUser === 'undefined') localStorage.removeItem('user');
+      if (storedToken === 'undefined') localStorage.removeItem('auth_token');
+    }
+    setLoading(false);
+  }, []);
+
+  const login = async (email: string, contrasena: string) => {
+    setLoading(true);
+    try {
+      const result = await authApi.login(email, contrasena);
+
+      if (result.success && result.data) {
+        setUser(result.data.usuario);
+      }
+
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Error inesperado en login',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (data: RegisterData) => {
+    setLoading(true);
+    try {
+      const result = await authApi.register(data);
+
+      if (result.success && result.data) {
+        setUser(result.data.usuario);
+      }
+
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error) {
+      console.error('Error en register:', error);
+      return {
+        success: false,
+        message: 'Error inesperado en registro',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+
+      if (token) {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+        await fetch(`${API_URL}/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión en el backend:', error);
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
+      sessionStorage.removeItem('verification_user_id');
+      sessionStorage.removeItem('verification_email');
+      sessionStorage.removeItem('verification_code');
+      sessionStorage.removeItem('verification_expiry');
+      sessionStorage.removeItem('verification_nombre');
+
+      setUser(null);
+    }
+  };
+
+  return (
+    <UserContext.Provider
+      value={{
+        user,
+        setUser,
+        loading,
+        login,
+        register,
+        logout,
+        isAuthenticated: !!user,
+      }}
+    >
+      {children}
+    </UserContext.Provider>
+  );
 };
 
-// 4️⃣ Hook para usar el contexto en cualquier parte
 export const useUser = () => {
   const context = useContext(UserContext);
-  if (!context) throw new Error('useUser debe usarse dentro de un UserProvider');
+  if (context === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
   return context;
 };

@@ -1,16 +1,22 @@
 // app/members/signin/components/RucSignIn.tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { rucLoginSchema } from '@components/Form/validationSchemas';
-import api from '@utils/api';
+import { useUser } from '@contexts/UserContext';
+import { useState } from 'react';
 
 import Input from '@components/Form/Input';
 import Button from '@components/Button/Button';
 
 type FormInputs = z.infer<typeof rucLoginSchema>;
 
-const RucSignIn: React.FC = () => {
+const RucSignInForm: React.FC = () => {
+  const router = useRouter();
+  const { setUser } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -20,14 +26,86 @@ const RucSignIn: React.FC = () => {
   });
 
   const onSubmit = async (data: FormInputs) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      await api.post('/api/auth/login', {
-        identifier: data.ruc,
-        password: data.password,
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const response = await fetch(`${API_URL}/loginorg`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ruc: data.ruc,
+          contrasenha: data.password,
+        }),
       });
-      window.location.href = '/dashboard';
-    } catch (error) {
+      const result = await response.json();
+      console.log('Respuesta del servidor:', result);
+
+      if (response.status === 403) {
+        // Cuenta no activa o deshabilitada
+        if (result.error === 'ACCOUNT_NOT_ACTIVE') {
+          setError(
+            'Tu cuenta está pendiente de aprobación por un administrador. Recibirás un correo cuando sea activada.'
+          );
+          alert('⏳ Cuenta pendiente de aprobación\n\n' + result.message);
+        } else if (result.error === 'ACCOUNT_DISABLED') {
+          setError('Tu cuenta ha sido deshabilitada. Por favor, contacta al soporte.');
+          alert('❌ Cuenta deshabilitada\n\n' + result.message);
+        } else {
+          setError(result.message || 'No tienes permiso para acceder');
+          alert(result.message || 'No tienes permiso para acceder');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          if (result.error === 'ACCOUNT_NOT_ACTIVE') {
+            setError('Tu cuenta está pendiente de aprobación por un administrador.');
+            alert('⏳ Cuenta pendiente de aprobación\n\n' + result.message);
+          } else if (result.error === 'ACCOUNT_DISABLED') {
+            setError('Tu cuenta ha sido deshabilitada. Contacta al soporte.');
+            alert('❌ Cuenta deshabilitada\n\n' + result.message);
+          } else {
+            setError(result.message || 'No tienes permiso para acceder');
+          }
+        } else if (response.status === 400) {
+          setError(result.message || 'Datos inválidos');
+          alert('❌ ' + (result.message || 'Verifica que el RUC tenga 11 dígitos'));
+        } else if (response.status === 401) {
+          setError('RUC o contraseña incorrectos');
+          alert('❌ Credenciales incorrectas\n\nVerifica tu RUC y contraseña');
+        } else {
+          setError(result.message || 'Error al iniciar sesión');
+          alert('❌ Error: ' + (result.message || 'Error desconocido'));
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (response.ok && result.token) {
+        // Guardar token y usuario en localStorage
+        localStorage.setItem('auth_token', result.token.token);
+        localStorage.setItem('user', JSON.stringify(result.usuario));
+
+        // Actualizar contexto de usuario
+        if (setUser) {
+          setUser(result.usuario);
+        }
+
+        alert('¡Inicio de sesión exitoso!');
+        router.push('/organizer');
+      } else {
+        throw new Error(result.message || 'Credenciales incorrectas');
+      }
+    } catch (error: any) {
       console.error('Error al iniciar sesión como organizador:', error);
+      if (setUser) {
+        setUser(null);
+      }
     }
   };
 
@@ -52,6 +130,14 @@ const RucSignIn: React.FC = () => {
         </div>
       </div>
     </form>
+  );
+};
+
+const RucSignIn: React.FC = () => {
+  return (
+    <div className='signin-container'>
+      <RucSignInForm />
+    </div>
   );
 };
 

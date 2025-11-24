@@ -7,6 +7,8 @@ type EventDateRange = {
   horaFin: string;
 };
 
+type TicketBreakdown = { tipo: string; vendidos: number; ingresos: number };
+
 export type EventReport = {
   idEvento: number;
   nombre: string;
@@ -15,7 +17,7 @@ export type EventReport = {
   estado: 'EN_VENTA' | 'AGOTADO' | 'FINALIZADO' | 'CANCELADO';
   ingresosTotales: number;
   ticketsVendidos: number;
-  ventasPorTipo: Array<{ tipo: string; vendidos: number; ingresos: number }>;
+  ventasPorTipo: TicketBreakdown[];
   fechas: EventDateRange[];
   cargosServicio: number;
   comisiones: number;
@@ -31,118 +33,205 @@ type ReportPayload = {
   eventos: EventReport[];
 };
 
-const mockReports: EventReport[] = [
-  {
-    idEvento: 1024,
-    nombre: 'Showcase de bandas indie',
-    ubicacion: 'Teatro Canout',
-    capacidad: 800,
-    estado: 'EN_VENTA',
-    ingresosTotales: 90500,
-    ticketsVendidos: 640,
-    ventasPorTipo: [
-      { tipo: 'General', vendidos: 320, ingresos: 32000 },
-      { tipo: 'VIP', vendidos: 180, ingresos: 36000 },
-      { tipo: 'Preventa', vendidos: 110, ingresos: 14300 },
-      { tipo: 'Cortesía', vendidos: 30, ingresos: 0 },
-    ],
-    fechas: [
-      { idFechaEvento: 1, fecha: '2025-03-21', horaInicio: '18:00', horaFin: '22:30' },
-      { idFechaEvento: 2, fecha: '2025-03-22', horaInicio: '18:00', horaFin: '22:30' },
-    ],
-    cargosServicio: 5200,
-    comisiones: 3600,
-  },
-  {
-    idEvento: 2048,
-    nombre: 'Festival gastronómico Lima Fusión',
-    ubicacion: 'Parque de la Exposición',
-    capacidad: 1200,
-    estado: 'AGOTADO',
-    ingresosTotales: 135400,
-    ticketsVendidos: 1200,
-    ventasPorTipo: [
-      { tipo: 'General', vendidos: 700, ingresos: 70000 },
-      { tipo: 'VIP', vendidos: 300, ingresos: 45000 },
-      { tipo: 'Preventa', vendidos: 150, ingresos: 19500 },
-      { tipo: 'Cortesía', vendidos: 50, ingresos: 0 },
-    ],
-    fechas: [
-      { idFechaEvento: 3, fecha: '2025-04-12', horaInicio: '12:00', horaFin: '23:30' },
-      { idFechaEvento: 4, fecha: '2025-04-13', horaInicio: '12:00', horaFin: '23:30' },
-    ],
-    cargosServicio: 8200,
-    comisiones: 6100,
-  },
-  {
-    idEvento: 4096,
-    nombre: 'Conferencia de tecnología FutureStack',
-    ubicacion: 'Centro de Convenciones de Lima',
-    capacidad: 1500,
-    estado: 'EN_VENTA',
-    ingresosTotales: 60200,
-    ticketsVendidos: 480,
-    ventasPorTipo: [
-      { tipo: 'General', vendidos: 250, ingresos: 25000 },
-      { tipo: 'VIP', vendidos: 90, ingresos: 22500 },
-      { tipo: 'Early-bird', vendidos: 120, ingresos: 11000 },
-      { tipo: 'Cortesía', vendidos: 20, ingresos: 0 },
-    ],
-    fechas: [
-      { idFechaEvento: 5, fecha: '2025-05-05', horaInicio: '09:00', horaFin: '18:00' },
-      { idFechaEvento: 6, fecha: '2025-05-06', horaInicio: '09:00', horaFin: '18:00' },
-      { idFechaEvento: 7, fecha: '2025-05-07', horaInicio: '09:00', horaFin: '18:00' },
-    ],
-    cargosServicio: 3800,
-    comisiones: 2700,
-  },
-];
+type UpstreamTicket = {
+  sector?: string;
+  tipo?: string;
+  vendidos?: number;
+  ingresos?: number;
+};
+
+type UpstreamDate = {
+  idFechaEvento?: number;
+  fecha?: string;
+  horaInicio?: string;
+  horaFin?: string;
+};
+
+type UpstreamEventReport = {
+  idEvento?: number | string;
+  nombre?: string;
+  ubicacion?: string;
+  capacidad?: number | string;
+  estado?: string;
+  ingresosTotales?: number;
+  ticketsVendidos?: number;
+  ventasPorSector?: UpstreamTicket[];
+  ventasPorTipo?: UpstreamTicket[];
+  fechas?: UpstreamDate[];
+  cargosServicio?: number;
+  comisiones?: number;
+};
+
+const getOrganizerApiBaseUrl = () =>
+  (process.env.NEXT_PUBLIC_API_URL ??
+    process.env.API_URL ??
+    process.env.NEXIVENT_API_URL ??
+    '') as string;
+
+const buildEndpoint = (baseUrl: string, path: string) => {
+  const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${normalizedBase}${normalizedPath}`;
+};
+
+const resolveNumeric = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const resolveStatus = (value?: string | null): EventReport['estado'] => {
+  const normalized = (value ?? '').toUpperCase();
+  if (normalized === 'AGOTADO') return 'AGOTADO';
+  if (normalized === 'FINALIZADO') return 'FINALIZADO';
+  if (normalized === 'CANCELADO') return 'CANCELADO';
+  return 'EN_VENTA';
+};
+
+const normalizeTicket = (ticket: UpstreamTicket, index: number): TicketBreakdown => {
+  const sold = Number(ticket.vendidos ?? 0);
+  const revenue = Number(ticket.ingresos ?? 0);
+  return {
+    tipo: ticket.tipo ?? ticket.sector ?? `Sector ${index + 1}`,
+    vendidos: Number.isNaN(sold) ? 0 : sold,
+    ingresos: Number.isNaN(revenue) ? 0 : revenue,
+  };
+};
+
+const normalizeDate = (date: UpstreamDate, fallbackId: number): EventDateRange => {
+  const dateValue = date.fecha ?? '';
+  return {
+    idFechaEvento: date.idFechaEvento ?? fallbackId,
+    fecha: dateValue,
+    horaInicio: date.horaInicio ?? '',
+    horaFin: date.horaFin ?? '',
+  };
+};
+
+const normalizeEvent = (payload: UpstreamEventReport, fallbackId: number): EventReport => {
+  const eventId = resolveNumeric(payload.idEvento) ?? fallbackId;
+  const capacity = Number(payload.capacidad ?? 0);
+  const tickets = Number(payload.ticketsVendidos ?? 0);
+  const revenue = Number(payload.ingresosTotales ?? 0);
+
+  const ticketsBreakdown = Array.isArray(payload.ventasPorSector)
+    ? payload.ventasPorSector
+    : Array.isArray(payload.ventasPorTipo)
+      ? payload.ventasPorTipo
+      : [];
+
+  const dates = Array.isArray(payload.fechas) ? payload.fechas : [];
+
+  return {
+    idEvento: eventId,
+    nombre: payload.nombre ?? `Evento ${eventId}`,
+    ubicacion: payload.ubicacion ?? '',
+    capacidad: Number.isNaN(capacity) ? 0 : capacity,
+    estado: resolveStatus(payload.estado),
+    ingresosTotales: Number.isNaN(revenue) ? 0 : revenue,
+    ticketsVendidos: Number.isNaN(tickets) ? 0 : tickets,
+    ventasPorTipo: ticketsBreakdown.map((ticket, index) => normalizeTicket(ticket, index)),
+    fechas: dates.map((date, index) => normalizeDate(date, eventId + index)),
+    cargosServicio: Number(payload.cargosServicio ?? 0),
+    comisiones: Number(payload.comisiones ?? 0),
+  };
+};
+
+const buildSummary = (events: EventReport[]): ReportPayload['resumen'] => {
+  const ingresosTotales = events.reduce((sum, event) => sum + event.ingresosTotales, 0);
+  const ticketsVendidos = events.reduce((sum, event) => sum + event.ticketsVendidos, 0);
+  const eventosActivos = events.filter((event) => event.estado === 'EN_VENTA' || event.estado === 'AGOTADO').length;
+  const promedioOcupacion =
+    events.length === 0
+      ? 0
+      : Math.round(
+          (events.reduce((sum, event) => {
+            const capacidad = Math.max(1, event.capacidad);
+            return sum + event.ticketsVendidos / capacidad;
+          }, 0) / events.length) *
+            100
+        );
+
+  return { eventosActivos, ingresosTotales, ticketsVendidos, promedioOcupacion };
+};
 
 export const dynamic = 'force-dynamic';
 
-export function GET(request: NextRequest) {
+export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const start = searchParams.get('start');
-  const end = searchParams.get('end');
-  const eventId = searchParams.get('eventId');
+  const organizerId =
+    resolveNumeric(searchParams.get('organizerId')) ??
+    resolveNumeric(searchParams.get('organizadorId')) ??
+    resolveNumeric(process.env.NEXT_PUBLIC_ORGANIZER_ID) ??
+    resolveNumeric(process.env.ORGANIZER_ID);
 
-  let eventos = mockReports;
-
-  if (start !== null || end !== null) {
-    eventos = eventos.filter((event) => {
-      const matchesRange = event.fechas.some((date) => {
-        const dateValue = new Date(date.fecha).getTime();
-        const afterStart = start === null ? true : dateValue >= new Date(start).getTime();
-        const beforeEnd = end === null ? true : dateValue <= new Date(end).getTime();
-        return afterStart && beforeEnd;
-      });
-      return matchesRange;
-    });
+  if (organizerId === null) {
+    return NextResponse.json(
+      { message: 'organizerId no es valido. Configura NEXT_PUBLIC_ORGANIZER_ID o envia el parametro.' },
+      { status: 400 }
+    );
   }
 
-  if (eventId !== null) {
-    const parsed = Number(eventId);
-    if (!Number.isNaN(parsed)) {
-      eventos = eventos.filter((event) => event.idEvento === parsed);
+  const apiBaseUrl = getOrganizerApiBaseUrl();
+  if (apiBaseUrl.length === 0) {
+    return NextResponse.json(
+      { message: 'NEXT_PUBLIC_API_URL o API_URL no esta configurada. No se pudo obtener reportes.' },
+      { status: 500 }
+    );
+  }
+
+  const fechaDesde = searchParams.get('fechaDesde') ?? searchParams.get('start');
+  const fechaHasta = searchParams.get('fechaHasta') ?? searchParams.get('end');
+  const eventId = resolveNumeric(searchParams.get('eventId'));
+
+  const upstreamQuery = new URLSearchParams();
+  if (fechaDesde) upstreamQuery.set('fechaDesde', fechaDesde);
+  if (fechaHasta) upstreamQuery.set('fechaHasta', fechaHasta);
+
+  const upstreamUrl = `${buildEndpoint(apiBaseUrl, `/organizador/${organizerId}/eventos/reporte`)}${
+    upstreamQuery.size > 0 ? `?${upstreamQuery.toString()}` : ''
+  }`;
+
+  try {
+    const upstreamResponse = await fetch(upstreamUrl, { cache: 'no-store' });
+    if (!upstreamResponse.ok) {
+      const detail = await upstreamResponse.text();
+      return NextResponse.json(
+        {
+          message: 'No se pudo obtener el reporte del organizador.',
+          detail: detail.length > 0 ? detail : upstreamResponse.statusText,
+        },
+        { status: upstreamResponse.status }
+      );
     }
+
+    const rawPayload = (await upstreamResponse.json()) as unknown;
+    const upstreamEvents = Array.isArray(rawPayload)
+      ? rawPayload
+      : Array.isArray((rawPayload as { data?: unknown })?.data)
+        ? ((rawPayload as { data?: unknown[] }).data as unknown[])
+        : [];
+
+    const normalizedEvents = upstreamEvents.map((event, index) =>
+      normalizeEvent((event ?? {}) as UpstreamEventReport, Date.now() + index)
+    );
+
+    const filteredEvents =
+      eventId === null ? normalizedEvents : normalizedEvents.filter((event) => event.idEvento === eventId);
+
+    const response: ReportPayload = {
+      resumen: buildSummary(filteredEvents),
+      eventos: filteredEvents,
+    };
+
+    return NextResponse.json(response);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        message: 'Ocurrio un error al obtener los reportes del organizador.',
+        detail: error instanceof Error ? error.message : 'Error desconocido',
+      },
+      { status: 500 }
+    );
   }
-
-  const response: ReportPayload = {
-    resumen: {
-      eventosActivos: eventos.filter((event) => event.estado === 'EN_VENTA').length,
-      ingresosTotales: eventos.reduce((sum, event) => sum + event.ingresosTotales, 0),
-      ticketsVendidos: eventos.reduce((sum, event) => sum + event.ticketsVendidos, 0),
-      promedioOcupacion:
-        eventos.length === 0
-          ? 0
-          : Math.round(
-              (eventos.reduce((sum, event) => sum + event.ticketsVendidos / event.capacidad, 0) /
-                eventos.length) *
-                100
-            ),
-    },
-    eventos,
-  };
-
-  return NextResponse.json(response);
 }

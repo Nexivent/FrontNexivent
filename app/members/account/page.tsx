@@ -38,6 +38,7 @@ const Page = () => {
         </div>
       </Section>
       <Section className='black-background'>
+        <p style={{ marginTop: '-250px' }}></p>
         <div className='container'>
           <ProfileClient />
         </div>

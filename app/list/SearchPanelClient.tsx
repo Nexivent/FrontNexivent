@@ -1,94 +1,86 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState } from "react";
+import { searchEvents } from "../lib/list/searchEvents";
+import EventCard from "@components/Card/EventCard";
 
-const SearchPanel: React.FC = () => {
-  const searchParams = useSearchParams();
-  const openParam = searchParams?.get('search') ?? '';
+export default function SearchPanel({ initialData }: { initialData: any[] }) {
+  const [events, setEvents] = useState(initialData);
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [keyword, setKeyword] = useState<string>(searchParams?.get('keyword') ?? '');
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  async function search(textValue: string) {
+    setLoading(true);
 
-  useEffect(() => {
-    if (openParam === '1') {
-      const t = window.setTimeout(() => inputRef.current?.focus(), 50);
-      return () => window.clearTimeout(t);
+    const payload = {
+      idCategoria: null,
+      titulo: textValue,
+      descripcion: textValue,
+      lugar: textValue,
+      fechaHoraInicio: new Date().toISOString(),
+      page: 1,
+      limit: 10
+    };
+
+    console.log("🔍 Buscando con payload:", payload);
+
+    const result = await searchEvents(payload);
+
+    if (result.ok) {
+      setEvents(result.data ?? []);
+    } else {
+      console.warn("⚠ Error en búsqueda:", result.error);
+      setEvents([]);
     }
-  }, [openParam]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setKeyword(e.target.value);
+    setLoading(false);
+  }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  };
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") search(text);
+  }
 
   return (
-    <form noValidate onSubmit={handleSubmit} className='list-search-form'>
-      <div
-        className='search-inputs flex flex-h-center flex-space-between'
-        style={{ width: '100%' }}
-      >
-        <div
-          className='search-input-wrapper'
+    <>
+      {/* INPUT */}
+      <div className="container center" style={{ marginTop: 20 }}>
+        <input
+          type="text"
+          placeholder="Buscar eventos..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
           style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: 1100,
-            margin: '0 auto',
-            paddingLeft: 16,
-            paddingRight: 16,
-            boxSizing: 'border-box',
+            padding: "12px 16px",
+            width: "100%",
+            maxWidth: "500px",
+            borderRadius: "8px",
+            border: "1px solid #ccc",
           }}
-        >
-          <input
-            id='list-search-input'
-            ref={inputRef}
-            type='text'
-            name='keyword'
-            value={keyword}
-            onChange={handleChange}
-            maxLength={64}
-            placeholder='Eventos, local, artista, palabra clave'
-            className='input-text'
-            autoComplete='off'
-            aria-label='Buscar eventos'
-            style={{
-              paddingRight: 44,
-              boxSizing: 'border-box',
-              width: '100%',
-              height: 56,
-              borderRadius: 8,
-            }}
-          />
-          <button
-            type='submit'
-            aria-label='Buscar'
-            style={{
-              position: 'absolute',
-              right: 20,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'transparent',
-              border: 'none',
-              padding: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              height: 36,
-              width: 36,
-              color: 'inherit',
-            }}
-          >
-            <span className='material-symbols-outlined' aria-hidden>
-              search
-            </span>
-          </button>
-        </div>
-      </div>
-    </form>
-  );
-};
+        />
 
-export default SearchPanel;
+        {loading && <p style={{ marginTop: 10 }}>Buscando...</p>}
+      </div>
+
+      {/* RESULTADOS */}
+      <div className="container center list-cards" style={{ marginTop: 30 }}>
+        {events.length === 0 && !loading && (
+          <p>No se encontraron eventos.</p>
+        )}
+
+        {events.map((ev: any) => (
+          <EventCard
+            key={ev.ID}
+            url={ev.ID?.toString()}
+            from={ev.precioDesde?.toString() ?? ""}
+            color="yellow"
+            when={ev.fechaHoraInicio}
+            name={ev.Titulo}
+            venue={ev.Lugar}
+            image={ev.ImagenPortada ?? "/logo6.png"}
+          />
+        ))}
+      </div>
+    </>
+  );
+}

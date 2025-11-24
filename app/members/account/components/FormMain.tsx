@@ -119,7 +119,7 @@ const FormMain: React.FC<IProps> = ({ data }) => {
             />
           </div>
         </div>
-        <div className='form-line'>
+        {/*<div className='form-line'>
           <div className='one-line'>
             <div className='label-line'>
               <label htmlFor='lastname'>Apellido</label>
@@ -134,7 +134,7 @@ const FormMain: React.FC<IProps> = ({ data }) => {
               onChange={handleChange}
             />
           </div>
-        </div>
+        </div>*/}
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line flex flex-v-center flex-space-between'>

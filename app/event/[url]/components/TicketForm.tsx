@@ -10,83 +10,130 @@ import useAlert from '@hooks/useAlert';
 import Button from '@components/Button/Button';
 import Loader from '@components/Loader/Loader';
 
-// interfaces
-interface IData {
-  id: number;
-  name: string;
-  price: string;
-  ordering: number;
-  soldout?: boolean;
-  quantity?: number;
-  information?: string;
-}
+// =================================
+// INTERFACES
+// =================================
 
-interface IFecha {
+interface Fecha {
   idFechaEvento: number;
   fecha: string;
   horaInicio: string;
   horaFin: string;
 }
 
-interface IProps {
-  data: IData[];
-  eventId?: number;
-  fechas?: IFecha[];
-  eventData?: any;
+interface Tarifa {
+  idTarifa: number;
+  precio: number;
+  idTipoSector: number;    
+  tipoSector: string;
+  stockDisponible: number;
+  idTipoTicket: number;    
+  tipoTicket: string;
+  fechaIni: string;
+  fechaFin: string;
+  idPerfil: number;        
+  perfil: string;
 }
 
-const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData }) => {
+interface EventData {
+  idEvento: number;
+  titulo: string;
+  descripcion: string;
+  descripcionArtista: string;
+  imagenPortada: string;
+  lugar: string;
+  fechas: Fecha[];
+  tarifas: Tarifa[];
+}
+
+interface TarifaConCantidad extends Tarifa {
+  cantidad: number;
+}
+
+interface IProps {
+  eventData: EventData;
+}
+
+// =================================
+// COMPONENTE PRINCIPAL
+// =================================
+
+const TicketForm: React.FC<IProps> = ({ eventData }) => {
   const { showAlert, hideAlert } = useAlert();
   const router = useRouter();
 
   const [loading, setLoading] = useState<boolean>(true);
-  const [formValues, setFormValues] = useState<IData[]>(data || []);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState<number | null>(
-    fechas.length > 0 ? fechas[0].idFechaEvento : null
+    eventData.fechas.length > 0 ? eventData.fechas[0].idFechaEvento : null
   );
+  const [tarifasConCantidad, setTarifasConCantidad] = useState<TarifaConCantidad[]>([]);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 500);
+  // =================================
+  // ESTRUCTURAS DE DATOS PARA LA TABLA
+  // =================================
 
-    return () => {
-      clearTimeout(timeout);
+  // Obtener lista única de sectores
+  const getSectores = () => {
+    const sectoresMap = new Map();
+    tarifasConCantidad.forEach(tarifa => {
+      if (!sectoresMap.has(tarifa.tipoSector)) {
+        sectoresMap.set(tarifa.tipoSector, {
+          tipoSector: tarifa.tipoSector,
+        });
+      }
+    });
+    return Array.from(sectoresMap.values());
+  };
+
+  // Obtener lista única de perfiles
+  const getPerfiles = () => {
+    const perfilesMap = new Map();
+    tarifasConCantidad.forEach(tarifa => {
+      if (!perfilesMap.has(tarifa.perfil)) {
+        perfilesMap.set(tarifa.perfil, {
+          perfil: tarifa.perfil,
+        });
+      }
+    });
+    return Array.from(perfilesMap.values());
+  };
+
+  // Obtener información del tipo de ticket
+  const getTipoTicketInfo = () => {
+    if (tarifasConCantidad.length === 0) return null;
+    const primera = tarifasConCantidad[0];
+    return {
+      tipoTicket: primera.tipoTicket,
+      fechaFin: primera.fechaFin,
     };
-  }, []);
+  };
 
-  useEffect(() => {
-    if (data && data.length > 0) {
-      setFormValues(data);
-    }
-  }, [data]);
+  // Calcular stock disponible de un sector considerando las cantidades seleccionadas
+  const calcularStockDisponibleSector = (tipoSector: string): number => {
+    const tarifasSector = tarifasConCantidad.filter(t => t.tipoSector === tipoSector);
+    if (tarifasSector.length === 0) return 0;
 
-  useEffect(() => {
-    if (data && data.length > 0) {
-      const updatedData = data.map(ticket => {
-        if (fechaSeleccionada === 1) {
-          return {
-            ...ticket,
-            soldout: false,
-            quantity: 0,
-          };
-        } else if (fechaSeleccionada === 2) {
-          return {
-            ...ticket,
-            soldout: ticket.id !== 2,
-            quantity: 0,
-            information: ticket.id === 2 
-              ? 'Stock disponible para esta fecha'
-              : 'Agotado para esta fecha',
-          };
-        }
-        return ticket;
-      });
-      
-      setFormValues(updatedData);
-    }
-  }, [fechaSeleccionada, data]);
+    // El stock es compartido entre todos los perfiles del mismo sector
+    // Tomamos el stock de la primera tarifa del sector
+    const stockBase = tarifasSector[0].stockDisponible;
+    
+    // Restamos todas las cantidades seleccionadas en ese sector
+    const totalSeleccionado = tarifasSector.reduce((sum, tarifa) => sum + tarifa.cantidad, 0);
+    
+    return Math.max(0, stockBase - totalSeleccionado);
+  };
+
+  // Obtener tarifa específica por sector y perfil
+  const getTarifa = (tipoSector: string, perfil: string): TarifaConCantidad | undefined => {
+    return tarifasConCantidad.find(
+      t => t.tipoSector === tipoSector && t.perfil === perfil
+    );
+  };
+
+  // =================================
+  // FUNCIONES AUXILIARES
+  // =================================
 
   const formatFecha = (fechaString: string): string => {
     const date = new Date(fechaString);
@@ -99,82 +146,132 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
     return `${dias[date.getDay()]} ${date.getDate()} de ${months[date.getMonth()]}`;
   };
 
-  const orderTickets = (array: IData[]): IData[] => {
-    return array.sort((a, b) => {
-      return a.ordering - b.ordering;
+  const formatFechaCorta = (fechaString: string): string => {
+    const date = new Date(fechaString);
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
+  // Filtrar tarifas vigentes según la fecha actual
+// Filtrar tarifas vigentes según la fecha de fin - solo muestra UN tipo de ticket
+const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  // Agrupar tarifas por tipoTicket y ordenar por fechaFin
+  const tiposTicket = Array.from(new Set(tarifas.map(t => t.tipoTicket)));
+  
+  // Ordenar tipos de ticket por la fecha de fin más temprana
+  const tiposOrdenados = tiposTicket
+    .map(tipo => {
+      const tarifasTipo = tarifas.filter(t => t.tipoTicket === tipo);
+      const fechaFinMasProxima = tarifasTipo
+        .map(t => new Date(t.fechaFin))
+        .sort((a, b) => a.getTime() - b.getTime())[0];
+      
+      return {
+        tipo,
+        fechaFin: fechaFinMasProxima,
+        tarifas: tarifasTipo
+      };
+    })
+    .sort((a, b) => a.fechaFin.getTime() - b.fechaFin.getTime());
+
+  // Buscar el primer tipo de ticket cuya fecha de fin no haya pasado
+  for (const tipoData of tiposOrdenados) {
+    const fin = new Date(tipoData.fechaFin);
+    fin.setHours(23, 59, 59, 999);
+    
+    if (hoy <= fin) {
+      // Retornar solo las tarifas de este tipo de ticket
+      console.log(`✅ Mostrando tarifas de tipo: ${tipoData.tipo} (vigente hasta ${tipoData.fechaFin.toLocaleDateString()})`);
+      return tipoData.tarifas;
+    }
+  }
+
+  // Si ningún tipo está vigente, retornar array vacío
+  console.warn('⚠️ No hay tarifas vigentes');
+  return [];
+};
+
+  const countTickets = (): number => {
+    return tarifasConCantidad.reduce((sum, tarifa) => sum + tarifa.cantidad, 0);
+  };
+
+  // =================================
+  // EFECTOS
+  // =================================
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Filtrar tarifas vigentes y agregar cantidad inicial
+    const tarifasVigentes = filtrarTarifasVigentes(eventData.tarifas);
+    const tarifasConCant = tarifasVigentes.map(tarifa => ({
+      ...tarifa,
+      cantidad: 0
+    }));
+    
+    setTarifasConCantidad(tarifasConCant);
+  }, [eventData.tarifas]);
+
+  // =================================
+  // HANDLERS
+  // =================================
+
+  const handleDecrease = (tipoSector: string, perfil: string): void => {
+    setTarifasConCantidad(prev => {
+      return prev.map(tarifa => {
+        if (tarifa.tipoSector === tipoSector && tarifa.perfil === perfil && tarifa.cantidad > 0) {
+          return { ...tarifa, cantidad: tarifa.cantidad - 1 };
+        }
+        return tarifa;
+      });
     });
   };
 
-  const countTickets = (array: IData[]): number => {
-    return array.reduce((sum, curr): number => {
-      let q: number = 0;
-
-      if (curr.quantity != null && !isNaN(curr.quantity)) {
-        q = sum + curr.quantity;
-      } else {
-        q = sum;
-      }
-
-      return q;
-    }, 0);
-  };
-
-  const handleDecrease = (ticket: IData): void => {
-    const tickets: IData[] = formValues.filter((e: IData) => e.id !== ticket.id);
-
-    let newTicket: IData;
-
-    if (ticket?.quantity == null || isNaN(ticket.quantity)) {
-      newTicket = { ...ticket, quantity: 0 };
-    } else {
-      if (ticket.quantity > 0) {
-        const newQuantity: number = (ticket.quantity -= 1);
-
-        newTicket = { ...ticket, quantity: newQuantity };
-      } else {
-        newTicket = { ...ticket, quantity: 0 };
-      }
-    }
-
-    tickets.push(newTicket);
-
-    setFormValues(orderTickets(tickets));
-  };
-
-  const handleIncrease = (ticket: IData): void => {
-    if (ticket.soldout) {
-      showAlert({ type: 'error', text: 'Este tipo de entrada está agotado para esta fecha.' });
+  const handleIncrease = (tipoSector: string, perfil: string): void => {
+    const stockDisponibleSector = calcularStockDisponibleSector(tipoSector);
+    
+    if (stockDisponibleSector <= 0) {
+      // Usar setTimeout para ejecutar fuera del render
+      setTimeout(() => {
+        showAlert({ type: 'error', text: 'No hay más entradas disponibles en este sector.' });
+      }, 0);
       return;
     }
-
-    const tickets: IData[] = formValues.filter((e: IData) => e.id !== ticket.id);
-
-    let newTicket: IData;
-
-    if (ticket?.quantity == null || isNaN(ticket.quantity)) {
-      newTicket = { ...ticket, quantity: 1 };
-    } else {
-      if (ticket.quantity < 9) {
-        const newQuantity: number = (ticket.quantity += 1);
-
-        newTicket = { ...ticket, quantity: newQuantity };
-      } else {
-        newTicket = { ...ticket, quantity: 9 };
-      }
-    }
-
-    tickets.push(newTicket);
-
-    setFormValues(orderTickets(tickets));
+  
+    setTarifasConCantidad(prev => {
+      return prev.map(tarifa => {
+        if (tarifa.tipoSector === tipoSector && tarifa.perfil === perfil) {
+          if (tarifa.cantidad >= 9) {
+            // Usar setTimeout para ejecutar fuera del render
+            setTimeout(() => {
+              showAlert({ type: 'error', text: 'Máximo 9 entradas por tipo.' });
+            }, 0);
+            return tarifa;
+          }
+          return { ...tarifa, cantidad: tarifa.cantidad + 1 };
+        }
+        return tarifa;
+      });
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<any> => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-
     hideAlert();
-
-    const quantity: number = countTickets(formValues);
-
+  
+    const quantity = countTickets();
+  
     if (quantity === 0) {
       showAlert({ 
         type: 'error', 
@@ -182,7 +279,7 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
       });
       return;
     }
-
+  
     if (!fechaSeleccionada) {
       showAlert({ 
         type: 'error', 
@@ -190,31 +287,14 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
       });
       return;
     }
-
-    if (!eventData) {
-      showAlert({ 
-        type: 'error', 
-        text: 'Error: No se encontró información del evento.' 
-      });
-      return;
-    }
-
+  
     setSubmitting(true);
-
+  
     try {
-      // Filtrar solo los tickets con cantidad > 0
-      const selectedTickets = formValues
-        .filter(ticket => ticket.quantity && ticket.quantity > 0)
-        .map(ticket => ({
-          id: ticket.id,
-          name: ticket.name,
-          price: ticket.price,
-          quantity: ticket.quantity || 0,
-        }));
-
-      // Encontrar la fecha seleccionada
-      const fechaSeleccionadaObj = fechas.find(f => f.idFechaEvento === fechaSeleccionada);
-
+      const fechaSeleccionadaObj = eventData.fechas.find(
+        f => f.idFechaEvento === fechaSeleccionada
+      );
+  
       if (!fechaSeleccionadaObj) {
         showAlert({ 
           type: 'error', 
@@ -223,37 +303,44 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
         setSubmitting(false);
         return;
       }
-
-      // Crear objeto con toda la información
+  
+      
+      const ticketsSeleccionados = tarifasConCantidad
+        .filter(tarifa => tarifa.cantidad > 0)
+        .map(tarifa => ({
+          id: tarifa.idTarifa,
+          name: `${tarifa.tipoSector} - ${tarifa.perfil}`,
+          price: `S/. ${tarifa.precio.toFixed(2)}`,
+          quantity: tarifa.cantidad,
+          
+          idSector: tarifa.idTipoSector,     
+          idPerfil: tarifa.idPerfil,         
+          idTipoTicket: tarifa.idTipoTicket, 
+        }));
+  
       const purchaseData = {
         event: {
           idEvento: eventData.idEvento,
           titulo: eventData.titulo,
           lugar: eventData.lugar,
-          direccion: eventData.direccion,
-          telefono: eventData.telefono,
           imagenPortada: eventData.imagenPortada,
         },
-        tickets: selectedTickets,
+        tickets: ticketsSeleccionados,
         fecha: fechaSeleccionadaObj,
         timestamp: Date.now(),
       };
-
+  
       console.log('Saving purchase data:', purchaseData);
-
-      // Guardar en sessionStorage
+  
       sessionStorage.setItem('purchaseData', JSON.stringify(purchaseData));
-
-      // Verificar que se guardó
+  
       const saved = sessionStorage.getItem('purchaseData');
       console.log('Verified saved data:', saved);
-
-      // Pequeño delay para asegurar que se guardó
+  
       await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Navegar a /buy
+  
       router.push('/buy');
-
+  
     } catch (error) {
       console.error('Error saving purchase data:', error);
       showAlert({ 
@@ -264,9 +351,27 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
     }
   };
 
+  // =================================
+  // RENDER
+  // =================================
+
   if (loading) {
     return <Loader type='inline' color='gray' text='Cargando...' />;
   }
+
+  if (tarifasConCantidad.length === 0) {
+    return (
+      <div className='ticket-box-content'>
+        <div className='paragraph-container'>
+          <p>No hay entradas disponibles en este momento.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const sectores = getSectores();
+  const perfiles = getPerfiles();
+  const tipoTicketInfo = getTipoTicketInfo();
 
   return (
     <form
@@ -275,7 +380,7 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
         void handleSubmit(e);
       }}
     >
-      {fechas.length > 1 && (
+      {eventData.fechas.length > 1 && (
         <div className='ticket-box-dates'>
           <label htmlFor='fecha-select' className='date-label'>
             Selecciona la fecha:
@@ -286,7 +391,7 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
             value={fechaSeleccionada || ''}
             onChange={(e) => setFechaSeleccionada(Number(e.target.value))}
           >
-            {fechas.map((fecha) => (
+            {eventData.fechas.map((fecha) => (
               <option key={fecha.idFechaEvento} value={fecha.idFechaEvento}>
                 {formatFecha(fecha.fecha)} - {fecha.horaInicio}
                 {fecha.horaFin && ` a ${fecha.horaFin}`}
@@ -296,80 +401,116 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
         </div>
       )}
 
-      <div className='ticket-box-content'>
-        {formValues && formValues.length > 0 ? (
-          formValues.map((ticket) => (
-            <div key={ticket.id} className='ticket-box-line'>
-              {ticket.soldout === true ? (
-                <>
-                  <span className='material-symbols-outlined'>lock</span>
-                  <span>{ticket.name}</span>
-                  <strong>Agotado</strong>
-                  {ticket.information != null && (
-                    <span className='material-symbols-outlined icon' title={ticket.information}>
-                      info
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className='quantity'>
-                    <button
-                      type='button'
-                      onClick={() => {
-                        handleDecrease(ticket);
-                      }}
-                      disabled={submitting}
-                    >
-                      -
-                    </button>
-                    <input
-                      readOnly
-                      type='text'
-                      name={`t-${ticket.id}`}
-                      value={ticket.quantity ?? 0}
-                      onChange={() => {}}
-                    />
-                    <button
-                      type='button'
-                      onClick={() => {
-                        handleIncrease(ticket);
-                      }}
-                      disabled={submitting}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <span>{ticket.name}</span>
-                  <strong>{ticket.price}</strong>
-                  {ticket.information != null && (
-                    <span className='material-symbols-outlined icon' title={ticket.information}>
-                      info
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className='paragraph-container'>
-            <p>No hay entradas disponibles.</p>
+      <div className='ticket-table-container'>
+        {/* Header con tipo de ticket y vigencia */}
+        {tipoTicketInfo && (
+          <div className='ticket-table-header'>
+            <h4 className='ticket-type-title'>
+              {tipoTicketInfo.tipoTicket}
+              <span className='ticket-validity'>
+                (Vigente hasta {formatFechaCorta(tipoTicketInfo.fechaFin)})
+              </span>
+            </h4>
           </div>
         )}
+
+        {/* Tabla de tarifas */}
+        <div className='ticket-table-wrapper'>
+          <table className='ticket-table'>
+            <thead>
+              <tr>
+                <th className='perfil-column'></th>
+                {sectores.map(sector => {
+                  const stockDisponible = calcularStockDisponibleSector(sector.tipoSector);
+                  const isAgotado = stockDisponible <= 0;
+                  
+                  return (
+                    <th key={sector.tipoSector} className='sector-column'>
+                      <div className='sector-header'>
+                        <span className='sector-name'>{sector.tipoSector}</span>
+                        <span className={`sector-stock ${isAgotado ? 'agotado' : ''}`}>
+                          {stockDisponible} disponibles
+                        </span>
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {perfiles.map(perfil => (
+                <tr key={perfil.perfil}>
+                  <td className='perfil-cell'>
+                    <span className='perfil-name'>{perfil.perfil}</span>
+                  </td>
+                  {sectores.map(sector => {
+                    const tarifa = getTarifa(sector.tipoSector, perfil.perfil);
+                    const stockDisponible = calcularStockDisponibleSector(sector.tipoSector);
+                    const isAgotado = stockDisponible <= 0;
+
+                    if (!tarifa) {
+                      return (
+                        <td key={`${sector.tipoSector}-${perfil.perfil}`} className='tarifa-cell empty'>
+                          -
+                        </td>
+                      );
+                    }
+
+                    return (
+                      <td key={`${sector.tipoSector}-${perfil.perfil}`} className='tarifa-cell'>
+                        {isAgotado ? (
+                          <div className='tarifa-content agotado'>
+                            <span className='material-symbols-outlined lock-icon'>lock</span>
+                            <span className='agotado-text'>Agotado</span>
+                          </div>
+                        ) : (
+                          <div className='tarifa-content'>
+                            <div className='quantity-controls'>
+                              <button
+                                type='button'
+                                className='qty-btn'
+                                onClick={() => handleDecrease(sector.tipoSector, perfil.perfil)}
+                                disabled={submitting || tarifa.cantidad === 0}
+                              >
+                                -
+                              </button>
+                              <input
+                                readOnly
+                                type='text'
+                                className='qty-input'
+                                value={tarifa.cantidad}
+                                onChange={() => {}}
+                              />
+                              <button
+                                type='button'
+                                className='qty-btn'
+                                onClick={() => handleIncrease(sector.tipoSector, perfil.perfil)}
+                                disabled={submitting || isAgotado}
+                              >
+                                +
+                              </button>
+                            </div>
+                            <span className='precio'>S/. {tarifa.precio.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       
       <div className='ticket-box-buttons'>
-        {formValues && formValues.length > 0 ? (
-          <Button 
-            type='submit' 
-            color={submitting ? 'disabled' : 'yellow-filled'}
-            text={submitting ? 'Procesando...' : 'Ir a pagar'}
-            rightIcon={submitting ? undefined : 'arrow_forward'}
-            disabled={submitting}
-          />
-        ) : (
-          <Button type='button' color='disabled' text='No se encontraron entradas' />
-        )}
+        <Button 
+          type='submit' 
+          color={submitting ? 'disabled' : 'yellow-filled'}
+          text={submitting ? 'Procesando...' : 'Ir a pagar'}
+          rightIcon={submitting ? undefined : 'arrow_forward'}
+          disabled={submitting}
+        />
       </div>
 
       <style jsx>{`
@@ -413,6 +554,211 @@ const TicketForm: React.FC<IProps> = ({ data, eventId, fechas = [], eventData })
           background-color: #000;
           color: #fff;
           padding: 0.5rem;
+        }
+
+        .ticket-table-container {
+          padding: 1rem 0;
+        }
+
+        .ticket-table-header {
+          padding: 1rem 1.5rem;
+          background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+          border-bottom: 2px solid #cddc39;
+        }
+
+        .ticket-type-title {
+          margin: 0;
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: #cddc39;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+
+        .ticket-validity {
+          display: inline-block;
+          margin-left: 1rem;
+          font-size: 0.85rem;
+          font-weight: 500;
+          color: #999;
+          text-transform: none;
+          letter-spacing: 0;
+        }
+
+        .ticket-table-wrapper {
+          overflow-x: auto;
+          padding: 1rem;
+        }
+
+        .ticket-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          background-color: rgba(255, 255, 255, 0.02);
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        .ticket-table th,
+        .ticket-table td {
+          padding: 1rem;
+          text-align: center;
+          border: 1px solid #222;
+        }
+
+        .ticket-table thead th {
+          background-color: #0a0a0a;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .perfil-column {
+          background-color: transparent !important;
+          border: none !important;
+        }
+
+        .sector-column {
+          min-width: 180px;
+        }
+
+        .sector-header {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .sector-name {
+          color: #cddc39;
+          font-size: 1rem;
+        }
+
+        .sector-stock {
+          color: #999;
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+
+        .sector-stock.agotado {
+          color: #f44336;
+        }
+
+        .perfil-cell {
+          background-color: #0a0a0a;
+          font-weight: 600;
+          color: #fff;
+          text-align: left;
+          min-width: 120px;
+        }
+
+        .perfil-name {
+          display: block;
+        }
+
+        .tarifa-cell {
+          background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .tarifa-cell.empty {
+          color: #666;
+          font-style: italic;
+        }
+
+        .tarifa-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .tarifa-content.agotado {
+          opacity: 0.5;
+        }
+
+        .lock-icon {
+          color: #f44336;
+          font-size: 1.5rem;
+        }
+
+        .agotado-text {
+          color: #f44336;
+          font-size: 0.9rem;
+          font-weight: 600;
+        }
+
+        .quantity-controls {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .qty-btn {
+          width: 32px;
+          height: 32px;
+          border: 2px solid #333;
+          background-color: #000;
+          color: #cddc39;
+          border-radius: 6px;
+          font-size: 1.2rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .qty-btn:hover:not(:disabled) {
+          background-color: #cddc39;
+          color: #000;
+          border-color: #cddc39;
+        }
+
+        .qty-btn:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+
+        .qty-input {
+          width: 50px;
+          height: 32px;
+          text-align: center;
+          background-color: #1a1a1a;
+          border: 2px solid #333;
+          color: #fff;
+          border-radius: 6px;
+          font-weight: 600;
+        }
+
+        .precio {
+          color: #cddc39;
+          font-size: 1rem;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+          .ticket-table-wrapper {
+            overflow-x: scroll;
+          }
+
+          .ticket-type-title {
+            font-size: 1.1rem;
+          }
+
+          .ticket-validity {
+            display: block;
+            margin-left: 0;
+            margin-top: 0.5rem;
+          }
+
+          .sector-column {
+            min-width: 150px;
+          }
+
+          .perfil-cell {
+            min-width: 100px;
+          }
         }
       `}</style>
     </form>

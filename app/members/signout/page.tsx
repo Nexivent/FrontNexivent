@@ -1,49 +1,30 @@
-import { type Metadata } from 'next';
+'use client';
 
-// components
-import Master from '@components/Layout/Master';
-import Section from '@components/Section/Section';
-import Heading from '@components/Heading/Heading';
-import ButtonLink from '@components/Button/ButtonLink';
+import { useEffect } from 'react';
+import { useUser } from '@contexts/UserContext';
+import { useRouter } from 'next/navigation';
 
-const Page: React.FC = () => (
-  <Master>
-    <Section className='gray-background hero-offset'>
-      <div className='container'>
-        <div className='center'>
-          <Heading type={1} color='gray' text='Signed out' />
-          <p className='gray form-information'>
-            You are successfully signed out an you can safely return to home page.
-          </p>
+const SignOutPage: React.FC = () => {
+  const { logout } = useUser();
+  const router = useRouter();
 
-          <div className='button-container'>
-            <ButtonLink color='gray-overlay' text='Return to home' url='' />
-            &nbsp; &nbsp;
-            <ButtonLink color='blue-filled' text='Sign in again' url='members/signin' />
-          </div>
-        </div>
+  useEffect(() => {
+    const handleSignOut = async () => {
+      await logout();
+      router.push('/');
+    };
+
+    handleSignOut();
+  }, [logout, router]);
+
+  return (
+    <div className='flex items-center justify-center min-h-screen'>
+      <div className='text-center'>
+        <h2 className='text-2xl font-bold mb-4'>Cerrando sesión...</h2>
+        <p className='text-gray-600'>Por favor espera un momento.</p>
       </div>
-    </Section>
-  </Master>
-);
-
-const title = 'Sign out';
-const canonical = 'https://modern-ticketing.com/members/signout';
-const description = 'Modern ticketing is a modern ticketing solution';
-
-export const metadata: Metadata = {
-  title,
-  description,
-  keywords: 'modern ticketing',
-  alternates: { canonical },
-  openGraph: {
-    title,
-    description,
-    url: canonical,
-    type: 'website',
-    siteName: 'Modern Ticketing',
-    images: 'https://modern-ticketing.com/logo192.png',
-  },
+    </div>
+  );
 };
 
-export default Page;
+export default SignOutPage;

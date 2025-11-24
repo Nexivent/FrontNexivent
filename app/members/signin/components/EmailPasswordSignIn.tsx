@@ -1,5 +1,6 @@
 // app/members/signin/components/EmailPasswordSignIn.tsx
 import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { emailLoginSchema } from '@components/Form/validationSchemas';
@@ -45,6 +46,7 @@ const GoogleIcon = () => (
 
 const EmailPasswordSignInForm: React.FC = () => {
   const { setUser } = useUser();
+  const router = useRouter();
 
   const {
     register,
@@ -56,71 +58,80 @@ const EmailPasswordSignInForm: React.FC = () => {
 
   const onSubmit = async (data: FormInputs) => {
     try {
-      await api.post('/api/auth/login', {
-        identifier: data.email,
-        password: data.password,
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          correo: data.email,
+          contrasenha: data.password,
+        }),
       });
-      window.location.href = '/';
-    } catch (error) {
-      setUser(null as any);
+
+      const result = await response.json();
+
+      if (response.ok && result.token) {
+        // Guardar token y usuario en localStorage
+        localStorage.setItem('auth_token', result.token.token);
+        localStorage.setItem('user', JSON.stringify(result.usuario));
+
+        // Actualizar contexto de usuario
+        if (setUser) {
+          setUser(result.usuario);
+        }
+
+        alert('¡Inicio de sesión exitoso!');
+        router.push('/');
+      } else {
+        throw new Error(result.message || 'Credenciales incorrectas');
+      }
+    } catch (error: any) {
+      console.error('Error en login:', error);
+      alert(error.message || 'Error al iniciar sesión');
+      if (setUser) {
+        setUser(null);
+      }
     }
   };
 
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        await api.post('/api/auth/google', { accessToken: tokenResponse.access_token });
-        window.location.href = '/';
-      } catch (error) {
-        console.error('Google login failed:', error);
-      }
-    },
-    onError: () => {
-      console.error('Google Login Failed');
-    },
-  });
   return (
-    <>
-      <div className='google-signin-container'>
-        <button type='button' className='google-signin-button' onClick={() => handleGoogleLogin()}>
-          <GoogleIcon />
-          <span>Iniciar sesión con Google</span>
-        </button>
-      </div>
-      <div className='or-line'>
-        <hr />
-      </div>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className='form-elements'>
-          <Input
-            label='Correo electrónico'
-            type='email'
-            error={errors.email?.message}
-            {...register('email')}
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className='form-elements'>
+        <Input
+          label='Correo electrónico'
+          type='email'
+          error={errors.email?.message}
+          {...register('email')}
+        />
+        <Input
+          label='Contraseña'
+          type='password'
+          isPassword
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <div className='form-buttons'>
+          <Button
+            type='submit'
+            text='Iniciar Sesión'
+            color='yellow-filled'
+            disabled={isSubmitting}
           />
-          <Input
-            label='Contraseña'
-            type='password'
-            isPassword
-            error={errors.password?.message}
-            {...register('password')}
-          />
-          <div className='form-buttons'>
-            <Button
-              type='submit'
-              text='Iniciar Sesión'
-              color='yellow-filled'
-              disabled={isSubmitting}
-            />
-          </div>
         </div>
-      </form>
-    </>
+      </div>
+    </form>
   );
 };
 
 const EmailPasswordSignIn: React.FC = () => (
-  <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
+  <GoogleOAuthProvider
+    clientId={
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+      '357817738890-4psm8ecl33dpmjv8339m8duvcdg3adii.apps.googleusercontent.com'
+    }
+  >
     <EmailPasswordSignInForm />
   </GoogleOAuthProvider>
 );

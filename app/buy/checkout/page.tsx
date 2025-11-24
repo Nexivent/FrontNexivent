@@ -34,6 +34,15 @@ interface ReservationData {
       fecha: string;
       horaInicio: string;
     };
+    entradas?: Array<{
+      idTarifa: number;
+      idSector: number;
+      idPerfil: number;
+      idTipoTicket: number;
+      cantidad: number;
+      precio: number;
+      nombreZona: string;
+    }>;
   };
 }
 
@@ -41,7 +50,7 @@ type PaymentMethod = 'card' | 'yape' | null;
 
 const Page: React.FC = () => {
   const router = useRouter();
-  const { showAlert } = useAlert();
+  const { showAlert, hideAlert } = useAlert();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -130,191 +139,59 @@ const Page: React.FC = () => {
     if (!reservationData) return;
 
     setSubmitting(true);
+    hideAlert();
 
-    // ========================================================
-    // (sin backend)
-    // Para probar con las APIs, cambiar USE_SIMULATION a false
-    // =========================================================
-    const USE_SIMULATION = true; // ← :v
-
-    if (USE_SIMULATION) {
-      try {
-        console.log('🧪 Modo simulación activado');
-        
-        console.log('📡 Paso 1: Registrando intento de pago...');
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const intentData = {
-          paymentId: 'PAY-' + Date.now(),
-          estado: 'PENDIENTE',
-          metodoPago: selectedMethod === 'card' ? 'TARJETA' : 'YAPE',
-        };
-        console.log('✅ Intento simulado:', intentData);
-
-        console.log('📡 Paso 2: Confirmando orden...');
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const confirmData = {
-          orderId: reservationData.orderId,
-          estado: 'CONFIRMADA',
-          message: 'Compra confirmada',
-        };
-        console.log('✅ Orden simulada confirmada:', confirmData);
-
-        console.log('📡 Paso 3: Generando tickets...');
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const ticketsData = {
-          tickets: reservationData.purchaseData.tickets.map((ticket, index) => ({
-            idTicket: `TICKET-${String(index + 1).padStart(3, '0')}`,
-            codigoQR: `QR-${Math.random().toString(36).substring(2, 15).toUpperCase()}`,
-            estado: 'Disponible',
-            zona: ticket.name,
-          })),
-          orderId: reservationData.orderId,
-        };
-        console.log('✅ Tickets simulados generados:', ticketsData);
-
-        sessionStorage.setItem('ticketsData', JSON.stringify({
-          tickets: ticketsData.tickets,
-          orderId: reservationData.orderId,
-          timestamp: Date.now(),
-        }));
-
-        sessionStorage.removeItem('purchaseData');
-        sessionStorage.removeItem('reservationData');
-
-        router.push('/buy/success');
-
-      } catch (error) {
-        console.error('❌ Error en simulación:', error);
-        setSubmitting(false);
-        showAlert({ 
-          type: 'error', 
-          text: 'Error en la simulación. Intenta nuevamente.' 
-        });
-      }
-      return;
-    }
-
-    // =========
-    // CON API 
-    // =========
     try {
-      // ==============================
-      // Registrar intento de pago 
-      // POST /api/payments/intent
-      // ==============================
-      console.log('📡 Paso 1: Registrando intento de pago...');
+      // Mapear método de pago a ID según el enum del backend
+      // MetodoTarjeta = 1, MetodoYape = 2
+      const paymentMethodId = selectedMethod === 'card' ? '1' : '2';
       
-      const intentResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/payments/intent`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            // Si tienes autenticación:
-            // 'Authorization': `Bearer ${getAuthToken()}`,
-          },
-          body: JSON.stringify({
-            orderId: reservationData.orderId,
-            idMetodoPago: selectedMethod === 'card' ? 1 : 2, // Ajustar según tu BD
-            // O usar string:
-            // idMetodoPago: selectedMethod === 'card' ? 'TARJETA' : 'YAPE',
-          }),
-        }
-      );
+      console.log('💳 Método seleccionado:', selectedMethod);
+      console.log('💳 Payment ID a enviar:', paymentMethodId);
 
-      if (!intentResponse.ok) {
-        const errorData = await intentResponse.json();
-        throw new Error(errorData.error || 'Error al registrar el intento de pago');
-      }
-
-      const intentData = await intentResponse.json();
-      console.log('✅ Intento de pago registrado:', intentData);
-
-      const paymentId = intentData.paymentId; // Guardar el paymentId
-
-      // ===================================
       // Confirmar la orden
-      // POST /api/orders/{orderId}/confirm
-      // ===================================
-      console.log('📡 Paso 2: Confirmando orden...');
+      console.log('📡 Confirmando orden:', reservationData.orderId);
 
       const confirmResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/orders/${reservationData.orderId}/confirm`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098'}/orden_de_compra/${reservationData.orderId}/confirm`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Si tienes autenticación:
-            // 'Authorization': `Bearer ${getAuthToken()}`,
           },
           body: JSON.stringify({
-            paymentId: paymentId, // El ID obtenido anteriormente
+            paymentId: paymentMethodId,
           }),
         }
       );
 
       if (!confirmResponse.ok) {
         const errorData = await confirmResponse.json();
-        
-        // Manejar errores específicos
-        if (confirmResponse.status === 410 || confirmResponse.status === 402 || confirmResponse.status === 409) {
-          throw new Error(errorData.error || 'Error al confirmar la orden');
-        }
-        
-        throw new Error(errorData.error || 'Error al procesar el pago');
+        throw new Error(errorData.message || 'Error al confirmar la orden');
       }
 
       const confirmData = await confirmResponse.json();
       console.log('✅ Orden confirmada:', confirmData);
 
-      // =======================
-      // Generar tickets
-      // POST /api/tickets/issue
-      // ========================
-      console.log('📡 Paso 3: Generando tickets...');
-
-      const ticketsResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/tickets/issue`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            // Si tienes autenticación:
-            // 'Authorization': `Bearer ${getAuthToken()}`,
-          },
-          body: JSON.stringify({
-            orderId: reservationData.orderId,
-          }),
-        }
-      );
-
-      if (!ticketsResponse.ok) {
-        const errorData = await ticketsResponse.json();
-        throw new Error(errorData.error || 'Error al generar los tickets');
-      }
-
-      const ticketsData = await ticketsResponse.json();
-      console.log('✅ Tickets generados:', ticketsData);
-
-      // Guardar información de los tickets
-      sessionStorage.setItem('ticketsData', JSON.stringify({
-        tickets: ticketsData.tickets,
+      // Guardar que la orden fue confirmada y mantener toda la info
+      sessionStorage.setItem('confirmedOrder', JSON.stringify({
         orderId: reservationData.orderId,
+        estado: 'CONFIRMADA',
+        purchaseData: reservationData.purchaseData,
+        paymentMethod: selectedMethod,
+        paymentMethodId: paymentMethodId,
         timestamp: Date.now(),
       }));
 
-      // Limpiar datos de reserva
+      // Limpiar datos de reserva temporal
       sessionStorage.removeItem('purchaseData');
       sessionStorage.removeItem('reservationData');
 
-      // Navegar a página de éxito
+      // Navegar a success (donde se generarán los tickets)
       router.push('/buy/success');
 
     } catch (error) {
-      console.error('Error en el proceso de pago:', error);
+      console.error('❌ Error en el proceso de pago:', error);
       
       setSubmitting(false);
       
