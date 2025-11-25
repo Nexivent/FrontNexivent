@@ -429,6 +429,8 @@ const Page: React.FC = () => {
           transition: border-color 0.3s ease;
         }
 
+
+        
         .payment-option.selected .radio-outer {
           border-color: #cddc39;
         }
