@@ -252,7 +252,7 @@ const Page: React.FC = () => {
   };
 
   const handleViewTickets = () => {
-    router.push('/members/account/tickets');
+    router.push('/members/tickets');
   };
 
   const handleSendEmail = async () => {
@@ -358,9 +358,6 @@ const Page: React.FC = () => {
               <p>
                 Puedes ver y descargar tus entradas en <strong>"Mis entradas"</strong>.
               </p>
-              <Link href="/members/tickets" className="white">
-                Mis tickets
-              </Link>
             </div>
 
             {orderData && (
