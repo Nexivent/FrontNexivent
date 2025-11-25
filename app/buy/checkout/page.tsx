@@ -162,7 +162,7 @@ const Page: React.FC = () => {
           body: JSON.stringify({
             paymentId: paymentMethodId,
             idEvento: reservationData.purchaseData.event.idEvento,
-            fechaEvento: reservationData.purchaseData.fecha.fecha, // Formato: "2001-14-05"
+            fechaEvento: reservationData.purchaseData.fecha.fecha, // Formato: YYYY-MM-DD
           }),
         }
       );
