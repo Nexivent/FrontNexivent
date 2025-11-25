@@ -161,9 +161,17 @@ const Page: React.FC = () => {
           },
           body: JSON.stringify({
             paymentId: paymentMethodId,
+            idEvento: reservationData.purchaseData.event.idEvento,
+            fechaEvento: reservationData.purchaseData.fecha.fecha, // Formato: "2001-14-05"
           }),
         }
       );
+
+      console.log('INFO: Payload enviado:', {
+        paymentId: paymentMethodId,
+        idEvento: reservationData.purchaseData.event.idEvento,
+        fechaEvento: reservationData.purchaseData.fecha.fecha,
+      });
 
       if (!confirmResponse.ok) {
         const errorData = await confirmResponse.json();
