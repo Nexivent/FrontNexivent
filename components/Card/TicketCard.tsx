@@ -59,18 +59,20 @@ const TicketCard: React.FC<IProps> = ({
 
     setCancelling(true);
 
-    const payload = { idTickets: [id] };
-    console.log('JSON enviado a la API de cancelación:', payload);
+    const payload = { idTickets: [parseInt(id, 10)] };
+    console.log('JSON enviado al backend Go:', payload);
 
     try {
-      const res = await fetch('/api/tickets/cancel', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/tickets/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const json = await res.json();
-      if (json.success) {
+      console.log("Respuesta del backend:", json);
+
+      if (res.ok && json.cancelados && json.cancelados.length > 0) {
         alert(`Ticket cancelado correctamente (ID: ${id})`);
       } else {
         alert('No se pudo cancelar el ticket');
@@ -82,6 +84,7 @@ const TicketCard: React.FC<IProps> = ({
       setCancelling(false);
     }
   };
+
 
   return (
     <div className='card'>
