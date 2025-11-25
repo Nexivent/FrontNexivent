@@ -22,15 +22,12 @@ export interface Usuario {
   telefono?: string;
   fecha_nacimiento?: string;
   foto?: string;
-<<<<<<< Updated upstream
   roles?: Array<{ id: number; nombre: string }>;
   rol?: string;
   idUsuario?: number;
   tipo_documento?: string;
   tipoUsuario?: string;
-=======
   rol_principal: string;
->>>>>>> Stashed changes
 }
 
 export interface AuthResponse {

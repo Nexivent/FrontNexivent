@@ -27,6 +27,8 @@ const EmailPasswordSignInForm: React.FC = () => {
 
   const onSubmit = async (data: FormInputs) => {
     try {
+      console.log('🔐 [LOGIN] Iniciando proceso de login...');
+      console.log('📧 [LOGIN] Email ingresado:', data.email);
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
@@ -38,26 +40,38 @@ const EmailPasswordSignInForm: React.FC = () => {
           contrasenha: data.password,
         }),
       });
-
+      console.log('📥 [LOGIN] Response status:', response.status);
       const result = await response.json();
-
+      console.log('📦 [LOGIN] Response completa:', result);
       if (response.ok && result.token) {
+        console.log('✅ [LOGIN] Autenticación exitosa');
+        console.log('👤 [LOGIN] Usuario recibido:', result.usuario);
+        console.log('🎭 [LOGIN] Rol principal:', result.usuario.rol_principal);
+        console.log('🔑 [LOGIN] Token generado:', result.token.token.substring(0, 20) + '...');
         // Guardar token y usuario en localStorage
         localStorage.setItem('auth_token', result.token.token);
         localStorage.setItem('user', JSON.stringify(result.usuario));
-
+        console.log('💾 [LOGIN] Datos guardados en localStorage');
         // Actualizar contexto de usuario
         if (setUser) {
           setUser(result.usuario);
+          console.log('🔄 [LOGIN] Contexto de usuario actualizado');
         }
 
-        alert('¡Inicio de sesión exitoso!');
-        if (result.usuario.rol_principal === 'ADMINISTRADOR') {
+        const rolPrincipal = result.usuario.rol_principal?.toUpperCase();
+        console.log('🎯 [LOGIN] Rol principal normalizado:', rolPrincipal);
+
+        if (rolPrincipal === 'ADMINISTRADOR') {
+          console.log('🔴 [LOGIN] Usuario es ADMINISTRADOR - Redirigiendo a /administrator');
+          alert('¡Bienvenido Administrador!');
           router.push('/administrator');
         } else {
+          console.log('🟢 [LOGIN] Usuario es CLIENTE/ORGANIZADOR - Redirigiendo a /');
+          alert('¡Inicio de sesión exitoso!');
           router.push('/');
         }
       } else {
+        console.error('❌ [LOGIN] Error en respuesta:', result);
         throw new Error(result.message || 'Credenciales incorrectas');
       }
     } catch (error: any) {
