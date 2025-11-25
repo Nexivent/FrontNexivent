@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@contexts/UserContext';
-import Link from 'next/link';
+
 // components
 import Master from '@components/Layout/Master';
 import Section from '@components/Section/Section';
@@ -54,7 +54,10 @@ interface ConfirmedOrderData {
 const Page: React.FC = () => {
   const router = useRouter();
   const { user } = useUser();
-
+  
+  // Log para debugging
+  console.log('SUCCESS PAGE - User:', user);
+  
   const [loading, setLoading] = useState(true);
   const [generatingTickets, setGeneratingTickets] = useState(true);
   const [tickets, setTickets] = useState<TicketInfo[]>([]);
@@ -69,16 +72,16 @@ const Page: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-
+    
     const initializeSuccess = async () => {
       console.log('=================================================');
       console.log('INICIO - initializeSuccess');
       console.log('=================================================');
-
+      
       // 1. Verificar confirmedOrder
       const storedData = sessionStorage.getItem('confirmedOrder');
       console.log('[1] Verificando confirmedOrder:', storedData ? 'Existe' : 'No existe');
-
+      
       if (!storedData) {
         console.error('ERROR: No confirmed order data found, redirigiendo a home');
         router.push('/');
@@ -98,15 +101,15 @@ const Page: React.FC = () => {
       // 2. Verificar tickets existentes
       const existingTickets = sessionStorage.getItem('ticketsData');
       console.log('[3] Verificando ticketsData:', existingTickets ? 'Existe' : 'No existe');
-
+      
       if (existingTickets) {
         console.log('INFO: Cargando tickets existentes...');
         try {
           const ticketsData = JSON.parse(existingTickets);
           console.log('SUCCESS: Tickets parseados:', ticketsData);
-
+          
           if (!mounted) return;
-
+          
           setTickets(ticketsData.tickets || []);
           setOrderData(confirmedOrder);
           setLoading(false);
@@ -121,9 +124,9 @@ const Page: React.FC = () => {
 
       // 3. No hay tickets, preparar para generar
       console.log('[4] No hay tickets, preparando para generar...');
-
+      
       if (!mounted) return;
-
+      
       setOrderData(confirmedOrder);
       setLoading(false);
       console.log('SUCCESS: Estados iniciales configurados');
@@ -131,7 +134,7 @@ const Page: React.FC = () => {
       // 4. Verificar bandera de generación
       const isGenerating = sessionStorage.getItem(GENERATION_KEY);
       console.log('[5] Verificando bandera de generación:', isGenerating);
-
+      
       if (isGenerating === 'true') {
         console.log('WARNING: Generación ya en progreso, abortando');
         return;
@@ -140,7 +143,7 @@ const Page: React.FC = () => {
       // 5. Marcar generación y ejecutar
       console.log('[6] Marcando bandera de generación');
       sessionStorage.setItem(GENERATION_KEY, 'true');
-
+      
       console.log('[7] Llamando a generateTickets...');
       try {
         await generateTickets(confirmedOrder);
@@ -152,7 +155,7 @@ const Page: React.FC = () => {
         sessionStorage.removeItem(GENERATION_KEY);
         console.log('INFO: Bandera de generación limpiada');
       }
-
+      
       console.log('=================================================');
       console.log('FIN - initializeSuccess');
       console.log('=================================================');
@@ -186,7 +189,7 @@ const Page: React.FC = () => {
         tickets: purchaseData.tickets.map((ticket, idx) => {
           const entradaInfo = purchaseData.entradas?.[idx];
           const precio = parseFloat(ticket.price.replace('S/.', '').replace(',', '').trim());
-
+          
           return {
             idTarifa: ticket.id,
             idSector: entradaInfo?.idSector || 1,
@@ -232,7 +235,7 @@ const Page: React.FC = () => {
         eventDate: purchaseData.fecha.fecha,
         eventVenue: purchaseData.event.lugar,
       };
-
+      
       sessionStorage.setItem('ticketsData', JSON.stringify(ticketsStorageData));
       console.log('SUCCESS: Tickets guardados en sessionStorage');
 
@@ -256,13 +259,35 @@ const Page: React.FC = () => {
   };
 
   const handleSendEmail = async () => {
+    console.log('INFO: Iniciando envío de email...');
+    console.log('INFO: orderData:', orderData);
+    console.log('INFO: user:', user);
+    
     if (!orderData) {
-      setEmailStatus('Error: No se encontraron datos de la compra.');
+      const errorMsg = 'Error: No se encontraron datos de la compra.';
+      console.error('ERROR:', errorMsg);
+      setEmailStatus(errorMsg);
       return;
     }
 
-    if (!user || !user.email) {
-      setEmailStatus('Error: Debes iniciar sesión para enviar el correo.');
+    if (!user) {
+      const errorMsg = 'Error: Debes iniciar sesión para enviar el correo.';
+      console.error('ERROR:', errorMsg);
+      setEmailStatus(errorMsg);
+      return;
+    }
+
+    // Buscar email en diferentes lugares del objeto user
+    const userEmail = user.email || user.correo || user.Email || user.Correo;
+    const userName = user.nombre || user.name || user.Nombre || user.Name || 'Usuario';
+    
+    console.log('INFO: Email extraído:', userEmail);
+    console.log('INFO: Nombre extraído:', userName);
+
+    if (!userEmail) {
+      const errorMsg = 'Error: No se encontró tu correo electrónico. Por favor verifica tu perfil.';
+      console.error('ERROR:', errorMsg);
+      setEmailStatus(errorMsg);
       return;
     }
 
@@ -275,23 +300,35 @@ const Page: React.FC = () => {
         eventName: orderData.purchaseData.event.titulo,
         eventVenue: orderData.purchaseData.event.lugar,
         orderId: orderData.orderId,
-        userEmail: user.email,
-        userName: user.nombre || 'Usuario',
+        userEmail: userEmail,
+        userName: userName,
       };
 
-      const response = await fetch('/api/tickets/sendEmail', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      console.log('INFO: Payload a enviar:', payload);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098'}/api/tickets/sendEmail`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      console.log('INFO: Response status:', response.status);
 
       if (!response.ok) {
-        throw new Error('Error al enviar correo');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('ERROR: Respuesta del servidor:', errorData);
+        throw new Error(errorData.message || 'Error al enviar correo');
       }
 
+      const result = await response.json();
+      console.log('SUCCESS: Correo enviado:', result);
       setEmailStatus('¡Correo enviado con éxito!');
     } catch (error: any) {
-      setEmailStatus('Error al enviar el correo.');
+      console.error('ERROR: Error al enviar correo:', error);
+      setEmailStatus(`Error al enviar el correo: ${error.message || 'Error desconocido'}`);
     } finally {
       setIsSendingEmail(false);
     }
@@ -502,6 +539,5 @@ const Page: React.FC = () => {
     </Master>
   );
 };
-
 
 export default Page;
