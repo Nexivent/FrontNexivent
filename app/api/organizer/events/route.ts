@@ -68,6 +68,12 @@ const buildEndpoint = (baseUrl: string, path: string) => {
   return `${normalizedBase}${normalizedPath}`;
 };
 
+const resolveNumeric = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 const isOrganizerEvent = (value: unknown): value is OrganizerEvent =>
   typeof value === 'object' &&
   value !== null &&
@@ -348,9 +354,10 @@ const normalizeUpstreamEvent = (payload: Partial<OrganizerEvent>): OrganizerEven
 
 export async function GET(request: NextRequest) {
   const organizerId =
-    Number(request.nextUrl.searchParams.get('organizadorId')) ||
-    Number(process.env.NEXT_PUBLIC_ORGANIZER_ID) ||
-    Number(process.env.ORGANIZER_ID) ||
+    resolveNumeric(request.nextUrl.searchParams.get('organizerId')) ??
+    resolveNumeric(request.nextUrl.searchParams.get('organizadorId')) ??
+    resolveNumeric(process.env.NEXT_PUBLIC_ORGANIZER_ID) ??
+    resolveNumeric(process.env.ORGANIZER_ID) ??
     baseEvent.idOrganizador;
 
   const apiBaseUrl = getOrganizerApiBaseUrl();

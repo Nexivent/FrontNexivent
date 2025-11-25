@@ -143,6 +143,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   const organizerId =
     resolveNumeric(request.nextUrl.searchParams.get('organizerId')) ??
+    resolveNumeric(request.nextUrl.searchParams.get('organizadorId')) ??
     resolveNumeric(process.env.NEXT_PUBLIC_ORGANIZER_ID) ??
     resolveNumeric(process.env.ORGANIZER_ID);
 

@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@components/Button/Button';
+import { useUser } from '@contexts/UserContext';
+import { resolveOrganizerIdFromUser } from '@utils/organizer';
 
 type EventState = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
 
@@ -47,24 +49,35 @@ type FilterState = 'all' | EventState;
 
 const EventManager: React.FC = () => {
     const router = useRouter();
+    const { user, loading: userLoading } = useUser();
+    const organizerId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
     const [events, setEvents] = useState<ManagedEvent[]>([]);
     const [filter, setFilter] = useState<FilterState>('all');
     const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState<string>('');
 
     const fetchEvents = useCallback(async () => {
+        if (userLoading) return;
+        if (!organizerId) {
+            setStatus('error');
+            setErrorMessage('No pudimos obtener tu ID de organizador. Inicia sesion nuevamente.');
+            return;
+        }
         try {
             setStatus('loading');
-            const response = await fetch('/api/organizer/events');
+            const response = await fetch(`/api/organizer/events?organizerId=${organizerId}`, {
+                cache: 'no-store',
+            });
             if (!response.ok) throw new Error('No se pudieron obtener los eventos');
             const data = (await response.json()) as EventsResponse;
             setEvents(data.data || []);
             setStatus('idle');
+            setErrorMessage('');
         } catch (error) {
             setStatus('error');
             setErrorMessage(error instanceof Error ? error.message : 'Error desconocido');
         }
-    }, []);
+    }, [organizerId, userLoading]);
 
     useEffect(() => {
         void fetchEvents();
@@ -75,6 +88,12 @@ const EventManager: React.FC = () => {
     };
 
     const handleCancel = async (eventId: number) => {
+        if (userLoading) return;
+        if (!organizerId) {
+            setErrorMessage('No pudimos obtener tu ID de organizador para cancelar el evento.');
+            setStatus('error');
+            return;
+        }
         if (!confirm('¿Estás seguro de que deseas cancelar este evento?')) return;
 
         try {
@@ -87,6 +106,7 @@ const EventManager: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...event,
+                    idOrganizador: organizerId,
                     estado: 'CANCELADO',
                 }),
             });
@@ -100,7 +120,6 @@ const EventManager: React.FC = () => {
             setErrorMessage(error instanceof Error ? error.message : 'Error al cancelar el evento');
         }
     };
-
     const isEventPast = (eventDates: EventDate[]): boolean => {
         if (eventDates.length === 0) return false;
         const now = new Date();

@@ -7,6 +7,8 @@ import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
 import ButtonLink from '@components/Button/ButtonLink';
 import Button from '@components/Button/Button';
+import { useUser } from '@contexts/UserContext';
+import { resolveOrganizerIdFromUser } from '@utils/organizer';
 
 type EventDateRange = {
   idFechaEvento: number;
@@ -57,17 +59,9 @@ const statusColor: Record<EventReport['estado'], string> = {
 
 const formatCurrency = (value: number) => `S/ ${value.toLocaleString()}`;
 
-const resolveOrganizerUserId = () => {
-  const envValue = Number(process.env.NEXT_PUBLIC_ORGANIZER_ID);
-  if (!Number.isNaN(envValue) && envValue > 0) return envValue;
-  const serverValue = Number(process.env.ORGANIZER_ID);
-  if (!Number.isNaN(serverValue) && serverValue > 0) return serverValue;
-  return 1;
-};
-
-const organizerUserId = resolveOrganizerUserId();
-
 const ReportsDashboard: React.FC = () => {
+  const { user, loading: userLoading } = useUser();
+  const organizerUserId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [events, setEvents] = useState<EventReport[]>([]);
   const [filters, setFilters] = useState<{ start: string; end: string; event: 'all' | number }>({
@@ -77,11 +71,18 @@ const ReportsDashboard: React.FC = () => {
   });
   const [eventOptions, setEventOptions] = useState<Array<{ id: number; nombre: string }>>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fetchReports = useCallback(
     async (start?: string, end?: string, eventId: 'all' | number = 'all') => {
+      if (!organizerUserId) {
+        setStatus('error');
+        setErrorMessage('No pudimos obtener tu ID de organizador. Inicia sesion nuevamente.');
+        return;
+      }
       try {
         setStatus('loading');
+        setErrorMessage(null);
         const params = new URLSearchParams();
         params.set('organizerId', String(organizerUserId));
         if (start) params.set('fechaDesde', start);
@@ -115,14 +116,19 @@ const ReportsDashboard: React.FC = () => {
       } catch (error) {
         console.error('Organizer reports fetch failed', error);
         setStatus('error');
+        setErrorMessage(
+          error instanceof Error ? error.message : 'No se pudieron cargar los reportes.'
+        );
       }
     },
     [organizerUserId]
   );
 
   useEffect(() => {
-    void fetchReports();
-  }, [fetchReports]);
+    if (!userLoading) {
+      void fetchReports();
+    }
+  }, [fetchReports, userLoading]);
 
   const handleFilter = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -233,7 +239,9 @@ const ReportsDashboard: React.FC = () => {
           
           {status === 'loading' && <p className='gray'>Cargando reportes...</p>}
           {status === 'error' && (
-            <p className='field-hint'>No se pudieron cargar los reportes. Intenta nuevamente.</p>
+            <p className='field-hint'>
+              {errorMessage ?? 'No se pudieron cargar los reportes. Intenta nuevamente.'}
+            </p>
           )}
 
           {summary !== null && (
