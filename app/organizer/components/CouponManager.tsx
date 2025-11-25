@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Button from '@components/Button/Button';
+import { useUser } from '@contexts/UserContext';
+import { resolveOrganizerIdFromUser } from '@utils/organizer';
 
 type CouponForm = {
   idCupon: number;
@@ -24,18 +26,6 @@ type OrganizerEventSummary = {
 
 type FetchState = 'idle' | 'loading' | 'error';
 
-const resolveOrganizerUserId = () => {
-  const envValue = Number(process.env.NEXT_PUBLIC_ORGANIZER_ID);
-  if (!Number.isNaN(envValue) && envValue > 0) return envValue;
-  return 1; // Default organizer ID for development
-};
-
-const organizerUserId = resolveOrganizerUserId();
-const couponsListEndpoint = `/api/organizer/coupons?organizerId=${organizerUserId}`;
-const couponCreateEndpoint = `/api/organizer/coupons?usuarioCreacion=${organizerUserId}`;
-const couponUpdateEndpoint = `/api/organizer/coupons?usuarioModificacion=${organizerUserId}`;
-const eventsListEndpoint = `/api/organizer/events?organizadorId=${organizerUserId}`;
-
 const createEmptyCoupon = (): CouponForm => {
   const today = new Date();
   const nextMonth = new Date(today);
@@ -57,6 +47,23 @@ const createEmptyCoupon = (): CouponForm => {
 };
 
 const CouponManager: React.FC = () => {
+  const { user, loading: userLoading } = useUser();
+  const organizerId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
+  const organizerReady = organizerId !== null && !userLoading;
+
+  const couponsListEndpoint = organizerId
+    ? `/api/organizer/coupons?organizerId=${organizerId}`
+    : null;
+  const couponCreateEndpoint = organizerId
+    ? `/api/organizer/coupons?usuarioCreacion=${organizerId}`
+    : null;
+  const couponUpdateEndpoint = organizerId
+    ? `/api/organizer/coupons?usuarioModificacion=${organizerId}`
+    : null;
+  const eventsListEndpoint = organizerId
+    ? `/api/organizer/events?organizerId=${organizerId}`
+    : null;
+
   const [coupons, setCoupons] = useState<CouponForm[]>([]);
   const [events, setEvents] = useState<OrganizerEventSummary[]>([]);
   const [fetchState, setFetchState] = useState<FetchState>('idle');
@@ -70,6 +77,13 @@ const CouponManager: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   useEffect(() => {
+    if (userLoading) return;
+    if (!couponsListEndpoint) {
+      setFetchState('error');
+      setFeedback('No pudimos resolver tu ID de organizador. Inicia sesion nuevamente.');
+      return;
+    }
+
     let mounted = true;
     const loadCoupons = async () => {
       setFetchState('loading');
@@ -97,9 +111,15 @@ const CouponManager: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [couponsListEndpoint, userLoading]);
 
   useEffect(() => {
+    if (userLoading) return;
+    if (!eventsListEndpoint) {
+      setEventsState('error');
+      return;
+    }
+
     let mounted = true;
     setEventsState('loading');
     fetch(eventsListEndpoint)
@@ -127,7 +147,7 @@ const CouponManager: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [eventsListEndpoint, userLoading]);
 
   const stats = useMemo(() => {
     const activeTotal = coupons.filter((coupon) => coupon.activo === 1).length;
@@ -190,12 +210,20 @@ const CouponManager: React.FC = () => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (savingState === 'saving') return;
+    if (!organizerReady) {
+      setSavingState('error');
+      setFeedback('Necesitas iniciar sesion para crear o actualizar cupones.');
+      return;
+    }
     setSavingState('saving');
     setFeedback(null);
 
     try {
       const isEditing = selectedCouponId !== null;
       const endpoint = isEditing ? couponUpdateEndpoint : couponCreateEndpoint;
+      if (!endpoint) {
+        throw new Error('No pudimos resolver tu ID de organizador.');
+      }
       const method = isEditing ? 'PUT' : 'POST';
       console.log('Submitting to', endpoint, 'with method', method, 'and form', JSON.stringify(form));
       const response = await fetch(endpoint, {

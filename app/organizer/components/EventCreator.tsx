@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Button from '@components/Button/Button';
+import { useUser } from '@contexts/UserContext';
+import { resolveOrganizerIdFromUser } from '@utils/organizer';
 
 type CategoryOption = {
   id: number;
@@ -104,7 +106,7 @@ const defaultPricePreset: PriceMatrix = {
 
 const createInitialForm = (): OrganizerEventForm => ({
   idEvento: 0,
-  idOrganizador: 2,
+  idOrganizador: 0,
   idCategoria: 0,
   titulo: '',
   descripcion: '',
@@ -195,6 +197,8 @@ const normalizeIdentifier = (label: string, fallbackPrefix: string) => {
 const EventCreator: React.FC = () => {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
+  const { user } = useUser();
+  const organizerUserId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
 
   const [form, setForm] = useState<OrganizerEventForm>(() => createInitialForm());
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -265,7 +269,7 @@ const EventCreator: React.FC = () => {
 
           setForm({
             idEvento: event.idEvento,
-            idOrganizador: event.idOrganizador ?? 2,
+            idOrganizador: event.idOrganizador ?? organizerUserId ?? 0,
             idCategoria: event.idCategoria ?? 0,
             titulo: event.titulo ?? '',
             descripcion: event.descripcion ?? '',
@@ -297,7 +301,7 @@ const EventCreator: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [eventId]);
+  }, [eventId, organizerUserId]);
 
   useEffect(() => {
     let mounted = true;
@@ -331,6 +335,16 @@ const EventCreator: React.FC = () => {
       previous.idEvento === 0 ? { ...previous, idEvento: Date.now() } : previous
     );
   }, []);
+
+  useEffect(() => {
+    if (organizerUserId) {
+      setForm((previous) =>
+        previous.idOrganizador === organizerUserId
+          ? previous
+          : { ...previous, idOrganizador: organizerUserId }
+      );
+    }
+  }, [organizerUserId]);
 
   const selectedCategory = categories.find((category) => category.id === form.idCategoria);
 
@@ -849,10 +863,17 @@ const EventCreator: React.FC = () => {
       return;
     }
 
+    const resolvedOrganizerId = organizerUserId ?? form.idOrganizador;
+    if (!resolvedOrganizerId) {
+      setValidationErrors(['No pudimos obtener tu ID de organizador. Inicia sesion nuevamente.']);
+      return;
+    }
+
     setValidationErrors([]);
 
     const payload: OrganizerEventForm = {
       ...form,
+      idOrganizador: resolvedOrganizerId,
       estado: intentState ?? form.estado,
     };
 
