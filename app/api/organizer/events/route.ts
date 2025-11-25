@@ -302,7 +302,6 @@ const normalizeUpstreamEvent = (payload: Partial<OrganizerEvent>): OrganizerEven
     (payload as { eventDates?: EventDate[] }).eventDates ??
     (payload as { Fechas?: EventDate[] }).Fechas ??
     [];
-
   return {
     idEvento:
       payload.idEvento ??
@@ -433,13 +432,11 @@ export async function GET(request: NextRequest) {
     } else if (isEventLike(upstreamBody)) {
       rawEvents = [upstreamBody];
     }
-
     const normalizedEvents = rawEvents.map((event) =>
       normalizeUpstreamEvent(event as Partial<OrganizerEvent>)
     );
 
     events = normalizedEvents.length > 0 ? normalizedEvents : events;
-
     return NextResponse.json({
       data: normalizedEvents,
       metadata: {

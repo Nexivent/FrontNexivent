@@ -45,7 +45,7 @@ const statusColor: Record<EventState, string> = {
     CANCELADO: 'cancelado',
 };
 
-type FilterState = 'all' | EventState;
+type FilterState = 'all' | EventState | 'past';
 
 const resolveUserId = (user: any) => {
     const candidates = [
@@ -158,16 +158,28 @@ const EventManager: React.FC = () => {
 
     const filteredEvents = events.filter((event) => {
         if (filter === 'all') return true;
+        if (filter === 'past') return isEventPast(event.fechas);
+        if (filter === 'PUBLICADO') return event.estado === 'PUBLICADO' && !isEventPast(event.fechas);
         return event.estado === filter;
     });
 
     const formatDate = (date: EventDate) => {
-        const dateStr = new Date(date.fecha).toLocaleDateString('es-PE', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        });
-        return `${dateStr} · ${date.horaInicio} - ${date.horaFin}`;
+        const parsed = date?.fecha ? new Date(date.fecha) : null;
+        const validDate = parsed && !Number.isNaN(parsed.getTime());
+        const dateStr = validDate
+            ? parsed.toLocaleDateString('es-PE', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+            })
+            : 'Fecha por definir';
+        const start = typeof date?.horaInicio === 'string' && date.horaInicio.trim().length > 0
+            ? date.horaInicio
+            : '--:--';
+        const end = typeof date?.horaFin === 'string' && date.horaFin.trim().length > 0
+            ? date.horaFin
+            : '--:--';
+        return `${dateStr} | ${start}`;
     };
 
     return (
@@ -194,7 +206,7 @@ const EventManager: React.FC = () => {
                         className={`filter-btn ${filter === 'PUBLICADO' ? 'active' : ''}`}
                         onClick={() => setFilter('PUBLICADO')}
                     >
-                        Publicados ({events.filter((e) => e.estado === 'PUBLICADO').length})
+                        Publicados ({events.filter((e) => e.estado === 'PUBLICADO' && !isEventPast(e.fechas)).length})
                     </button>
                     <button
                         type='button'
@@ -202,6 +214,13 @@ const EventManager: React.FC = () => {
                         onClick={() => setFilter('CANCELADO')}
                     >
                         Cancelados ({events.filter((e) => e.estado === 'CANCELADO').length})
+                    </button>
+                    <button
+                        type='button'
+                        className={`filter-btn ${filter === 'past' ? 'active' : ''}`}
+                        onClick={() => setFilter('past')}
+                    >
+                        Pasados ({events.filter((e) => isEventPast(e.fechas)).length})
                     </button>
                 </div>
             </div>
