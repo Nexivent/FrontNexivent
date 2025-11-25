@@ -279,7 +279,7 @@ const Page: React.FC = () => {
 
     // Buscar email en diferentes lugares del objeto user
     const userEmail = user.email || user.correo || user.Email || user.Correo;
-    const userName = user.nombre || user.name || user.Nombre || user.Name || 'Usuario';
+    const userName = user.nombre || user.name || user.Name || 'Usuario';
     
     console.log('INFO: Email extraído:', userEmail);
     console.log('INFO: Nombre extraído:', userName);

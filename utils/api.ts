@@ -19,6 +19,11 @@ export interface Usuario {
   id: string;
   nombre: string;
   email: string;
+  correo?: string;
+  Email?: string;
+  Correo?: string;
+  name?: string;
+  Name?: string;
   telefono?: string;
   fecha_nacimiento?: string;
   foto?: string;

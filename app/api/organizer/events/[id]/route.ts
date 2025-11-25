@@ -32,9 +32,10 @@ export const dynamic = 'force-dynamic';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const eventId = resolveNumeric(params.id);
+  const resolvedParams = await params;
+  const eventId = resolveNumeric(resolvedParams.id);
   if (eventId === null) {
     return NextResponse.json({ message: 'idEvento no es valido.' }, { status: 400 });
   }
