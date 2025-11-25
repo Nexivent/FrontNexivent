@@ -295,7 +295,7 @@ const EventManager: React.FC = () => {
                                         {canCancel && (
                                             <Button
                                                 color='gray-overlay'
-                                                text='Cancelar evento'
+                                                text='Cancelar'
                                                 leftIcon='cancel'
                                                 onClick={() => handleCancel(event.idEvento)}
                                             />

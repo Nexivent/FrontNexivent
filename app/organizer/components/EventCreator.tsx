@@ -871,8 +871,10 @@ const EventCreator: React.FC = () => {
 
     setValidationErrors([]);
 
+    const numericEventId = eventId ? Number(eventId) : form.idEvento;
     const payload: OrganizerEventForm = {
       ...form,
+      idEvento: Number.isNaN(numericEventId) ? form.idEvento : numericEventId,
       idOrganizador: resolvedOrganizerId,
       estado: intentState ?? form.estado,
     };
@@ -880,12 +882,24 @@ const EventCreator: React.FC = () => {
     setSavingState('saving');
     try {
       console.log('Payload enviado:', JSON.stringify(payload));
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
-      const response = await fetch(`${API_URL}/evento/`, {
-        method: 'POST',
+      const isEditing = Boolean(eventId);
+      const endpoint = isEditing
+        ? `/api/organizer/events/${eventId}`
+        : '/api/organizer/events';
+      const method = isEditing ? 'PUT' : 'POST';
+      const body = isEditing
+        ? JSON.stringify({
+            ...payload,
+            usuarioModificacion: resolvedOrganizerId,
+          })
+        : JSON.stringify(payload);
+      console.log('Enviando a endpoint:', body);
+      const response = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body,
       });
+
       if (!response.ok) throw new Error('Error al guardar');
       setSavingState('success');
       setLastSavedAt(new Date().toISOString());
@@ -1371,6 +1385,7 @@ const EventCreator: React.FC = () => {
                                   className='input-text'
                                   type='number'
                                   min={0}
+                                  step="any"
                                   value={form.precios[sector.id]?.[profile.id]?.[ticket.id] ?? 0}
                                   onChange={(event) =>
                                     handlePriceChange(
