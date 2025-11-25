@@ -117,6 +117,9 @@ const Page: React.FC = () => {
     }
   
     const userId = user?.id ? parseInt(user.id) : 1;
+    
+    // Calcular el precio total de la orden
+    const precioTotal = calculateTotal();
   
     setSubmitting(true);
   
@@ -126,6 +129,7 @@ const Page: React.FC = () => {
         IdEvento: event.idEvento,
         IdFechaEvento: fecha.idFechaEvento,
         IdUsuario: userId,
+        Total: precioTotal, // Precio total de la orden
         Entradas: tickets.map(ticket => ({
           idTipoTicket: ticket.idTipoTicket || ticket.id,  
           idPerfil: ticket.idPerfil || 1,                   
@@ -134,7 +138,8 @@ const Page: React.FC = () => {
         })),
       };
   
-      console.log('📡 Enviando solicitud de reserva:', orderData);
+      console.log('API: Enviando solicitud de reserva:', orderData);
+      console.log('INFO: Total calculado:', precioTotal);
   
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/orden_de_compra/hold`,
@@ -153,7 +158,7 @@ const Page: React.FC = () => {
       }
   
       const reservaData = await response.json();
-      console.log('✅ Reserva exitosa:', reservaData);
+      console.log('SUCCESS: Reserva exitosa:', reservaData);
   
       const expiresAt = Date.now() + (reservaData.ttlSeconds * 1000);
   
@@ -168,7 +173,7 @@ const Page: React.FC = () => {
       router.push('/buy/checkout');
   
     } catch (error) {
-      console.error('❌ Error al reservar tickets:', error);
+      console.error('ERROR: Error al reservar tickets:', error);
       
       setSubmitting(false);
       
