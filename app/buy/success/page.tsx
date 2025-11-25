@@ -64,39 +64,116 @@ const Page: React.FC = () => {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
 
-  useEffect(() => {
-    const initializeSuccess = async () => {
-      const storedData = sessionStorage.getItem('confirmedOrder');
+  // Constante para la bandera de generación
+  const GENERATION_KEY = 'tickets_generation_in_progress';
 
+  useEffect(() => {
+    let mounted = true;
+    
+    const initializeSuccess = async () => {
+      console.log('=================================================');
+      console.log('INICIO - initializeSuccess');
+      console.log('=================================================');
+      
+      // 1. Verificar confirmedOrder
+      const storedData = sessionStorage.getItem('confirmedOrder');
+      console.log('[1] Verificando confirmedOrder:', storedData ? 'Existe' : 'No existe');
+      
       if (!storedData) {
-        console.error('No confirmed order data found');
+        console.error('ERROR: No confirmed order data found, redirigiendo a home');
         router.push('/');
         return;
       }
 
+      let confirmedOrder: ConfirmedOrderData;
       try {
-        const confirmedOrder: ConfirmedOrderData = JSON.parse(storedData);
-        console.log('✅ Orden confirmada cargada:', confirmedOrder);
-        setOrderData(confirmedOrder);
-        setLoading(false);
-
-        // Generar tickets llamando al API
-        await generateTickets(confirmedOrder);
-
+        confirmedOrder = JSON.parse(storedData);
+        console.log('[2] Orden parseada exitosamente:', confirmedOrder);
       } catch (error) {
-        console.error('Error al procesar la orden:', error);
-        setError('Error al procesar la orden confirmada');
-        setLoading(false);
-        setGeneratingTickets(false);
+        console.error('ERROR: Error al parsear confirmedOrder:', error);
+        router.push('/');
+        return;
       }
+
+      // 2. Verificar tickets existentes
+      const existingTickets = sessionStorage.getItem('ticketsData');
+      console.log('[3] Verificando ticketsData:', existingTickets ? 'Existe' : 'No existe');
+      
+      if (existingTickets) {
+        console.log('INFO: Cargando tickets existentes...');
+        try {
+          const ticketsData = JSON.parse(existingTickets);
+          console.log('SUCCESS: Tickets parseados:', ticketsData);
+          
+          if (!mounted) return;
+          
+          setTickets(ticketsData.tickets || []);
+          setOrderData(confirmedOrder);
+          setLoading(false);
+          setGeneratingTickets(false);
+          console.log('SUCCESS: Estado actualizado con tickets existentes');
+          return;
+        } catch (e) {
+          console.warn('WARNING: Error al parsear tickets existentes:', e);
+          sessionStorage.removeItem('ticketsData');
+        }
+      }
+
+      // 3. No hay tickets, preparar para generar
+      console.log('[4] No hay tickets, preparando para generar...');
+      
+      if (!mounted) return;
+      
+      setOrderData(confirmedOrder);
+      setLoading(false);
+      console.log('SUCCESS: Estados iniciales configurados');
+
+      // 4. Verificar bandera de generación
+      const isGenerating = sessionStorage.getItem(GENERATION_KEY);
+      console.log('[5] Verificando bandera de generación:', isGenerating);
+      
+      if (isGenerating === 'true') {
+        console.log('WARNING: Generación ya en progreso, abortando');
+        return;
+      }
+
+      // 5. Marcar generación y ejecutar
+      console.log('[6] Marcando bandera de generación');
+      sessionStorage.setItem(GENERATION_KEY, 'true');
+      
+      console.log('[7] Llamando a generateTickets...');
+      try {
+        await generateTickets(confirmedOrder);
+        console.log('SUCCESS: generateTickets completado');
+      } catch (error) {
+        console.error('ERROR: Error en generateTickets:', error);
+        throw error;
+      } finally {
+        sessionStorage.removeItem(GENERATION_KEY);
+        console.log('INFO: Bandera de generación limpiada');
+      }
+      
+      console.log('=================================================');
+      console.log('FIN - initializeSuccess');
+      console.log('=================================================');
     };
 
-    initializeSuccess();
-  }, [router]);
+    initializeSuccess().catch(error => {
+      console.error('ERROR FATAL: Error en initializeSuccess:', error);
+      setError('Error al procesar la orden confirmada');
+      setLoading(false);
+      setGeneratingTickets(false);
+      sessionStorage.removeItem(GENERATION_KEY);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [router]); // Sin dependencias para que solo se ejecute una vez
 
   const generateTickets = async (confirmedOrder: ConfirmedOrderData) => {
     try {
-      console.log('🎫 Generando tickets...');
+      console.log('TICKETS: Generando tickets...');
 
       const { orderId, purchaseData } = confirmedOrder;
 
@@ -122,7 +199,7 @@ const Page: React.FC = () => {
         }),
       };
 
-      console.log('📤 Request a /api/tickets/issue:', ticketsPayload);
+      console.log('API: Request a /api/tickets/issue:', ticketsPayload);
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098'}/api/tickets/issue`,
@@ -141,25 +218,30 @@ const Page: React.FC = () => {
       }
 
       const ticketsData = await response.json();
-      console.log('✅ Tickets generados:', ticketsData);
+      console.log('SUCCESS: Tickets generados:', ticketsData);
 
       setTickets(ticketsData.tickets || []);
       setGeneratingTickets(false);
 
-      // Guardar tickets en sessionStorage
-      sessionStorage.setItem('ticketsData', JSON.stringify({
+      // Guardar tickets en sessionStorage para evitar regeneración
+      const ticketsStorageData = {
         tickets: ticketsData.tickets,
         orderId: orderId,
         timestamp: Date.now(),
         eventName: purchaseData.event.titulo,
         eventDate: purchaseData.fecha.fecha,
         eventVenue: purchaseData.event.lugar,
-      }));
+      };
+      
+      sessionStorage.setItem('ticketsData', JSON.stringify(ticketsStorageData));
+      console.log('SUCCESS: Tickets guardados en sessionStorage');
 
     } catch (error) {
-      console.error('❌ Error al generar tickets:', error);
+      console.error('ERROR: Error al generar tickets:', error);
       setError(error instanceof Error ? error.message : 'Error al generar tickets');
       setGeneratingTickets(false);
+      // Limpiar la bandera para permitir reintento
+      sessionStorage.removeItem('tickets_generation_in_progress');
     }
   };
 

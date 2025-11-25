@@ -146,11 +146,11 @@ const Page: React.FC = () => {
       // MetodoTarjeta = 1, MetodoYape = 2
       const paymentMethodId = selectedMethod === 'card' ? '1' : '2';
       
-      console.log('💳 Método seleccionado:', selectedMethod);
-      console.log('💳 Payment ID a enviar:', paymentMethodId);
+      console.log('PAYMENT: Método seleccionado:', selectedMethod);
+      console.log('PAYMENT: Payment ID a enviar:', paymentMethodId);
 
       // Confirmar la orden
-      console.log('📡 Confirmando orden:', reservationData.orderId);
+      console.log('API: Confirmando orden:', reservationData.orderId);
 
       const confirmResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098'}/orden_de_compra/${reservationData.orderId}/confirm`,
@@ -171,7 +171,7 @@ const Page: React.FC = () => {
       }
 
       const confirmData = await confirmResponse.json();
-      console.log('✅ Orden confirmada:', confirmData);
+      console.log('SUCCESS: Orden confirmada:', confirmData);
 
       // Guardar que la orden fue confirmada y mantener toda la info
       sessionStorage.setItem('confirmedOrder', JSON.stringify({
@@ -183,15 +183,18 @@ const Page: React.FC = () => {
         timestamp: Date.now(),
       }));
 
-      // Limpiar datos de reserva temporal
+      // IMPORTANTE: Limpiar datos temporales Y tickets viejos
+      console.log('CLEANUP: Limpiando sessionStorage...');
       sessionStorage.removeItem('purchaseData');
       sessionStorage.removeItem('reservationData');
+      sessionStorage.removeItem('ticketsData'); // Limpiar tickets de compras anteriores
+      console.log('SUCCESS: SessionStorage limpio');
 
-      // Navegar a success (donde se generarán los tickets)
+      // Navegar a success (donde se generarán los tickets nuevos)
       router.push('/buy/success');
 
     } catch (error) {
-      console.error('❌ Error en el proceso de pago:', error);
+      console.error('ERROR: Error en el proceso de pago:', error);
       
       setSubmitting(false);
       

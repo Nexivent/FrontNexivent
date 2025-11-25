@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 // hooks
 import useAlert from '@hooks/useAlert';
+import { useUser } from '@contexts/UserContext';
 
 // components
 import Button from '@components/Button/Button';
@@ -61,6 +62,7 @@ interface IProps {
 const TicketForm: React.FC<IProps> = ({ eventData }) => {
   const { showAlert, hideAlert } = useAlert();
   const router = useRouter();
+  const { user } = useUser();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -152,8 +154,7 @@ const TicketForm: React.FC<IProps> = ({ eventData }) => {
     return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
   };
 
-  // Filtrar tarifas vigentes según la fecha actual
-// Filtrar tarifas vigentes según la fecha de fin - solo muestra UN tipo de ticket
+  // Filtrar tarifas vigentes según la fecha de fin - solo muestra UN tipo de ticket
 const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -184,13 +185,13 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
     
     if (hoy <= fin) {
       // Retornar solo las tarifas de este tipo de ticket
-      console.log(`✅ Mostrando tarifas de tipo: ${tipoData.tipo} (vigente hasta ${tipoData.fechaFin.toLocaleDateString()})`);
+      console.log('TARIFAS: Mostrando tarifas de tipo:', tipoData.tipo, '(vigente hasta', tipoData.fechaFin.toLocaleDateString() + ')');
       return tipoData.tarifas;
     }
   }
 
   // Si ningún tipo está vigente, retornar array vacío
-  console.warn('⚠️ No hay tarifas vigentes');
+  console.warn('WARNING: No hay tarifas vigentes');
   return [];
 };
 
@@ -270,6 +271,32 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
     e.preventDefault();
     hideAlert();
   
+    // Debug: ver qué contiene el objeto user
+    console.log('USER: Usuario actual:', user);
+    
+    // Validar que el usuario esté autenticado
+    // Soportar tanto idUsuario como id
+    const userId = user?.idUsuario || user?.id;
+    
+    if (!user || !userId) {
+      console.warn('WARNING: Usuario no autenticado o sin ID');
+      showAlert({ 
+        type: 'error', 
+        text: 'Debes iniciar sesión para comprar entradas.' 
+      });
+      
+      // Guardar la URL actual para redirigir después del login
+      sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+      
+      // Redirigir a la página de inicio de sesión
+      setTimeout(() => {
+        router.push('/members/signin');
+      }, 1500);
+      return;
+    }
+    
+    console.log('SUCCESS: Usuario autenticado con ID:', userId);
+
     const quantity = countTickets();
   
     if (quantity === 0) {
@@ -327,6 +354,7 @@ const filtrarTarifasVigentes = (tarifas: Tarifa[]): Tarifa[] => {
         },
         tickets: ticketsSeleccionados,
         fecha: fechaSeleccionadaObj,
+        idUsuario: userId, // Usar la variable userId que soporta ambos formatos
         timestamp: Date.now(),
       };
   
