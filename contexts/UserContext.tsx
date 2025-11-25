@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi, Usuario, RegisterData } from '@utils/api';
 
-
 interface UserContextType {
   user: Usuario | null;
   setUser: React.Dispatch<React.SetStateAction<Usuario | null>>;
@@ -20,30 +19,38 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔄 [CONTEXT] Inicializando contexto de usuario...');
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('auth_token');
     const storedExpiry = localStorage.getItem('token_expiry');
+    console.log('📦 [CONTEXT] localStorage - user:', storedUser ? 'presente' : 'no presente');
+    console.log('📦 [CONTEXT] localStorage - token:', storedToken ? 'presente' : 'no presente');
     if (storedUser && storedUser !== 'undefined' && storedToken && storedToken !== 'undefined') {
       try {
         const parsedUser = JSON.parse(storedUser);
+        console.log('👤 [CONTEXT] Usuario parseado:', parsedUser);
+        console.log('🎭 [CONTEXT] Rol del usuario:', parsedUser.rol_principal);
         if (parsedUser && typeof parsedUser === 'object') {
           if (storedExpiry && Date.now() < parseInt(storedExpiry)) {
             setUser(JSON.parse(storedUser));
-            console.log('Usuario cargado desde localStorage');
+            console.log('✅ [CONTEXT] Usuario cargado exitosamente desde localStorage');
+            console.log('🎯 [CONTEXT] Rol principal:', parsedUser.rol_principal);
           } else {
             console.log('Token expirado, limpiando sesion');
             logout();
           }
         } else {
+          console.log('⚠️ [CONTEXT] Usuario inválido en localStorage');
           localStorage.removeItem('user');
           localStorage.removeItem('auth_token');
         }
       } catch (error) {
-        console.error('Error parsing stored user:', error);
+        console.error('❌ [CONTEXT] Error parsing stored user:', error);
         localStorage.removeItem('user');
         localStorage.removeItem('auth_token');
       }
     } else {
+      console.log('ℹ️ [CONTEXT] No hay sesión activa');
       if (storedUser === 'undefined') localStorage.removeItem('user');
       if (storedToken === 'undefined') localStorage.removeItem('auth_token');
     }
@@ -51,12 +58,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, contrasena: string) => {
+    console.log('🔐 [CONTEXT] Ejecutando login...');
     setLoading(true);
     try {
       const result = await authApi.login(email, contrasena);
+      console.log('📥 [CONTEXT] Resultado de login:', result);
 
       if (result.success && result.data) {
+        console.log('✅ [CONTEXT] Login exitoso, actualizando usuario');
+        console.log('👤 [CONTEXT] Usuario:', result.data.usuario);
+        console.log('🎭 [CONTEXT] Rol principal:', result.data.usuario.rol_principal);
         setUser(result.data.usuario);
+      } else {
+        console.error('❌ [CONTEXT] Error en login:', result.message);
       }
 
       return {
@@ -64,6 +78,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message: result.message,
       };
     } catch (error) {
+      console.error('💥 [CONTEXT] Error en login:', error);
       return {
         success: false,
         message: 'Error inesperado en login',
