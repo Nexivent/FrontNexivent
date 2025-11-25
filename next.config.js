@@ -31,6 +31,11 @@ const nextConfig = {
   // Configurar rewrites si es necesario
   async rewrites() {
     return [
+      // Rutas internas del organizador (manejadas por Next, no se proxied)
+      {
+        source: '/api/organizer/:path*',
+        destination: '/api/organizer/:path*',
+      },
       {
         source: '/api/:path*',
         destination: 'http://localhost:8098/:path*',

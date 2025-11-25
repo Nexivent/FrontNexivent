@@ -319,7 +319,12 @@ const normalizeUpstreamEvent = (payload: Partial<OrganizerEvent>): OrganizerEven
     lugar: payload.lugar ?? (payload as { Lugar?: string }).Lugar ?? '',
     estado:
       (payload.estado as OrganizerEvent['estado']) ??
-      ((payload as { EventoEstado?: number }).EventoEstado === 1 ? 'PUBLICADO' : 'BORRADOR'),
+      ((payload as { EventoEstado?: number }).EventoEstado === 1)
+  ? 'PUBLICADO'
+  : ((payload as { EventoEstado?: number }).EventoEstado === 2)
+    ? 'CANCELADO'
+    : 'BORRADOR',
+
     likes: payload.likes ?? (payload as { CantMeGusta?: number }).CantMeGusta ?? 0,
     noInteres: payload.noInteres ?? (payload as { CantNoInteresa?: number }).CantNoInteresa ?? 0,
     cantVendidasTotal: payload.cantVendidasTotal ?? (payload as { CantVendidoTotal?: number }).CantVendidoTotal ?? 0,

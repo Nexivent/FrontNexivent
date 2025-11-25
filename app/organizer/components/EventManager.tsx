@@ -47,10 +47,25 @@ const statusColor: Record<EventState, string> = {
 
 type FilterState = 'all' | EventState;
 
+const resolveUserId = (user: any) => {
+    const candidates = [
+        user?.idUsuario,
+        user?.id,
+        (user as { usuarioId?: unknown })?.usuarioId,
+        (user as { userId?: unknown })?.userId,
+    ];
+    for (const candidate of candidates) {
+        const numeric = Number(candidate);
+        if (!Number.isNaN(numeric) && numeric > 0) return numeric;
+    }
+    return null;
+};
+
 const EventManager: React.FC = () => {
     const router = useRouter();
     const { user, loading: userLoading } = useUser();
     const organizerId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
+    const userId = useMemo(() => resolveUserId(user), [user]);
     const [events, setEvents] = useState<ManagedEvent[]>([]);
     const [filter, setFilter] = useState<FilterState>('all');
     const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -89,29 +104,40 @@ const EventManager: React.FC = () => {
 
     const handleCancel = async (eventId: number) => {
         if (userLoading) return;
-        if (!organizerId) {
-            setErrorMessage('No pudimos obtener tu ID de organizador para cancelar el evento.');
+        const actorId = userId ?? organizerId;
+        if (!actorId) {
+            setErrorMessage('No pudimos obtener tu ID de usuario/organizador para cancelar el evento.');
             setStatus('error');
             return;
         }
-        if (!confirm('¿Estás seguro de que deseas cancelar este evento?')) return;
+        if (!confirm('Estas seguro de que deseas cancelar este evento?')) return;
 
         try {
             setStatus('loading');
             const event = events.find((e) => e.idEvento === eventId);
             if (!event) return;
-
-            const response = await fetch('/api/organizer/events', {
-                method: 'POST',
+            console.log('maybe', JSON.stringify({
+                    usuarioModificacion: actorId,
+                    nuevoEstadoWorkflow: 2, // finalizado/cancelado segun backend
+                    nuevoEstadoFlag: 0,
+                }));
+            const response = await fetch(`/api/organizer/events/${eventId}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ...event,
-                    idOrganizador: organizerId,
-                    estado: 'CANCELADO',
+                    usuarioModificacion: actorId,
+                    nuevoEstadoWorkflow: 2, // finalizado/cancelado segun backend
+                    nuevoEstadoFlag: 0,
                 }),
             });
-            console.log(response);
-            //if (!response.ok) throw new Error('No se pudo cancelar el evento');
+
+            if (!response.ok) {
+                const errorPayload = await response.json().catch(() => null);
+                const message =
+                    (errorPayload as { message?: string })?.message ??
+                    `No se pudo cancelar el evento (${response.status}).`;
+                throw new Error(message);
+            }
 
             await fetchEvents();
             alert('Evento cancelado exitosamente');
