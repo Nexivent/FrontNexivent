@@ -723,7 +723,7 @@ const todayIsoDate = useMemo(() => {
     }
     if (isPastDate(fecha)) {
       setDateMessage('La fecha debe ser hoy o posterior.');
-      return;
+      return; 
     }
 
     const idTimestamp = Date.now();
@@ -958,7 +958,7 @@ const todayIsoDate = useMemo(() => {
     savingState === 'saving'
       ? 'Guardando cambios...'
       : savingState === 'success'
-        ? 'Borrador actualizado.'
+        ? 'Se actualizo el evento.'
         : savingState === 'error'
           ? 'No se pudo guardar el evento.'
           : null;
