@@ -142,7 +142,7 @@ const EventManager: React.FC = () => {
         throw new Error(message);
       }
       //obtener asistentes al evento seleccionado
-      const attendeesResponse = await fetch(`/api/organizer/events/${eventId}/attendees`);
+      const attendeesResponse = await fetch(`/api/organizer/cancelation/${eventId}/attendees`);
 
       if (attendeesResponse.ok) {
         const attendeesData = await attendeesResponse.json();

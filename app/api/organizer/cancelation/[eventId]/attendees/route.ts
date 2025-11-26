@@ -6,7 +6,7 @@ export async function GET(request: NextRequest, { params }: { params: { eventId:
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
 
     // Llamar al backend para obtener los asistentes
-    const response = await fetch(`${API_URL}/cancelation/${eventId}/asistentes`, {
+    const response = await fetch(`${API_URL}/eventos/${eventId}/asistentes`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
