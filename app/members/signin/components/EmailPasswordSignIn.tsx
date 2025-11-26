@@ -60,11 +60,9 @@ const EmailPasswordSignInForm: React.FC = () => {
         }
 
         if (rolPrincipal === 'ADMINISTRADOR') {
-          console.log('🔴 [LOGIN] Redirigiendo a /administrator');
           alert('¡Bienvenido Administrador!');
           router.push('/administrator');
         } else {
-          console.log('🟢 [LOGIN] Redirigiendo a / (rol:', rolPrincipal, ')');
           alert('¡Inicio de sesión exitoso!');
           router.push('/');
         }
