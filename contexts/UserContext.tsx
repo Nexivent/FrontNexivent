@@ -19,31 +19,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('auth_token');
-    const storedExpiry = localStorage.getItem('token_expiry');
-    if (storedUser && storedUser !== 'undefined' && storedToken && storedToken !== 'undefined') {
-      try {
+    try {
+      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem('auth_token');
+
+      if (storedUser && storedUser !== 'undefined' && storedToken && storedToken !== 'undefined') {
         const parsedUser = JSON.parse(storedUser);
-        if (parsedUser && typeof parsedUser === 'object') {
-          if (storedExpiry && Date.now() < parseInt(storedExpiry)) {
-            setUser(parsedUser);
-          } else {
-            logout();
-          }
-        } else {
-          localStorage.removeItem('user');
-          localStorage.removeItem('auth_token');
-        }
-      } catch (error) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('auth_token');
+        setUser(parsedUser);
+      } else {
+        console.log('ℹ️ [CONTEXT] No hay sesión guardada');
       }
-    } else {
-      if (storedUser === 'undefined') localStorage.removeItem('user');
-      if (storedToken === 'undefined') localStorage.removeItem('auth_token');
+    } catch (error) {
+      console.error('💥 [CONTEXT] Error al cargar el usuario desde localStorage:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, contrasena: string) => {
@@ -53,11 +45,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (result.success && result.data) {
         setUser(result.data.usuario);
-        setUser(result.data.usuario);
+        localStorage.setItem('user', JSON.stringify(result.data.usuario));
+        localStorage.setItem('auth_token', result.data.token);
+        localStorage.setItem('token_expiry', (Date.now() + 24 * 60 * 60 * 1000).toString());
       } else {
         console.error('❌ [CONTEXT] Error en login:', result.message);
       }
-
       return {
         success: result.success,
         message: result.message,
