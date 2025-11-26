@@ -144,25 +144,20 @@ export default function ReportPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Categoría
-              </label>
-              <select
-                name="idCategoria"
-                value={filters.idCategoria}
-                onChange={handleChange}
-                className="border border-gray-600 bg-gray-900 text-white rounded p-2 w-40"
-              >
-                <option value="">Todas</option>
-                <option value="1">Conciertos</option>
-                <option value="2">Ferias y Expos</option>
-                <option value="3">Teatro</option>
-                <option value="4">Gastronomía</option>
-                <option value="5">Deportes</option>
-                {/* Puedes añadir más categorías según tu BD */}
-              </select>
-            </div>
+            <select
+              name="idCategoria"
+              value={filters.idCategoria}
+              onChange={handleChange}
+              className="border border-gray-600 bg-white text-black rounded p-2 w-40"
+            >
+              <option value="">Todas</option>
+              <option value="1">Conciertos</option>
+              <option value="5">Negocios</option>
+              <option value="3">Teatro</option>
+              <option value="6">Gastronomía</option>
+              <option value="2">Deportes</option>
+              <option value="4">Tecnología</option>
+            </select>
 
 
             <div>
@@ -187,7 +182,7 @@ export default function ReportPage() {
                 name="estado"
                 value={filters.estado}
                 onChange={handleChange}
-                className="border border-gray-600 bg-gray-900 text-white rounded p-2"
+                className="border border-gray-600 bg-white text-black rounded p-2 w-40"
               >
                 <option value="">Todos</option>
                 <option value="PUBLICADO">Publicado</option>
@@ -254,7 +249,7 @@ export default function ReportPage() {
                 name="estado"
                 value={tableFilters.estado}
                 onChange={handleTableChange}
-                className="border border-gray-500 bg-gray-900 text-white rounded p-2"
+                className="border border-gray-600 bg-white text-black rounded p-2 w-40"
               >
                 <option value="">Todos</option>
                 <option value="PUBLICADO">Publicado</option>
@@ -305,7 +300,7 @@ export default function ReportPage() {
                         {ev.entradasVendidas.toLocaleString()}
                       </td>
                       <td className="border border-white/30 p-3 text-right">
-                        ${ev.recaudacionTotal.toLocaleString()}
+                        S/.{ev.recaudacionTotal.toLocaleString()}
                       </td>
                     </tr>
                   ))}

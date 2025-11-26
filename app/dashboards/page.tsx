@@ -75,9 +75,10 @@ export default function DashboardPage() {
       0
     ),
     recaudacionTotal: reportData.reduce(
-      (acc: number, e: any) => acc + (e.recaudacion || 0),
+      (acc: number, e: any) => acc + (e.recaudacionTotal || 0),
       0
     ),
+
   };
 
   // 📊 Agrupación por categoría
@@ -89,15 +90,15 @@ export default function DashboardPage() {
           recaudacionTotal: 0,
         };
       }
-      acc[item.categoria].recaudacionTotal += item.recaudacion || 0;
+      acc[item.categoria].recaudacionTotal += item.recaudacionTotal || 0;
       return acc;
     }, {})
   );
 
   // 🏆 Top 10 eventos
   const topEventos = [...reportData]
-    .sort((a, b) => b.recaudacion - a.recaudacion)
-    .slice(0, 10);
+    .sort((a, b) => (b.recaudacionTotal || 0) - (a.recaudacionTotal || 0))
+
 
   return (
     <Master>
@@ -125,7 +126,7 @@ export default function DashboardPage() {
           <Card><CardContent><h3 className="text-gray-400">Cancelados</h3><p className="text-3xl font-bold">{summary.totalCancelados}</p></CardContent></Card>
           <Card><CardContent><h3 className="text-gray-400">Borradores</h3><p className="text-3xl font-bold">{summary.totalBorradores}</p></CardContent></Card>
           <Card><CardContent><h3 className="text-gray-400">Entradas vendidas</h3><p className="text-3xl font-bold">{summary.entradasVendidasTotales.toLocaleString()}</p></CardContent></Card>
-          <Card><CardContent><h3 className="text-gray-400">Recaudación total</h3><p className="text-3xl font-bold">${summary.recaudacionTotal.toLocaleString()}</p></CardContent></Card>
+          <Card><CardContent><h3 className="text-gray-400">Recaudación total</h3><p className="text-3xl font-bold">S/. {summary.recaudacionTotal.toLocaleString()}</p></CardContent></Card>
         </section>
 
         {/* 📊 Gráfico por categoría */}
@@ -166,7 +167,7 @@ export default function DashboardPage() {
                     <td className="p-3">{ev.titulo}</td>
                     <td className="p-3">{ev.lugar}</td>
                     <td className="p-3 text-right">{ev.entradasVendidas?.toLocaleString()}</td>
-                    <td className="p-3 text-right">${ev.recaudacion?.toLocaleString()}</td>
+                    <td className="p-3 text-right">S/. {ev.recaudacionTotal?.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

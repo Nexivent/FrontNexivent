@@ -46,7 +46,7 @@ export default function SearchPanel({ initialData }: { initialData: any[] }) {
       <div className="container center" style={{ marginTop: 20 }}>
         <input
           type="text"
-          placeholder="Buscar eventos..."
+          placeholder="Busca eventos, locales o artistas…"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}

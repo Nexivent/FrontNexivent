@@ -41,11 +41,7 @@ const Page = async () => {
             <p className="gray">Nexivent, busca eventos en Lima.</p>
           </div>
 
-          <div className="flex justify-center">
-            <div className="w-full max-w-5xl">
-              <CircleButtons />
-            </div>
-          </div>
+
         </div>
       </Section>
 
