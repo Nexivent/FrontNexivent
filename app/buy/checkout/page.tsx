@@ -57,6 +57,12 @@ const Page: React.FC = () => {
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  
+  // Estados para el formulario de tarjeta (solo simulación)
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCVV, setCardCVV] = useState('');
 
   useEffect(() => {
     const storedData = sessionStorage.getItem('reservationData');
@@ -127,6 +133,43 @@ const Page: React.FC = () => {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Formatear número de tarjeta (agregar espacios cada 4 dígitos)
+  const formatCardNumber = (value: string): string => {
+    const cleaned = value.replace(/\s/g, '');
+    const groups = cleaned.match(/.{1,4}/g);
+    return groups ? groups.join(' ') : cleaned;
+  };
+
+  // Formatear fecha de expiración (MM/YY)
+  const formatExpiry = (value: string): string => {
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length >= 2) {
+      return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}`;
+    }
+    return cleaned;
+  };
+
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 16) {
+      setCardNumber(value);
+    }
+  };
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 4) {
+      setCardExpiry(value);
+    }
+  };
+
+  const handleCVVChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 3) {
+      setCardCVV(value);
+    }
+  };
+
   const handlePayment = async () => {
     if (!selectedMethod) {
       showAlert({ 
@@ -134,6 +177,41 @@ const Page: React.FC = () => {
         text: 'Por favor selecciona un método de pago.' 
       });
       return;
+    }
+
+    // Validar campos de tarjeta si se seleccionó ese método
+    if (selectedMethod === 'card') {
+      if (!cardNumber || !cardName || !cardExpiry || !cardCVV) {
+        showAlert({ 
+          type: 'error', 
+          text: 'Por favor completa todos los campos de la tarjeta.' 
+        });
+        return;
+      }
+      
+      if (cardNumber.length !== 16) {
+        showAlert({ 
+          type: 'error', 
+          text: 'El número de tarjeta debe tener 16 dígitos.' 
+        });
+        return;
+      }
+      
+      if (cardExpiry.length !== 4) {
+        showAlert({ 
+          type: 'error', 
+          text: 'La fecha de expiración debe tener formato MM/YY.' 
+        });
+        return;
+      }
+      
+      if (cardCVV.length !== 3) {
+        showAlert({ 
+          type: 'error', 
+          text: 'El CVV debe tener 3 dígitos.' 
+        });
+        return;
+      }
     }
 
     if (!reservationData) return;
@@ -276,6 +354,69 @@ const Page: React.FC = () => {
                 <span className='payment-text'>Visa / Mastercard</span>
               </button>
 
+              {/* Formulario de tarjeta */}
+              {selectedMethod === 'card' && (
+                <div className='payment-form card-form'>
+                  <div className='form-group'>
+                    <label htmlFor='cardNumber'>Número de tarjeta</label>
+                    <input
+                      id='cardNumber'
+                      type='text'
+                      placeholder='1234 5678 9012 3456'
+                      value={formatCardNumber(cardNumber)}
+                      onChange={handleCardNumberChange}
+                      disabled={submitting}
+                      maxLength={19}
+                    />
+                  </div>
+
+                  <div className='form-group'>
+                    <label htmlFor='cardName'>Nombre en la tarjeta</label>
+                    <input
+                      id='cardName'
+                      type='text'
+                      placeholder='JUAN GARCIA'
+                      value={cardName}
+                      onChange={(e) => setCardName(e.target.value.toUpperCase())}
+                      disabled={submitting}
+                    />
+                  </div>
+
+                  <div className='form-row'>
+                    <div className='form-group'>
+                      <label htmlFor='cardExpiry'>Fecha de expiración</label>
+                      <input
+                        id='cardExpiry'
+                        type='text'
+                        placeholder='MM/YY'
+                        value={formatExpiry(cardExpiry)}
+                        onChange={handleExpiryChange}
+                        disabled={submitting}
+                        maxLength={5}
+                      />
+                    </div>
+
+                    <div className='form-group'>
+                      <label htmlFor='cardCVV'>CVV</label>
+                      <input
+                        id='cardCVV'
+                        type='text'
+                        placeholder='123'
+                        value={cardCVV}
+                        onChange={handleCVVChange}
+                        disabled={submitting}
+                        maxLength={3}
+                      />
+                    </div>
+                  </div>
+
+                  <div className='payment-info'>
+                    <span className='material-symbols-outlined'>lock</span>
+                    <span>Tus datos están protegidos</span>
+                  </div>
+                </div>
+              )}
+
               {/* Yape */}
               <button
                 className={`payment-option ${selectedMethod === 'yape' ? 'selected' : ''}`}
@@ -290,6 +431,26 @@ const Page: React.FC = () => {
                 <span className='material-symbols-outlined payment-icon'>smartphone</span>
                 <span className='payment-text'>Yape</span>
               </button>
+
+              {/* Imagen de Yape */}
+              {selectedMethod === 'yape' && (
+                <div className='payment-form yape-form'>
+                  <div className='yape-instructions'>
+                    <p>Escanea el código QR con tu app de Yape:</p>
+                  </div>
+                  <div className='yape-qr-container'>
+                    <img 
+                      src='https://nexivent-multimedia.s3.us-east-2.amazonaws.com/yape.jpg' 
+                      alt='QR de Yape' 
+                      className='yape-qr'
+                    />
+                  </div>
+                  <div className='payment-info'>
+                    <span className='material-symbols-outlined'>info</span>
+                    <span>Después de yapear, presiona &quot;Pagar&quot; para confirmar tu compra</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Botón de pagar */}
@@ -429,8 +590,6 @@ const Page: React.FC = () => {
           transition: border-color 0.3s ease;
         }
 
-
-        
         .payment-option.selected .radio-outer {
           border-color: #cddc39;
         }
@@ -457,6 +616,124 @@ const Page: React.FC = () => {
           font-weight: 500;
         }
 
+        /* Formularios de pago */
+        .payment-form {
+          margin-top: 1.5rem;
+          padding: 1.5rem;
+          background: #000;
+          border: 1px solid #333;
+          border-radius: 8px;
+          animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Formulario de tarjeta */
+        .card-form .form-group {
+          margin-bottom: 1.25rem;
+        }
+
+        .card-form .form-group:last-of-type {
+          margin-bottom: 0;
+        }
+
+        .card-form label {
+          display: block;
+          color: #999;
+          font-size: 0.85rem;
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+        }
+
+        .card-form input {
+          width: 100%;
+          background: #1a1a1a;
+          border: 1px solid #333;
+          border-radius: 6px;
+          padding: 0.875rem;
+          color: #fff;
+          font-size: 1rem;
+          transition: all 0.3s ease;
+          font-family: 'Courier New', monospace;
+          letter-spacing: 0.5px;
+        }
+
+        .card-form input:focus {
+          outline: none;
+          border-color: #cddc39;
+          background: rgba(205, 220, 57, 0.05);
+        }
+
+        .card-form input:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .card-form input::placeholder {
+          color: #555;
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 1rem;
+        }
+
+        /* Formulario de Yape */
+        .yape-form {
+          text-align: center;
+        }
+
+        .yape-instructions {
+          margin-bottom: 1.5rem;
+        }
+
+        .yape-instructions p {
+          color: #999;
+          font-size: 0.95rem;
+        }
+
+        .yape-qr-container {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .yape-qr {
+          max-width: 300px;
+          width: 100%;
+          height: auto;
+          border-radius: 8px;
+          border: 2px solid #333;
+        }
+
+        /* Info de seguridad */
+        .payment-info {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid #333;
+          color: #999;
+          font-size: 0.85rem;
+        }
+
+        .payment-info .material-symbols-outlined {
+          font-size: 1rem;
+          color: #cddc39;
+        }
+
         .form-buttons {
           margin-top: 2rem;
         }
@@ -477,6 +754,18 @@ const Page: React.FC = () => {
 
           .payment-option {
             padding: 1rem;
+          }
+
+          .payment-form {
+            padding: 1rem;
+          }
+
+          .form-row {
+            grid-template-columns: 1fr;
+          }
+
+          .yape-qr {
+            max-width: 250px;
           }
         }
       `}</style>
