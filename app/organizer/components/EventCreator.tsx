@@ -439,6 +439,16 @@ const todayIsoDate = useMemo(() => {
       publishComplete,
     };
   }, [form]);
+  const isPastEvent = useMemo(() => {
+    if (!form.eventDates || form.eventDates.length === 0) return false;
+    const now = new Date();
+    return form.eventDates.every((date) => {
+      const parsed = new Date(date.fecha);
+      return !Number.isNaN(parsed.getTime()) && parsed < now;
+    });
+  }, [form.eventDates]);
+  const isPublishedEdit = Boolean(eventId) && form.estado === 'PUBLICADO';
+  const isLockedPast = Boolean(eventId) && isPastEvent;
 
   const checklist = [
     {
@@ -757,6 +767,7 @@ const todayIsoDate = useMemo(() => {
       };
     });
   };
+  
 
   const handleMediaUpload = async (key: MediaKey, file: File | null | undefined) => {
     if (!file) return;
@@ -852,6 +863,10 @@ const todayIsoDate = useMemo(() => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (savingState === 'saving') return;
+    if (isPastEvent) {
+      setValidationErrors(['No puedes editar un evento que ya finalizó.']);
+      return;
+    }
     const nativeEvent = event.nativeEvent as Event & { submitter?: EventTarget | null };
     const submitter = (nativeEvent.submitter as HTMLButtonElement | null) ?? null;
     const intentState = submitter?.dataset.intent as EventState | undefined;
@@ -916,18 +931,23 @@ const todayIsoDate = useMemo(() => {
         return 0;
       };
 
-      // EditarEventoRequest solo acepta campos puntuales: lugar, workflow/flag, fechas existentes y usuario.
-      const buildUpdatePayload = () => ({
+      // EditarEventoRequest (API real) solo acepta cambios puntuales y no crea nuevas entidades.
+        const buildUpdatePayload = () => ({
+        nuevaDescripcion: payload.descripcion,
+        nuevaImagenPortada: payload.imagenPortada,
+        nuevaImagenPresentacion: payload.imagenLugar,
+        nuevoVideo: payload.videoUrl,
         nuevoLugar: payload.lugar,
         nuevoEstadoWorkflow: estadoToWorkflow(payload.estado),
-        nuevoEstadoFlag: payload.estado === 'CANCELADO' ? 0 : 1,
-        fechas: payload.eventDates.map((date) => ({
-          idFechaEvento: date.idFechaEvento,
-          idFecha: date.idFecha,
-          nuevaFecha: date.fecha,
-          nuevaHoraInicio: date.horaInicio,
-          nuevaHoraFin: date.horaFin,
-        })),
+        fechas: isPublishedEdit || isLockedPast
+          ? [] // no tocar fechas en eventos publicados o pasados
+          : payload.eventDates.map((date) => ({
+              idFechaEvento: date.idFechaEvento,
+              idFecha: date.idFecha,
+              nuevaFecha: date.fecha,
+              nuevaHoraInicio: date.horaInicio,
+              nuevaHoraFin: date.horaFin,
+            })),
         usuarioModificacion: resolvedOrganizerId,
       });
 
@@ -1026,7 +1046,7 @@ const todayIsoDate = useMemo(() => {
                   <select
                     className='input-text'
                     value={form.idCategoria === 0 ? '' : form.idCategoria}
-                    disabled={categoryStatus === 'loading'}
+                    disabled={categoryStatus === 'loading' || isPublishedEdit}
                     onChange={(event) =>
                       setForm((previous) => ({
                         ...previous,
@@ -1061,6 +1081,7 @@ const todayIsoDate = useMemo(() => {
                   maxLength={160}
                   value={form.titulo}
                   placeholder='Ej. Festival urbano en Lima'
+                  disabled={isPublishedEdit}
                   onChange={(event) =>
                     setForm((previous) => ({ ...previous, titulo: event.target.value }))
                   }
@@ -1086,6 +1107,7 @@ const todayIsoDate = useMemo(() => {
                   maxLength={180}
                   value={form.lugar}
                   placeholder='Av. Arequipa 1234 - Miraflores'
+                  disabled={categoryStatus === 'loading' || isPublishedEdit}
                   onChange={(event) =>
                     setForm((previous) => ({ ...previous, lugar: event.target.value }))
                   }
@@ -1128,7 +1150,8 @@ const todayIsoDate = useMemo(() => {
                   ))}
                 </div>
               )}
-              <div className='field-grid three-columns new-date'>
+              {!isPublishedEdit && (
+              <div className='field-grid three-columns new-date'> 
                 <label className='field'>
                   <span className='field-label'>Fecha</span>
                   <input
@@ -1141,6 +1164,7 @@ const todayIsoDate = useMemo(() => {
                     }
                   />
                 </label>
+
                 <label className='field'>
                   <span className='field-label'>Hora inicio</span>
                   <input
@@ -1155,6 +1179,7 @@ const todayIsoDate = useMemo(() => {
                     }
                   />
                 </label>
+
                 <label className='field'>
                   <span className='field-label'>Hora fin</span>
                   <input
@@ -1167,13 +1192,17 @@ const todayIsoDate = useMemo(() => {
                   />
                 </label>
               </div>
-              <Button
-                type='button'
-                color='gray-overlay'
-                text='Agregar fecha'
-                leftIcon='event_available'
-                onClick={() => handleAddEventDate()}
-              />
+            )}
+              {!isPublishedEdit && (
+                <Button
+                  type='button'
+                  color='gray-overlay'
+                  text='Agregar fecha'
+                  leftIcon='event_available'
+                  onClick={() => handleAddEventDate()}
+                />
+              )}
+
               {dateMessage !== null && <p className='field-hint'>{dateMessage}</p>}
             </section>
 
@@ -1273,35 +1302,43 @@ const todayIsoDate = useMemo(() => {
                   </div>
                 ))}
               </div>
-              <div className='field-grid two-columns new-sector'>
-                <label className='field'>
-                  <span className='field-label'>Nuevo sector</span>
-                  <input
-                    className='input-text'
-                    type='text'
-                    value={newSectorName}
-                    onChange={(event) => setNewSectorName(event.target.value)}
-                    placeholder='Ej. Balcón'
-                  />
-                </label>
-                <label className='field'>
-                  <span className='field-label'>Capacidad</span>
-                  <input
-                    className='input-text'
-                    type='number'
-                    min={0}
-                    value={newSectorCapacity}
-                    onChange={(event) => setNewSectorCapacity(event.target.value)}
-                  />
-                </label>
-              </div>
-              <Button
-                type='button'
-                color='gray-overlay'
-                text='Agregar sector'
-                leftIcon='add'
-                onClick={() => handleAddSector()}
-              />
+              {!isPublishedEdit && (
+  <>
+    <div className='field-grid two-columns new-sector'>
+      <label className='field'>
+        <span className='field-label'>Nuevo sector</span>
+        <input
+          className='input-text'
+          type='text'
+          value={newSectorName}
+          onChange={(event) => setNewSectorName(event.target.value)}
+          placeholder='Ej. Balcón'
+        />
+      </label>
+
+      <label className='field'>
+        <span className='field-label'>Capacidad</span>
+        <input
+          className='input-text'
+          type='number'
+          min={0}
+          value={newSectorCapacity}
+          disabled={isPublishedEdit}
+          onChange={(event) => setNewSectorCapacity(event.target.value)}
+        />
+      </label>
+    </div>
+
+    <Button
+      type='button'
+      color='gray-overlay'
+      text='Agregar sector'
+      leftIcon='add'
+      onClick={() => handleAddSector()}
+    />
+  </>
+)}
+
               {sectorMessage !== null && <p className='field-hint'>{sectorMessage}</p>}
             </section>
 
@@ -1320,7 +1357,7 @@ const todayIsoDate = useMemo(() => {
                       type='button'
                       className='icon-button danger'
                       onClick={() => handleRemoveProfile(profile.id)}
-                      disabled={form.perfiles.length === 1}
+                      disabled={isPublishedEdit || form.perfiles.length === 1}
                       aria-label={`Eliminar perfil ${profile.label}`}
                     >
                       <span className='material-symbols-outlined'>close</span>
@@ -1328,25 +1365,33 @@ const todayIsoDate = useMemo(() => {
                   </div>
                 ))}
               </div>
-              <div className='field-grid two-columns new-entity'>
-                <label className='field'>
-                  <span className='field-label'>Nombre del perfil</span>
-                  <input
-                    className='input-text'
-                    type='text'
-                    value={newProfileLabel}
-                    onChange={(event) => setNewProfileLabel(event.target.value)}
-                    placeholder='Ej. Adulto mayor'
-                  />
-                </label>
-              </div>
-              <Button
-                type='button'
-                color='gray-overlay'
-                text='Agregar perfil'
-                leftIcon='person_add'
-                onClick={() => handleAddProfile()}
-              />
+              {!isPublishedEdit && (
+  <>
+    <div className='field-grid two-columns new-entity'>
+      <label className='field'>
+        <span className='field-label'>Nombre del perfil</span>
+        <input
+          className='input-text'
+          type='text'
+          value={newProfileLabel}
+          disabled={isPublishedEdit}
+          onChange={(event) => setNewProfileLabel(event.target.value)}
+          placeholder='Ej. Adulto mayor'
+        />
+      </label>
+    </div>
+
+    <Button
+      type='button'
+      color='gray-overlay'
+      text='Agregar perfil'
+      leftIcon='person_add'
+      disabled={isPublishedEdit}
+      onClick={() => handleAddProfile()}
+    />
+  </>
+)}
+
               {profileMessage !== null && <p className='field-hint'>{profileMessage}</p>}
             </section>
 
@@ -1365,7 +1410,7 @@ const todayIsoDate = useMemo(() => {
                       type='button'
                       className='icon-button danger'
                       onClick={() => handleRemoveTicketType(ticket.id)}
-                      disabled={form.tiposTicket.length === 1}
+                      disabled={isPublishedEdit || form.tiposTicket.length === 1}
                       aria-label={`Eliminar tipo ${ticket.label}`}
                     >
                       <span className='material-symbols-outlined'>close</span>
@@ -1373,25 +1418,33 @@ const todayIsoDate = useMemo(() => {
                   </div>
                 ))}
               </div>
-              <div className='field-grid two-columns new-entity'>
-                <label className='field'>
-                  <span className='field-label'>Nombre del tipo</span>
-                  <input
-                    className='input-text'
-                    type='text'
-                    value={newTicketLabel}
-                    onChange={(event) => setNewTicketLabel(event.target.value)}
-                    placeholder='Ej. Preventa fan club'
-                  />
-                </label>
-              </div>
-              <Button
-                type='button'
-                color='gray-overlay'
-                text='Agregar tipo'
-                leftIcon='confirmation_number'
-                onClick={() => handleAddTicketType()}
-              />
+              {!isPublishedEdit && (
+  <>
+    <div className='field-grid two-columns new-entity'>
+      <label className='field'>
+        <span className='field-label'>Nombre del tipo</span>
+        <input
+          className='input-text'
+          type='text'
+          value={newTicketLabel}
+          disabled={isPublishedEdit}
+          onChange={(event) => setNewTicketLabel(event.target.value)}
+          placeholder='Ej. Preventa fan club'
+        />
+      </label>
+    </div>
+
+    <Button
+      type='button'
+      color='gray-overlay'
+      text='Agregar tipo'
+      leftIcon='confirmation_number'
+      disabled={isPublishedEdit}
+      onClick={() => handleAddTicketType()}
+    />
+  </>
+)}
+
               {ticketMessage !== null && <p className='field-hint'>{ticketMessage}</p>}
             </section>
 
@@ -1427,6 +1480,7 @@ const todayIsoDate = useMemo(() => {
                                   min={0}
                                   step="any"
                                   value={form.precios[sector.id]?.[profile.id]?.[ticket.id] ?? 0}
+                                  disabled={isPublishedEdit}
                                   onChange={(event) =>
                                     handlePriceChange(
                                       sector.id,
@@ -1458,21 +1512,24 @@ const todayIsoDate = useMemo(() => {
             )}
             <section className='organizer-panel organizer-actions'>
               <div className='button-row'>
-                <Button
-                  type='submit'
-                  color='gray-overlay'
-                  text='Guardar borrador'
-                  leftIcon='save'
-                  dataIntent='BORRADOR'
-                  disabled={savingState === 'saving'}
-                />
+                {!isPublishedEdit && (
+                  <Button
+                    type='submit'
+                    color='gray-overlay'
+                    text='Guardar borrador'
+                    leftIcon='save'
+                    dataIntent='BORRADOR'
+                    disabled={savingState === 'saving' || isLockedPast}
+                  />
+                )}
+
                 <Button
                   type='submit'
                   color='yellow-filled'
-                  text='Publicar evento'
+                  text= {!isPublishedEdit? 'Publicar evento': 'Actualizar y mantener publicado'}
                   rightIcon='rocket_launch'
                   dataIntent='PUBLICADO'
-                  disabled={!stats.publishReady || savingState === 'saving'}
+                  disabled={!stats.publishReady || savingState === 'saving' || isLockedPast}
                 />
               </div>
               {savingMessage !== null && <p className='field-hint'>{savingMessage}</p>}

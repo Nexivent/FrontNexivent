@@ -242,7 +242,7 @@ const EventManager: React.FC = () => {
                     {filteredEvents.map((event) => {
                         const primaryDate = event.fechas[0];
                         const isPast = isEventPast(event.fechas);
-                        const canEdit = event.estado === 'BORRADOR';
+                        const canEdit = (event.estado === 'BORRADOR' || event.estado === 'PUBLICADO') && !isPast;
                         const canCancel = !isPast && event.estado !== 'CANCELADO';
 
                         return (
