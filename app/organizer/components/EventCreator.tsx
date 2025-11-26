@@ -891,41 +891,20 @@ const EventCreator: React.FC = () => {
         return 0;
       };
 
-      const buildUpdatePayload = () => {
-        const firstDate = payload.eventDates[0];
-        const lastDate = payload.eventDates[payload.eventDates.length - 1];
-        const fechaIni = firstDate?.fecha ?? '';
-        const fechaFin = lastDate?.fecha ?? '';
-
-        return {
-          nuevoLugar: payload.lugar,
-          nuevoEstadoWorkflow: estadoToWorkflow(payload.estado),
-          nuevoEstadoFlag: payload.estado === 'CANCELADO' ? 0 : 1,
-          fechas: payload.eventDates.map((date) => ({
-            idFechaEvento: date.idFechaEvento,
-            idFecha: date.idFecha,
-            nuevaFecha: date.fecha,
-            nuevaHoraInicio: date.horaInicio,
-            nuevaHoraFin: date.horaFin,
-          })),
-          sectores: payload.sectores.map((sector) => ({
-            idSector: Number(sector.id) || 0,
-            totalEntradas: sector.capacidad,
-          })),
-          perfiles: payload.perfiles.map((profile) => ({
-            idPerfil: Number(profile.id) || 0,
-            nombre: profile.label,
-          })),
-          tiposTicket: payload.tiposTicket.map((ticket) => ({
-            idTipoTicket: Number(ticket.id) || 0,
-            nombre: ticket.label,
-            fechaIni,
-            fechaFin,
-            estado: 1,
-          })),
-          usuarioModificacion: resolvedOrganizerId,
-        };
-      };
+      // EditarEventoRequest solo acepta campos puntuales: lugar, workflow/flag, fechas existentes y usuario.
+      const buildUpdatePayload = () => ({
+        nuevoLugar: payload.lugar,
+        nuevoEstadoWorkflow: estadoToWorkflow(payload.estado),
+        nuevoEstadoFlag: payload.estado === 'CANCELADO' ? 0 : 1,
+        fechas: payload.eventDates.map((date) => ({
+          idFechaEvento: date.idFechaEvento,
+          idFecha: date.idFecha,
+          nuevaFecha: date.fecha,
+          nuevaHoraInicio: date.horaInicio,
+          nuevaHoraFin: date.horaFin,
+        })),
+        usuarioModificacion: resolvedOrganizerId,
+      });
 
       const body = isEditing ? JSON.stringify(buildUpdatePayload()) : JSON.stringify(payload);
       console.log('Enviando a endpoint:', body);
