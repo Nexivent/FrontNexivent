@@ -30,10 +30,7 @@ const parseResponseBody = async (response: Response) => {
 
 export const dynamic = 'force-dynamic';
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const eventId = resolveNumeric(resolvedParams.id);
   if (eventId === null) {

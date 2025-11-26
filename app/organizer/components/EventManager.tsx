@@ -9,311 +9,349 @@ import { resolveOrganizerIdFromUser } from '@utils/organizer';
 type EventState = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
 
 type EventDate = {
-    idFechaEvento: number;
-    idFecha: number;
-    fecha: string;
-    horaInicio: string;
-    horaFin: string;
+  idFechaEvento: number;
+  idFecha: number;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
 };
 
 type ManagedEvent = {
-    idEvento: number;
-    titulo: string;
-    lugar: string;
-    estado: EventState;
-    fechas: EventDate[];
-    imagenPortada: string;
+  idEvento: number;
+  titulo: string;
+  lugar: string;
+  estado: EventState;
+  fechas: EventDate[];
+  imagenPortada: string;
 };
 
 type EventsResponse = {
-    data: ManagedEvent[];
-    metadata?: {
-        serverTime: string;
-        source: string;
-    };
+  data: ManagedEvent[];
+  metadata?: {
+    serverTime: string;
+    source: string;
+  };
 };
 
 const statusCopy: Record<EventState, string> = {
-    BORRADOR: 'Borrador',
-    PUBLICADO: 'Publicado',
-    CANCELADO: 'Cancelado',
+  BORRADOR: 'Borrador',
+  PUBLICADO: 'Publicado',
+  CANCELADO: 'Cancelado',
 };
 
 const statusColor: Record<EventState, string> = {
-    BORRADOR: 'borrador',
-    PUBLICADO: 'publicado',
-    CANCELADO: 'cancelado',
+  BORRADOR: 'borrador',
+  PUBLICADO: 'publicado',
+  CANCELADO: 'cancelado',
 };
 
 type FilterState = 'all' | EventState | 'past';
 
 const resolveUserId = (user: any) => {
-    const candidates = [
-        user?.idUsuario,
-        user?.id,
-        (user as { usuarioId?: unknown })?.usuarioId,
-        (user as { userId?: unknown })?.userId,
-    ];
-    for (const candidate of candidates) {
-        const numeric = Number(candidate);
-        if (!Number.isNaN(numeric) && numeric > 0) return numeric;
-    }
-    return null;
+  const candidates = [
+    user?.idUsuario,
+    user?.id,
+    (user as { usuarioId?: unknown })?.usuarioId,
+    (user as { userId?: unknown })?.userId,
+  ];
+  for (const candidate of candidates) {
+    const numeric = Number(candidate);
+    if (!Number.isNaN(numeric) && numeric > 0) return numeric;
+  }
+  return null;
 };
 
 const EventManager: React.FC = () => {
-    const router = useRouter();
-    const { user, loading: userLoading } = useUser();
-    const organizerId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
-    const userId = useMemo(() => resolveUserId(user), [user]);
-    const [events, setEvents] = useState<ManagedEvent[]>([]);
-    const [filter, setFilter] = useState<FilterState>('all');
-    const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
-    const [errorMessage, setErrorMessage] = useState<string>('');
+  const router = useRouter();
+  const { user, loading: userLoading } = useUser();
+  const organizerId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
+  const userId = useMemo(() => resolveUserId(user), [user]);
+  const [events, setEvents] = useState<ManagedEvent[]>([]);
+  const [filter, setFilter] = useState<FilterState>('all');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
-    const fetchEvents = useCallback(async () => {
-        if (userLoading) return;
-        if (!organizerId) {
-            setStatus('error');
-            setErrorMessage('No pudimos obtener tu ID de organizador. Inicia sesion nuevamente.');
-            return;
+  const fetchEvents = useCallback(async () => {
+    if (userLoading) return;
+    if (!organizerId) {
+      setStatus('error');
+      setErrorMessage('No pudimos obtener tu ID de organizador. Inicia sesion nuevamente.');
+      return;
+    }
+    try {
+      setStatus('loading');
+      const response = await fetch(`/api/organizer/events?organizerId=${organizerId}`, {
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('No se pudieron obtener los eventos');
+      const data = (await response.json()) as EventsResponse;
+      setEvents(data.data || []);
+      setStatus('idle');
+      setErrorMessage('');
+    } catch (error) {
+      setStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Error desconocido');
+    }
+  }, [organizerId, userLoading]);
+
+  useEffect(() => {
+    void fetchEvents();
+  }, [fetchEvents]);
+
+  const handleEdit = (eventId: number) => {
+    router.push(`/organizer/events?eventId=${eventId}`);
+  };
+
+  const handleCancel = async (eventId: number) => {
+    if (userLoading) return;
+    const actorId = userId ?? organizerId;
+    if (!actorId) {
+      setErrorMessage('No pudimos obtener tu ID de usuario/organizador para cancelar el evento.');
+      setStatus('error');
+      return;
+    }
+    if (!confirm('Estas seguro de que deseas cancelar este evento?')) return;
+
+    try {
+      setStatus('loading');
+      const event = events.find((e) => e.idEvento === eventId);
+      if (!event) return;
+      console.log(
+        'maybe',
+        JSON.stringify({
+          usuarioModificacion: actorId,
+          nuevoEstadoWorkflow: 2, // finalizado/cancelado segun backend
+          nuevoEstadoFlag: 0,
+        })
+      );
+      const response = await fetch(`/api/organizer/events/${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          usuarioModificacion: actorId,
+          nuevoEstadoWorkflow: 2, // finalizado/cancelado segun backend
+          nuevoEstadoFlag: 0,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        const message =
+          (errorPayload as { message?: string })?.message ??
+          `No se pudo cancelar el evento (${response.status}).`;
+        throw new Error(message);
+      }
+      //obtener asistentes al evento seleccionado
+      const attendeesResponse = await fetch(`/api/organizer/events/${eventId}/attendees`);
+
+      if (attendeesResponse.ok) {
+        const attendeesData = await attendeesResponse.json();
+        const attendees = attendeesData.data || [];
+
+        if (attendees.length > 0) {
+          console.log(`📧 Enviando notificaciones a ${attendees.length} asistente(s)...`);
+
+          const notificationResponse = await fetch('/api/notifications/event-cancelled', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventId: event.idEvento,
+              eventTitle: event.titulo,
+              eventDate: event.fechas[0]?.fecha || 'Fecha no definida',
+              eventLocation: event.lugar || 'Ubicación por definir',
+              attendees: attendees,
+            }),
+          });
+
+          if (notificationResponse.ok) {
+            console.log('✅ Notificaciones enviadas exitosamente');
+          } else {
+            console.warn('⚠️ No se pudieron enviar algunas notificaciones');
+          }
+        } else {
+          console.log('ℹ️ No hay asistentes para notificar');
         }
-        try {
-            setStatus('loading');
-            const response = await fetch(`/api/organizer/events?organizerId=${organizerId}`, {
-                cache: 'no-store',
-            });
-            if (!response.ok) throw new Error('No se pudieron obtener los eventos');
-            const data = (await response.json()) as EventsResponse;
-            setEvents(data.data || []);
-            setStatus('idle');
-            setErrorMessage('');
-        } catch (error) {
-            setStatus('error');
-            setErrorMessage(error instanceof Error ? error.message : 'Error desconocido');
-        }
-    }, [organizerId, userLoading]);
-
-    useEffect(() => {
-        void fetchEvents();
-    }, [fetchEvents]);
-
-    const handleEdit = (eventId: number) => {
-        router.push(`/organizer/events?eventId=${eventId}`);
-    };
-
-    const handleCancel = async (eventId: number) => {
-        if (userLoading) return;
-        const actorId = userId ?? organizerId;
-        if (!actorId) {
-            setErrorMessage('No pudimos obtener tu ID de usuario/organizador para cancelar el evento.');
-            setStatus('error');
-            return;
-        }
-        if (!confirm('Estas seguro de que deseas cancelar este evento?')) return;
-
-        try {
-            setStatus('loading');
-            const event = events.find((e) => e.idEvento === eventId);
-            if (!event) return;
-            console.log('maybe', JSON.stringify({
-                    usuarioModificacion: actorId,
-                    nuevoEstadoWorkflow: 2, // finalizado/cancelado segun backend
-                    nuevoEstadoFlag: 0,
-                }));
-            const response = await fetch(`/api/organizer/events/${eventId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    usuarioModificacion: actorId,
-                    nuevoEstadoWorkflow: 2, // finalizado/cancelado segun backend
-                    nuevoEstadoFlag: 0,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorPayload = await response.json().catch(() => null);
-                const message =
-                    (errorPayload as { message?: string })?.message ??
-                    `No se pudo cancelar el evento (${response.status}).`;
-                throw new Error(message);
-            }
-
-            await fetchEvents();
-            alert('Evento cancelado exitosamente');
-        } catch (error) {
-            setStatus('error');
-            setErrorMessage(error instanceof Error ? error.message : 'Error al cancelar el evento');
-        }
-    };
-    const isEventPast = (eventDates: EventDate[]): boolean => {
-        if (eventDates.length === 0) return false;
-        const now = new Date();
-        const allPast = eventDates.every((date) => {
-            const eventDate = new Date(date.fecha);
-            return eventDate < now;
-        });
-        return allPast;
-    };
-
-    const filteredEvents = events.filter((event) => {
-        if (filter === 'all') return true;
-        if (filter === 'past') return isEventPast(event.fechas);
-        if (filter === 'PUBLICADO') return event.estado === 'PUBLICADO' && !isEventPast(event.fechas);
-        return event.estado === filter;
+      } else {
+        console.warn('⚠️ No se pudo obtener la lista de asistentes');
+      }
+      await fetchEvents();
+      alert('Evento cancelado exitosamente');
+      //uso de emailSender para notificar a los asistentes sobre cancelacion de evento
+    } catch (error) {
+      setStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Error al cancelar el evento');
+    }
+  };
+  const isEventPast = (eventDates: EventDate[]): boolean => {
+    if (eventDates.length === 0) return false;
+    const now = new Date();
+    const allPast = eventDates.every((date) => {
+      const eventDate = new Date(date.fecha);
+      return eventDate < now;
     });
+    return allPast;
+  };
 
-    const formatDate = (date: EventDate) => {
-        const parsed = date?.fecha ? new Date(date.fecha) : null;
-        const validDate = parsed && !Number.isNaN(parsed.getTime());
-        const dateStr = validDate
-            ? parsed.toLocaleDateString('es-PE', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-            })
-            : 'Fecha por definir';
-        const start = typeof date?.horaInicio === 'string' && date.horaInicio.trim().length > 0
-            ? date.horaInicio
-            : '--:--';
-        const end = typeof date?.horaFin === 'string' && date.horaFin.trim().length > 0
-            ? date.horaFin
-            : '--:--';
-        return `${dateStr} | ${start}`;
-    };
+  const filteredEvents = events.filter((event) => {
+    if (filter === 'all') return true;
+    if (filter === 'past') return isEventPast(event.fechas);
+    if (filter === 'PUBLICADO') return event.estado === 'PUBLICADO' && !isEventPast(event.fechas);
+    return event.estado === filter;
+  });
 
-    return (
-        <div className='event-manager'>
-            {/* Filters */}
-            <div className='event-manager-filters'>
-                <div className='filter-buttons'>
-                    <button
-                        type='button'
-                        className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-                        onClick={() => setFilter('all')}
-                    >
-                        Todos ({events.length})
-                    </button>
-                    <button
-                        type='button'
-                        className={`filter-btn ${filter === 'BORRADOR' ? 'active' : ''}`}
-                        onClick={() => setFilter('BORRADOR')}
-                    >
-                        Borradores ({events.filter((e) => e.estado === 'BORRADOR').length})
-                    </button>
-                    <button
-                        type='button'
-                        className={`filter-btn ${filter === 'PUBLICADO' ? 'active' : ''}`}
-                        onClick={() => setFilter('PUBLICADO')}
-                    >
-                        Publicados ({events.filter((e) => e.estado === 'PUBLICADO' && !isEventPast(e.fechas)).length})
-                    </button>
-                    <button
-                        type='button'
-                        className={`filter-btn ${filter === 'CANCELADO' ? 'active' : ''}`}
-                        onClick={() => setFilter('CANCELADO')}
-                    >
-                        Cancelados ({events.filter((e) => e.estado === 'CANCELADO').length})
-                    </button>
-                    <button
-                        type='button'
-                        className={`filter-btn ${filter === 'past' ? 'active' : ''}`}
-                        onClick={() => setFilter('past')}
-                    >
-                        Pasados ({events.filter((e) => isEventPast(e.fechas)).length})
-                    </button>
-                </div>
-            </div>
+  const formatDate = (date: EventDate) => {
+    const parsed = date?.fecha ? new Date(date.fecha) : null;
+    const validDate = parsed && !Number.isNaN(parsed.getTime());
+    const dateStr = validDate
+      ? parsed.toLocaleDateString('es-PE', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : 'Fecha por definir';
+    const start =
+      typeof date?.horaInicio === 'string' && date.horaInicio.trim().length > 0
+        ? date.horaInicio
+        : '--:--';
+    const end =
+      typeof date?.horaFin === 'string' && date.horaFin.trim().length > 0 ? date.horaFin : '--:--';
+    return `${dateStr} | ${start}`;
+  };
 
-            {/* Status Messages */}
-            {status === 'loading' && <p className='gray'>Cargando eventos...</p>}
-            {status === 'error' && <p className='field-hint'>{errorMessage}</p>}
-
-            {/* Events List */}
-            {status === 'idle' && filteredEvents.length === 0 && (
-                <div className='empty-state'>
-                    <span className='material-symbols-outlined'>event_busy</span>
-                    <p>No hay eventos para mostrar</p>
-                </div>
-            )}
-
-            {status === 'idle' && filteredEvents.length > 0 && (
-                <div className='event-manager-grid'>
-                    {filteredEvents.map((event) => {
-                        const primaryDate = event.fechas[0];
-                        const isPast = isEventPast(event.fechas);
-                        const canEdit = (event.estado === 'BORRADOR' || event.estado === 'PUBLICADO') && !isPast;
-                        const canCancel = !isPast && event.estado !== 'CANCELADO';
-
-                        return (
-                            <div key={event.idEvento} className='event-manager-card'>
-                                {/* Event Image */}
-                                {event.imagenPortada && (
-                                    <div className='event-card-image'>
-                                        <img src={event.imagenPortada} alt={event.titulo} />
-                                    </div>
-                                )}
-
-                                {/* Event Info */}
-                                <div className='event-card-content'>
-                                    <div className='event-card-header'>
-                                        <h3>{event.titulo}</h3>
-                                        <span className={`status-pill ${statusColor[event.estado]}`}>
-                                            {statusCopy[event.estado]}
-                                        </span>
-                                    </div>
-
-                                    <div className='event-card-details'>
-                                        <div className='event-detail-item'>
-                                            <span className='material-symbols-outlined'>location_on</span>
-                                            <span>{event.lugar || 'Ubicación por definir'}</span>
-                                        </div>
-                                        {primaryDate && (
-                                            <div className='event-detail-item'>
-                                                <span className='material-symbols-outlined'>calendar_today</span>
-                                                <span>{formatDate(primaryDate)}</span>
-                                            </div>
-                                        )}
-                                        {event.fechas.length > 1 && (
-                                            <div className='event-detail-item'>
-                                                <span className='material-symbols-outlined'>event_repeat</span>
-                                                <span>{event.fechas.length} fechas programadas</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className='event-card-actions'>
-                                        {canEdit && (
-                                            <Button
-                                                color='yellow-filled'
-                                                text='Editar'
-                                                leftIcon='edit'
-                                                onClick={() => handleEdit(event.idEvento)}
-                                            />
-                                        )}
-                                        {canCancel && (
-                                            <Button
-                                                color='gray-overlay'
-                                                text='Cancelar'
-                                                leftIcon='cancel'
-                                                onClick={() => handleCancel(event.idEvento)}
-                                            />
-                                        )}
-                                        {!canEdit && !canCancel && (
-                                            <p className='gray small'>
-                                                {isPast ? 'Evento finalizado' : 'No hay acciones disponibles'}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+  return (
+    <div className='event-manager'>
+      {/* Filters */}
+      <div className='event-manager-filters'>
+        <div className='filter-buttons'>
+          <button
+            type='button'
+            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            Todos ({events.length})
+          </button>
+          <button
+            type='button'
+            className={`filter-btn ${filter === 'BORRADOR' ? 'active' : ''}`}
+            onClick={() => setFilter('BORRADOR')}
+          >
+            Borradores ({events.filter((e) => e.estado === 'BORRADOR').length})
+          </button>
+          <button
+            type='button'
+            className={`filter-btn ${filter === 'PUBLICADO' ? 'active' : ''}`}
+            onClick={() => setFilter('PUBLICADO')}
+          >
+            Publicados (
+            {events.filter((e) => e.estado === 'PUBLICADO' && !isEventPast(e.fechas)).length})
+          </button>
+          <button
+            type='button'
+            className={`filter-btn ${filter === 'CANCELADO' ? 'active' : ''}`}
+            onClick={() => setFilter('CANCELADO')}
+          >
+            Cancelados ({events.filter((e) => e.estado === 'CANCELADO').length})
+          </button>
+          <button
+            type='button'
+            className={`filter-btn ${filter === 'past' ? 'active' : ''}`}
+            onClick={() => setFilter('past')}
+          >
+            Pasados ({events.filter((e) => isEventPast(e.fechas)).length})
+          </button>
         </div>
-    );
+      </div>
+
+      {/* Status Messages */}
+      {status === 'loading' && <p className='gray'>Cargando eventos...</p>}
+      {status === 'error' && <p className='field-hint'>{errorMessage}</p>}
+
+      {/* Events List */}
+      {status === 'idle' && filteredEvents.length === 0 && (
+        <div className='empty-state'>
+          <span className='material-symbols-outlined'>event_busy</span>
+          <p>No hay eventos para mostrar</p>
+        </div>
+      )}
+
+      {status === 'idle' && filteredEvents.length > 0 && (
+        <div className='event-manager-grid'>
+          {filteredEvents.map((event) => {
+            const primaryDate = event.fechas[0];
+            const isPast = isEventPast(event.fechas);
+            const canEdit =
+              (event.estado === 'BORRADOR' || event.estado === 'PUBLICADO') && !isPast;
+            const canCancel = !isPast && event.estado !== 'CANCELADO';
+
+            return (
+              <div key={event.idEvento} className='event-manager-card'>
+                {/* Event Image */}
+                {event.imagenPortada && (
+                  <div className='event-card-image'>
+                    <img src={event.imagenPortada} alt={event.titulo} />
+                  </div>
+                )}
+
+                {/* Event Info */}
+                <div className='event-card-content'>
+                  <div className='event-card-header'>
+                    <h3>{event.titulo}</h3>
+                    <span className={`status-pill ${statusColor[event.estado]}`}>
+                      {statusCopy[event.estado]}
+                    </span>
+                  </div>
+
+                  <div className='event-card-details'>
+                    <div className='event-detail-item'>
+                      <span className='material-symbols-outlined'>location_on</span>
+                      <span>{event.lugar || 'Ubicación por definir'}</span>
+                    </div>
+                    {primaryDate && (
+                      <div className='event-detail-item'>
+                        <span className='material-symbols-outlined'>calendar_today</span>
+                        <span>{formatDate(primaryDate)}</span>
+                      </div>
+                    )}
+                    {event.fechas.length > 1 && (
+                      <div className='event-detail-item'>
+                        <span className='material-symbols-outlined'>event_repeat</span>
+                        <span>{event.fechas.length} fechas programadas</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className='event-card-actions'>
+                    {canEdit && (
+                      <Button
+                        color='yellow-filled'
+                        text='Editar'
+                        leftIcon='edit'
+                        onClick={() => handleEdit(event.idEvento)}
+                      />
+                    )}
+                    {canCancel && (
+                      <Button
+                        color='gray-overlay'
+                        text='Cancelar'
+                        leftIcon='cancel'
+                        onClick={() => handleCancel(event.idEvento)}
+                      />
+                    )}
+                    {!canEdit && !canCancel && (
+                      <p className='gray small'>
+                        {isPast ? 'Evento finalizado' : 'No hay acciones disponibles'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default EventManager;

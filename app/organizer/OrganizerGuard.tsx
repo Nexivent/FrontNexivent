@@ -80,7 +80,10 @@ const OrganizerGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =
       const token = localStorage.getItem('auth_token');
       const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
       const userId =
-        (user as any).idUsuario ?? (user as any).id ?? (user as any).usuarioId ?? (user as any).userId;
+        (user as any).idUsuario ??
+        (user as any).id ??
+        (user as any).usuarioId ??
+        (user as any).userId;
 
       if (!token || !userId) {
         setHasAccess(false);
@@ -99,7 +102,9 @@ const OrganizerGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =
         if (response.ok) {
           const payload = await response.json();
           const roles =
-            (Array.isArray(payload?.roles) && payload.roles) || (Array.isArray(payload) && payload) || [];
+            (Array.isArray(payload?.roles) && payload.roles) ||
+            (Array.isArray(payload) && payload) ||
+            [];
           const allowed = hasOrganizerRole(roles);
           setHasAccess(allowed);
           if (!allowed) {
@@ -144,7 +149,12 @@ const OrganizerGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =
               solicita acceso al equipo.
             </p>
             <div className='organizer-cta-row'>
-              <ButtonLink color='yellow-filled' text='Iniciar sesion' rightIcon='login' url='/members/signin' />
+              <ButtonLink
+                color='yellow-filled'
+                text='Iniciar sesion'
+                rightIcon='login'
+                url='/members/signin'
+              />
               <ButtonLink color='gray-overlay' text='Volver al inicio' rightIcon='home' url='/' />
             </div>
           </div>
