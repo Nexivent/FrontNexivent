@@ -13,11 +13,10 @@ const Page: React.FC = () => (
     <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='padding-bottom center'>
-          <Heading type={1} color='gray' text='Promoters' />
+          <Heading type={1} color='gray' text='Organizadores' />
           <p className='gray form-information'>
-            Whether you&apos;re selling one ticket or a hundred thousand, the Modern ticketing
-            infrastructure is designed to meet all your needs. Plus, there are no additional fees or
-            surprises added later!
+            Ya sea que estés vendiendo una entrada o cien mil, la infraestructura de Nexivent
+            está diseñada para cubrir todas tus necesidades.
           </p>
         </div>
       </div>
@@ -26,15 +25,14 @@ const Page: React.FC = () => (
     <Section>
       <div className='container'>
         <div className='center'>
-          <Heading type={5} color='gray' text='Manage everything with a single application' />
+          <Heading type={5} color='gray' text='Gestiona todo desde una sola aplicación' />
           <p className='gray form-information'>
-            With our specially designed Promoter application, you can track ticket sales in
-            real-time and admit customers at the door with your barcode scanner. Plus, it&apos;s
-            free!
+            Con nuestra aplicación para organizadores, puedes crear tus eventos, monitorear las ventas de
+            entradas en tiempo real y acceder a informes detallados
           </p>
           <div className='button-container'>
             <ButtonLink
-              text='Get started'
+              text='Comenzar'
               color='gray-filled'
               rightIcon='arrow_forward'
               url='contact'
@@ -44,84 +42,20 @@ const Page: React.FC = () => (
       </div>
     </Section>
 
-    <Section className='white-background'>
-      <div className='container'>
-        <div className='center'>
-          <Heading type={5} color='gray' text='Sustainable ticketing' />
-          <p className='gray form-information'>
-            Stunning, white-labelled pages to promote your event. To get started selling tickets
-            online with Modern ticketing, you&apos;ll first create a beautiful event website to
-            promote your event.
-          </p>
-          <div className='button-container'>
-            <ButtonLink
-              text='Get started'
-              color='gray-filled'
-              rightIcon='arrow_forward'
-              url='contact'
-            />
-          </div>
-        </div>
-      </div>
-    </Section>
 
-    <Section>
-      <div className='container'>
-        <div className='center'>
-          <Heading type={5} color='gray' text='How it works?' />
-          <p className='gray'>100% Modern Ticketing backed guarantee.</p>
-        </div>
-      </div>
 
-      <div className='carousel padding-top'>
-        <Slider>
-          <Box className='gray'>
-            <span className='material-symbols-outlined gray'>today</span>
-            <p>Break down silos between marketing, design, and development</p>
-          </Box>
-          <Box className='gray'>
-            <span className='material-symbols-outlined gray'>stacked_bar_chart</span>
-            <p>Backed by enterprise-grade security</p>
-          </Box>
-          <Box className='gray'>
-            <span className='material-symbols-outlined gray'>area_chart</span>
-            <p>We’ll partner with you to ensure success</p>
-          </Box>
-          <Box className='gray'>
-            <span className='material-symbols-outlined gray'>table_chart_view</span>
-            <p>World-class performance</p>
-          </Box>
-          <Box className='gray'>
-            <span className='material-symbols-outlined gray'>database</span>
-            <p>Harness the power of code without writing it</p>
-          </Box>
-          <Box className='gray'>
-            <span className='material-symbols-outlined gray'>pie_chart</span>
-            <p>You have a team dedicated to serving your customers individually</p>
-          </Box>
-        </Slider>
-      </div>
 
-      <div className='button-container center'>
-        <ButtonLink
-          text='Get started'
-          color='gray-filled'
-          rightIcon='arrow_forward'
-          url='contact'
-        />
-      </div>
-    </Section>
   </Master>
 );
 
-const title = 'Promoters';
+const title = 'Organizadores';
 const canonical = 'https://modern-ticketing.com/promoters';
-const description = 'Modern ticketing is a modern ticketing solution';
+const description = 'Modern Ticketing es una solución moderna de ticketing.';
 
 export const metadata: Metadata = {
   title,
   description,
-  keywords: 'modern ticketing',
+  keywords: 'ticketing, organizadores, eventos',
   alternates: { canonical },
   openGraph: {
     title,

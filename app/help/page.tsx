@@ -1,5 +1,4 @@
 import Link from 'next/link';
-
 import { type Metadata } from 'next';
 
 // components
@@ -12,126 +11,83 @@ import FormSearch from './components/FormSearch';
 
 const Page: React.FC = () => (
   <Master>
+    {/* HERO */}
     <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='center'>
-          <Heading type={1} color='gray' text='Help' />
-          <p className='gray'>Welcome to our help center. How can we help today?</p>
-
-          <div className='top-search'>
-            <FormSearch />
-          </div>
-          <div className='help-top flex flex-v-center flex-space-around'>
-            <div className='center'>
-              <Heading type={5} color='gray' text='About us' />
-              <Link href='/help/answer/1' className='blue'>
-                <span className='material-symbols-outlined yellow'>star</span>
-                What is ticketing?
-              </Link>
-            </div>
-            <div className='center'>
-              <Heading type={5} color='gray' text='Account' />
-              <Link href='/help/answer/1' className='blue'>
-                <span className='material-symbols-outlined yellow'>star</span>
-                How to sign in?
-              </Link>
-            </div>
-            <div className='center'>
-              <Heading type={5} color='gray' text='Using system' />
-              <Link href='/help/answer/1' className='blue'>
-                <span className='material-symbols-outlined yellow'>star</span>
-                How can I get my tickets?
-              </Link>
-            </div>
-          </div>
+          <Heading type={1} color='gray' text='Centro de ayuda' />
+          <p className='gray'>Encuentra respuestas a preguntas comunes y busca apoyo..</p>
         </div>
       </div>
     </Section>
 
+    {/* FAQ NUEVO — SOLO TEXTO */}
     <Section className='white-background'>
       <div className='container'>
         <div className='center'>
-          <Heading type={2} color='gray' text='Featured answers' />
-          <div className='help-bottom flex flex-space-around padding-top padding-bottom'>
-            <div className='help-bottom-box'>
-              <div className='links'>
-                <Heading type={5} color='gray' text='About us' />
-                <Link href='/help/answer/1' className='blue'>
-                  What is ticketing?
-                </Link>
-                <Link href='/help/answer/1' className='blue'>
-                  What is ticketing?
-                </Link>
-              </div>
+          <Heading type={2} color='gray' text='Preguntas frequentes' />
 
-              <ButtonLink
-                color='gray-overlay'
-                rightIcon='arrow_forward'
-                text='See all'
-                url='help/category/1'
-              />
+          <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'left' }}>
+
+            <div className='padding-bottom'>
+              <Heading type={5} color='gray' text='¿Cómo puedo comprar un ticket?' />
+              <p className='gray'>
+                Solo necesitas buscar el evento, seleccionar el tipo de entrada y completar el pago.
+                Una vez confirmado, recibirás tu E-ticket automáticamente.
+              </p>
             </div>
-            <div className='help-bottom-box'>
-              <div className='links'>
-                <Heading type={5} color='gray' text='Account' />
-                <Link href='/help/answer/1' className='blue'>
-                  How to sign in?
-                </Link>
-                <Link href='/help/answer/1' className='blue'>
-                  What is ticketing?
-                </Link>
-              </div>
 
-              <ButtonLink
-                color='gray-overlay'
-                rightIcon='arrow_forward'
-                text='See all'
-                url='help/category/1'
-              />
+            <div className='padding-bottom'>
+              <Heading type={5} color='gray' text='¿Dónde encuentro mis tickets?' />
+              <p className='gray'>
+                Tus tickets aparecen inmediatamente en tu cuenta dentro de la sección “Mis Tickets”.
+                También se envían a tu correo registrado.
+              </p>
             </div>
-            <div className='help-bottom-box'>
-              <div className='links'>
-                <Heading type={5} color='gray' text='Using system' />
-                <Link href='/help/answer/1' className='blue'>
-                  How can I get my tickets?
-                </Link>
-              </div>
 
-              <ButtonLink
-                color='gray-overlay'
-                rightIcon='arrow_forward'
-                text='See all'
-                url='help/category/1'
-              />
+            <div className='padding-bottom'>
+              <Heading type={5} color='gray' text='¿Necesito imprimir mi ticket?' />
+              <p className='gray'>
+                Para la mayoría de eventos NO es necesario imprimirlo; puedes mostrarlo desde tu celular.
+                Sin embargo, eventos deportivos sí pueden exigir impresión según Ley N°30037.
+              </p>
             </div>
-          </div>
 
-          <div className='button-container'>
-            <ButtonLink
-              color='gray-filled'
-              rightIcon='arrow_forward'
-              text='See all answers'
-              url='help/answers'
-            />
+            <div className='padding-bottom'>
+              <Heading type={5} color='gray' text='¿Qué hago si pierdo o borro mi ticket?' />
+              <p className='gray'>
+                No te preocupes, tus tickets siempre están disponibles en tu cuenta.
+                Puedes volver a descargarlos en cualquier momento.
+              </p>
+            </div>
+
+            <div className='padding-bottom'>
+              <Heading type={5} color='gray' text='¿Puedo pedir un reembolso?' />
+              <p className='gray'>
+                Los reembolsos dependen del organizador del evento. Si el evento lo permite,
+                podrás solicitarlo desde la sección de soporte.
+              </p>
+            </div>
+
           </div>
         </div>
       </div>
     </Section>
 
+    {/* FINAL CTA */}
     <Section className='gray-background'>
       <div className='container'>
         <div className='center'>
-          <Heading type={3} color='gray' text='Any questions?' />
+          <Heading type={3} color='gray' text='Más preguntas?' />
           <p className='gray'>
-            If you can&apos;t find what you are looking for or need further support please contact
-            us and we will be happy to help.
+            Si no encuentras lo que buscas o necesitas más ayuda, por favor contáctanos y estaremos encantados de ayudarte.
           </p>
 
           <div className='button-container'>
             <ButtonLink
               color='blue-filled'
               rightIcon='arrow_forward'
-              text='Contact us'
+              text='Contactanos'
               url='contact'
             />
           </div>

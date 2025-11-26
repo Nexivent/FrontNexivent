@@ -11,89 +11,84 @@ const Page: React.FC = () => (
     <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='padding-bottom center'>
-          <Heading type={1} color='gray' text='Contact us' />
+          <Heading type={1} color='gray' text='Contáctanos' />
           <p className='gray form-information'>
-            Please feel free to contact us through the following communication channels for any
-            questions, concerns, or suggestions you may have.
+            Siéntete libre de comunicarte con nosotros a través de los siguientes canales
+            para cualquier consulta, duda o sugerencia que puedas tener.
           </p>
         </div>
       </div>
     </Section>
+
     <Section className='gray-background'>
       <div className='container'>
         <div className='center'>
-          <Heading type={5} color='gray' text='Customer service' />
+          <Heading type={5} color='gray' text='Atención al cliente' />
           <p className='gray form-information'>
-            Our customer service is available Monday through Friday from <strong>9:00 AM</strong> to{' '}
-            <strong>6:00 PM</strong>, and on weekends from <strong>10:00 AM</strong> to{' '}
-            <strong>6:00 PM</strong>. Please click the button below for live assistance.
+            Nuestro servicio de atención al cliente está disponible de lunes a viernes de{' '}
+            <strong>9:00 AM</strong> a <strong>6:00 PM</strong>, y los fines de semana de{' '}
+            <strong>10:00 AM</strong> a <strong>6:00 PM</strong>
           </p>
           <div className='button-container'>
-            <ButtonLink
-              color='gray-overlay'
-              text='Live assistance'
-              rightIcon='arrow_forward'
-              url=''
-            />
             &nbsp; &nbsp;
             <ButtonLink
               color='gray-filled'
-              text='Drop us an e-mail'
+              text='Envíanos un correo'
               rightIcon='arrow_forward'
-              url=''
+              url='mailto:nexivent.tickets@gmail.com'
             />
           </div>
         </div>
       </div>
     </Section>
+
     <Section className='white-background'>
       <div className='container'>
         <div className='center'>
-          <Heading type={5} color='gray' text='How can we help you?' />
+          <Heading type={5} color='gray' text='¿Cómo podemos ayudarte?' />
           <p className='gray form-information'>
-            Would you like to browse through the help section to find the answer to your question
-            before asking us?
+            ¿Te gustaría revisar la sección de ayuda para encontrar la respuesta a tu
+            consulta antes de escribirnos?
           </p>
           <div className='button-container'>
-            <ButtonLink color='gray-filled' text='Help page' rightIcon='arrow_forward' url='help' />
+            <ButtonLink color='gray-filled' text='Página de ayuda' rightIcon='arrow_forward' url='help' />
           </div>
         </div>
       </div>
     </Section>
+
     <Section className='gray-background'>
       <div className='container'>
         <div className='center'>
-          <Heading type={5} color='gray' text='Communication details' />
+          <Heading type={5} color='gray' text='Detalles de contacto' />
           <div className='paragraph-container'>
             <p className='gray'>
-              You can directly write us to
+              Puedes escribirnos directamente a:
               <br />
-              <strong>hello@modern-ticketing.com</strong>
-              <br />
-              <br />
-              or call us at
-              <br />
-              <strong>+44 7445 5100000</strong>
+              <strong>nexivent.tickets@gmail.com</strong>
               <br />
               <br />
-              <strong>Our office address is</strong>
+              También puedes llamarnos al:
               <br />
-              233 North Road, Southbank, W2 2UL, London, UK
+              <strong>+51 999 999 999</strong>
+              <br />
+              <br />
+              <strong>Nuestra dirección de oficina</strong>
+              <br />
+              Av. Universitaria 1801, San Miguel, Lima, Perú
             </p>
           </div>
-          <div className='button-container'>
-            <ButtonLink color='yellow-filled' text='Open maps' rightIcon='arrow_forward' url='' />
-          </div>
+
         </div>
       </div>
     </Section>
   </Master>
 );
 
-const title = 'Contact us';
+const title = 'Contáctanos';
 const mainUrl = 'https://www.modern-ticketing.com';
 const canonical = `${mainUrl}/contact`;
-const description = 'Modern ticketing is a modern ticketing solution';
+const description = 'Modern ticketing es una solución moderna de ticketing';
 
 export const metadata: Metadata = {
   title,

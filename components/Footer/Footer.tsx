@@ -32,7 +32,7 @@ const Footer: React.FC = () => (
           Ayuda
         </Link>
         <Link href='/news' className='white'>
-          Noticias
+          Nosotros
         </Link>
         <Link href='/contact' className='white'>
           Contactanos

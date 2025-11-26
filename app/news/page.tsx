@@ -4,124 +4,57 @@ import { type Metadata } from 'next';
 import Master from '@components/Layout/Master';
 import Section from '@components/Section/Section';
 import Heading from '@components/Heading/Heading';
-import NewsCard from '@components/Card/NewsCard';
 
 const Page: React.FC = () => (
   <Master>
+    {/* Hero */}
     <Section className='gray-background hero-offset'>
       <div className='container'>
         <div className='padding-bottom center'>
-          <Heading type={1} color='gray' text='News' />
-          <p className='gray'>News and announcements from us.</p>
+          <Heading type={1} color='gray' text='Sobre Nosotros' />
+          <p className='gray'>
+            Somos una plataforma moderna e intuitiva diseñada para facilitar la compra,
+            gestión y validación de entradas para todo tipo de eventos.
+          </p>
         </div>
       </div>
     </Section>
-    <Section className='list-cards'>
+
+    {/* Nuestra misión */}
+    <Section className='white-background'>
       <div className='container center'>
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
-        <NewsCard
-          url='1'
-          color='red'
-          when='Tue, Sep 21, 2024 19:00'
-          name='News title goes here'
-          image='https://images.unsplash.com/photo-1531058020387-3be344556be6?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-        />
+        <Heading type={3} color='gray' text='Nuestra Misión' />
+        <p className='gray form-information'>
+          Simplificar y mejorar la experiencia de compra de entradas, brindando a los usuarios
+          un sistema rápido, seguro y transparente, mientras ofrecemos a los organizadores
+          herramientas eficientes para gestionar sus eventos.
+        </p>
       </div>
     </Section>
+
+    {/* Nuestra visión */}
+    <Section className='gray-background'>
+      <div className='container center'>
+        <Heading type={3} color='gray' text='Nuestra Visión' />
+        <p className='gray form-information'>
+          Convertirnos en la plataforma líder de ticketing en Perú,
+          impulsando la innovación en la industria del entretenimiento y
+          conectando a más personas con experiencias inolvidables.
+        </p>
+      </div>
+    </Section>
+
   </Master>
 );
 
-const title = 'News';
-const canonical = 'https://modern-ticketing.com/news';
-const description = 'Modern ticketing is a modern ticketing solution';
+const title = 'Sobre Nosotros';
+const canonical = 'https://modern-ticketing.com/about';
+const description = 'Conoce nuestra misión, visión y valores.';
 
 export const metadata: Metadata = {
   title,
   description,
-  keywords: 'modern ticketing',
+  keywords: 'sobre nosotros, misión, visión, ticketing, eventos',
   alternates: { canonical },
   openGraph: {
     title,
