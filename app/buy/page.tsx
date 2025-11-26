@@ -56,13 +56,13 @@ const Page: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [purchaseData, setPurchaseData] = useState<PurchaseData | null>(null);
   
-  // Estados para el cupón
   const [codigoCupon, setCodigoCupon] = useState('');
   const [cuponAplicado, setCuponAplicado] = useState<{
     id: number;
     tipo: number;
     valor: number;
     cantUsadaPorElUsuario: number;
+    codigo: string;
   } | null>(null);
   const [validandoCupon, setValidandoCupon] = useState(false);
 
@@ -112,7 +112,6 @@ const Page: React.FC = () => {
       return total + (price * ticket.quantity);
     }, 0);
     
-    // Aplicar descuento si hay cupón
     if (cuponAplicado) {
       const descuento = (subtotal * cuponAplicado.valor) / 100;
       return subtotal - descuento;
@@ -168,11 +167,9 @@ const Page: React.FC = () => {
       console.log('INFO: Response status:', response.status);
 
       if (!response.ok) {
-        // Cupón no válido - esto NO es un error de la app
         let errorMessage = 'Cupón no válido o expirado.';
         try {
           const errorData = await response.json();
-          // El backend devuelve "Message" con mayúscula
           errorMessage = errorData.Message || errorData.message || errorData.error || errorMessage;
           console.log('INFO: Respuesta del servidor:', errorData);
           console.log('INFO: Mensaje de error a mostrar:', errorMessage);
@@ -180,7 +177,6 @@ const Page: React.FC = () => {
           console.log('INFO: No se pudo parsear respuesta del servidor');
         }
         
-        // Mostrar alerta usando alert() del navegador
         console.log('INFO: Mostrando alerta...');
         window.alert(errorMessage);
         console.log('INFO: Alerta mostrada');
@@ -192,14 +188,18 @@ const Page: React.FC = () => {
       const cuponData = await response.json();
       console.log('SUCCESS: Cupón validado:', cuponData);
 
-      setCuponAplicado(cuponData);
+      const cuponConCodigo = {
+        ...cuponData,
+        codigo: codigoCupon
+      };
+
+      setCuponAplicado(cuponConCodigo);
       console.log('INFO: Mostrando alerta de éxito...');
       window.alert(`¡Cupón aplicado! Descuento del ${cuponData.valor}%`);
       console.log('INFO: Alerta mostrada');
       setValidandoCupon(false);
       
     } catch (error) {
-      // Solo llegamos aquí si hay un error de RED o JavaScript
       console.log('INFO: Error de conexión:', error);
       window.alert('Error de conexión. Por favor intenta nuevamente.');
       setValidandoCupon(false);
@@ -226,8 +226,6 @@ const Page: React.FC = () => {
     }
   
     const userId = user?.id ? parseInt(user.id) : 1;
-    
-    // Calcular el precio total de la orden
     const precioTotal = calculateTotal();
   
     setSubmitting(true);
@@ -238,7 +236,7 @@ const Page: React.FC = () => {
         IdEvento: event.idEvento,
         IdFechaEvento: fecha.idFechaEvento,
         IdUsuario: userId,
-        Total: precioTotal, // Precio total de la orden
+        Total: precioTotal,
         Entradas: tickets.map(ticket => ({
           idTipoTicket: ticket.idTipoTicket || ticket.id,  
           idPerfil: ticket.idPerfil || 1,                   
@@ -271,13 +269,23 @@ const Page: React.FC = () => {
   
       const expiresAt = Date.now() + (reservaData.ttlSeconds * 1000);
   
-      sessionStorage.setItem('reservationData', JSON.stringify({
+      const reservationData = {
         orderId: reservaData.orderId,
         estado: reservaData.estado,
         remainingSeconds: reservaData.ttlSeconds,
         expiresAt: expiresAt,
         purchaseData: purchaseData,
-      }));
+        cuponAplicado: cuponAplicado ? {
+          id: cuponAplicado.id,
+          codigo: cuponAplicado.codigo,
+          tipo: cuponAplicado.tipo,
+          valor: cuponAplicado.valor,
+          cantUsadaPorElUsuario: cuponAplicado.cantUsadaPorElUsuario
+        } : null
+      };
+
+      sessionStorage.setItem('reservationData', JSON.stringify(reservationData));
+      console.log('INFO: Datos de reserva guardados con cupón:', reservationData);
   
       router.push('/buy/checkout');
   
@@ -345,7 +353,6 @@ const Page: React.FC = () => {
               </div>
             </div>
 
-            {/* Sección de cupón */}
             <div className='cupon-section'>
               <Heading type={5} color='gray' text='¿Tienes un cupón de descuento?' />
               {!cuponAplicado ? (

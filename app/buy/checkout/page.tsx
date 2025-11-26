@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@contexts/UserContext';
 
 // components
 import Master from '@components/Layout/Master';
@@ -44,12 +45,20 @@ interface ReservationData {
       nombreZona: string;
     }>;
   };
+  cuponAplicado?: {
+    id: number;
+    codigo: string;
+    tipo: number;
+    valor: number;
+    cantUsadaPorElUsuario: number;
+  } | null;
 }
 
 type PaymentMethod = 'card' | 'yape' | null;
 
 const Page: React.FC = () => {
   const router = useRouter();
+  const { user } = useUser();
   const { showAlert, hideAlert } = useAlert();
 
   const [loading, setLoading] = useState(true);
@@ -58,7 +67,6 @@ const Page: React.FC = () => {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   
-  // Estados para el formulario de tarjeta (solo simulación)
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -103,7 +111,6 @@ const Page: React.FC = () => {
     }
   }, [router, showAlert]);
 
-  // Contador de tiempo
   useEffect(() => {
     if (!reservationData || timeRemaining <= 0) return;
 
@@ -133,14 +140,12 @@ const Page: React.FC = () => {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Formatear número de tarjeta (agregar espacios cada 4 dígitos)
   const formatCardNumber = (value: string): string => {
     const cleaned = value.replace(/\s/g, '');
     const groups = cleaned.match(/.{1,4}/g);
     return groups ? groups.join(' ') : cleaned;
   };
 
-  // Formatear fecha de expiración (MM/YY)
   const formatExpiry = (value: string): string => {
     const cleaned = value.replace(/\D/g, '');
     if (cleaned.length >= 2) {
@@ -179,7 +184,6 @@ const Page: React.FC = () => {
       return;
     }
 
-    // Validar campos de tarjeta si se seleccionó ese método
     if (selectedMethod === 'card') {
       if (!cardNumber || !cardName || !cardExpiry || !cardCVV) {
         showAlert({ 
@@ -220,14 +224,46 @@ const Page: React.FC = () => {
     hideAlert();
 
     try {
-      // Mapear método de pago a ID según el enum del backend
-      // MetodoTarjeta = 1, MetodoYape = 2
       const paymentMethodId = selectedMethod === 'card' ? '1' : '2';
       
       console.log('PAYMENT: Método seleccionado:', selectedMethod);
       console.log('PAYMENT: Payment ID a enviar:', paymentMethodId);
 
-      // Confirmar la orden
+      if (reservationData.cuponAplicado && user?.id) {
+        try {
+          console.log('CUPON: Registrando uso del cupón...');
+          
+          const cuponPayload = {
+            cuponId: reservationData.cuponAplicado.id,
+            usuarioId: parseInt(user.id),
+            cantUsada: reservationData.cuponAplicado.cantUsadaPorElUsuario + 1
+          };
+
+          console.log('API: Enviando a /cupon/usuario:', cuponPayload);
+
+          const cuponResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098'}/cupon/usuario`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(cuponPayload),
+            }
+          );
+
+          if (!cuponResponse.ok) {
+            const errorData = await cuponResponse.json();
+            console.warn('WARNING: Error al registrar cupón:', errorData);
+          } else {
+            const cuponResult = await cuponResponse.json();
+            console.log('SUCCESS: Cupón registrado:', cuponResult);
+          }
+        } catch (cuponError) {
+          console.error('ERROR: Error al registrar cupón:', cuponError);
+        }
+      }
+
       console.log('API: Confirmando orden:', reservationData.orderId);
 
       const confirmResponse = await fetch(
@@ -240,7 +276,7 @@ const Page: React.FC = () => {
           body: JSON.stringify({
             paymentId: paymentMethodId,
             idEvento: reservationData.purchaseData.event.idEvento,
-            fechaEvento: reservationData.purchaseData.fecha.fecha, // Formato: YYYY-MM-DD
+            fechaEvento: reservationData.purchaseData.fecha.fecha,
           }),
         }
       );
@@ -259,7 +295,6 @@ const Page: React.FC = () => {
       const confirmData = await confirmResponse.json();
       console.log('SUCCESS: Orden confirmada:', confirmData);
 
-      // Guardar que la orden fue confirmada y mantener toda la info
       sessionStorage.setItem('confirmedOrder', JSON.stringify({
         orderId: reservationData.orderId,
         estado: 'CONFIRMADA',
@@ -267,16 +302,15 @@ const Page: React.FC = () => {
         paymentMethod: selectedMethod,
         paymentMethodId: paymentMethodId,
         timestamp: Date.now(),
+        cuponUsado: reservationData.cuponAplicado || null,
       }));
 
-      // IMPORTANTE: Limpiar datos temporales Y tickets viejos
       console.log('CLEANUP: Limpiando sessionStorage...');
       sessionStorage.removeItem('purchaseData');
       sessionStorage.removeItem('reservationData');
-      sessionStorage.removeItem('ticketsData'); // Limpiar tickets de compras anteriores
+      sessionStorage.removeItem('ticketsData');
       console.log('SUCCESS: SessionStorage limpio');
 
-      // Navegar a success (donde se generarán los tickets nuevos)
       router.push('/buy/success');
 
     } catch (error) {
@@ -318,7 +352,6 @@ const Page: React.FC = () => {
       <Section className='gray-background hero-offset'>
         <div className='container'>
           <div className='checkout-container'>
-            {/* Header con botón volver */}
             <div className='checkout-header'>
               <button onClick={handleBack} className='back-button'>
                 <span className='material-symbols-outlined'>arrow_back</span>
@@ -326,20 +359,16 @@ const Page: React.FC = () => {
               </button>
             </div>
 
-            {/* Título */}
             <Heading type={1} color='white' text='Método de pago' />
 
-            {/* Contador de tiempo */}
             <div className='timer-box'>
               <span className='material-symbols-outlined'>schedule</span>
               <span>Tiempo restante: <strong>{formatTime(timeRemaining)}</strong></span>
             </div>
 
-            {/* Métodos de pago */}
             <div className='payment-methods'>
               <p className='payment-label'>Selecciona tu método de pago:</p>
 
-              {/* Tarjeta */}
               <button
                 className={`payment-option ${selectedMethod === 'card' ? 'selected' : ''}`}
                 onClick={() => setSelectedMethod('card')}
@@ -354,7 +383,6 @@ const Page: React.FC = () => {
                 <span className='payment-text'>Visa / Mastercard</span>
               </button>
 
-              {/* Formulario de tarjeta */}
               {selectedMethod === 'card' && (
                 <div className='payment-form card-form'>
                   <div className='form-group'>
@@ -417,7 +445,6 @@ const Page: React.FC = () => {
                 </div>
               )}
 
-              {/* Yape */}
               <button
                 className={`payment-option ${selectedMethod === 'yape' ? 'selected' : ''}`}
                 onClick={() => setSelectedMethod('yape')}
@@ -432,7 +459,6 @@ const Page: React.FC = () => {
                 <span className='payment-text'>Yape</span>
               </button>
 
-              {/* Imagen de Yape */}
               {selectedMethod === 'yape' && (
                 <div className='payment-form yape-form'>
                   <div className='yape-instructions'>
@@ -453,7 +479,6 @@ const Page: React.FC = () => {
               )}
             </div>
 
-            {/* Botón de pagar */}
             <div className='form-buttons'>
               <Button
                 type='button'
@@ -616,7 +641,6 @@ const Page: React.FC = () => {
           font-weight: 500;
         }
 
-        /* Formularios de pago */
         .payment-form {
           margin-top: 1.5rem;
           padding: 1.5rem;
@@ -637,7 +661,6 @@ const Page: React.FC = () => {
           }
         }
 
-        /* Formulario de tarjeta */
         .card-form .form-group {
           margin-bottom: 1.25rem;
         }
@@ -688,7 +711,6 @@ const Page: React.FC = () => {
           gap: 1rem;
         }
 
-        /* Formulario de Yape */
         .yape-form {
           text-align: center;
         }
@@ -716,7 +738,6 @@ const Page: React.FC = () => {
           border: 2px solid #333;
         }
 
-        /* Info de seguridad */
         .payment-info {
           display: flex;
           align-items: center;
