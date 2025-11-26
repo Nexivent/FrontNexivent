@@ -27,46 +27,44 @@ const EmailPasswordSignInForm: React.FC = () => {
 
   const onSubmit = async (data: FormInputs) => {
     try {
-      console.log('🔐 [LOGIN] Iniciando proceso de login...');
-      console.log('📧 [LOGIN] Email ingresado:', data.email);
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
+      const requestBody = {
+        correo: data.email,
+        contrasenha: data.password,
+      };
+
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          correo: data.email,
-          contrasenha: data.password,
-        }),
+        body: JSON.stringify(requestBody),
       });
-      console.log('📥 [LOGIN] Response status:', response.status);
+
       const result = await response.json();
-      console.log('📦 [LOGIN] Response completa:', result);
+
       if (response.ok && result.token) {
-        console.log('✅ [LOGIN] Autenticación exitosa');
-        console.log('👤 [LOGIN] Usuario recibido:', result.usuario);
-        console.log('🎭 [LOGIN] Rol principal:', result.usuario.rol_principal);
-        console.log('🔑 [LOGIN] Token generado:', result.token.token.substring(0, 20) + '...');
-        // Guardar token y usuario en localStorage
         localStorage.setItem('auth_token', result.token.token);
         localStorage.setItem('user', JSON.stringify(result.usuario));
-        console.log('💾 [LOGIN] Datos guardados en localStorage');
-        // Actualizar contexto de usuario
+
+        // Actualizar contexto
         if (setUser) {
           setUser(result.usuario);
-          console.log('🔄 [LOGIN] Contexto de usuario actualizado');
         }
 
-        const rolPrincipal = result.usuario.rol_principal?.toUpperCase();
-        console.log('🎯 [LOGIN] Rol principal normalizado:', rolPrincipal);
+        // Determinar redirección
+        const rolPrincipal = result.usuario.rol_principal;
+
+        if (!rolPrincipal) {
+          console.error('⚠️ [LOGIN] rol_principal es undefined o null');
+        }
 
         if (rolPrincipal === 'ADMINISTRADOR') {
-          console.log('🔴 [LOGIN] Usuario es ADMINISTRADOR - Redirigiendo a /administrator');
+          console.log('🔴 [LOGIN] Redirigiendo a /administrator');
           alert('¡Bienvenido Administrador!');
           router.push('/administrator');
         } else {
-          console.log('🟢 [LOGIN] Usuario es CLIENTE/ORGANIZADOR - Redirigiendo a /');
+          console.log('🟢 [LOGIN] Redirigiendo a / (rol:', rolPrincipal, ')');
           alert('¡Inicio de sesión exitoso!');
           router.push('/');
         }
@@ -75,11 +73,8 @@ const EmailPasswordSignInForm: React.FC = () => {
         throw new Error(result.message || 'Credenciales incorrectas');
       }
     } catch (error: any) {
-      console.error('Error en login:', error);
+      console.error('💥 [LOGIN] Error:', error);
       alert(error.message || 'Error al iniciar sesión');
-      if (setUser) {
-        setUser(null);
-      }
     }
   };
 

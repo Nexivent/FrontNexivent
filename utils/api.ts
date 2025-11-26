@@ -27,18 +27,13 @@ export interface Usuario {
   telefono?: string;
   fecha_nacimiento?: string;
   foto?: string;
-
-  // Campos antiguos (se mantienen para no romper el flujo actual)
-  roles?: Array<{ id: number; nombre: string }>;
+  roles?: { id: number; nombre: string }[];
   rol?: string;
   idUsuario?: number;
   tipo_documento?: string;
   tipoUsuario?: string;
-
-  // Campo nuevo (se mantiene si tu backend lo envía)
   rol_principal?: string;
 }
-
 
 export interface AuthResponse {
   token: string;
