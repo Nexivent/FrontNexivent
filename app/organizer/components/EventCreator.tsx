@@ -194,11 +194,31 @@ const normalizeIdentifier = (label: string, fallbackPrefix: string) => {
     .replace(/(^-|-$)+/g, '');
   return slug.length > 0 ? slug : `${fallbackPrefix}-${Date.now()}`;
 };
+const isPastDate = (isoDate: string): boolean => {
+  if (!isoDate) return false;
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const value = new Date(y, m - 1, d);
+  const now = new Date();
+
+  // Normalizamos ambas fechas a medianoche local
+  value.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  return value.getTime() < now.getTime();
+};
 const EventCreator: React.FC = () => {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
   const { user } = useUser();
   const organizerUserId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
+const todayIsoDate = useMemo(() => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}, []);
+
 
   const [form, setForm] = useState<OrganizerEventForm>(() => createInitialForm());
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -701,6 +721,11 @@ const EventCreator: React.FC = () => {
       setDateMessage('Completa la fecha y las horas de inicio y fin.');
       return;
     }
+    if (isPastDate(fecha)) {
+      setDateMessage('La fecha debe ser hoy o posterior.');
+      return;
+    }
+
     const idTimestamp = Date.now();
     setForm((previous) => ({
       ...previous,
@@ -1110,6 +1135,7 @@ const EventCreator: React.FC = () => {
                     className='input-text'
                     type='date'
                     value={newEventDate.fecha}
+                    min={todayIsoDate}
                     onChange={(event) =>
                       setNewEventDate((previous) => ({ ...previous, fecha: event.target.value }))
                     }
