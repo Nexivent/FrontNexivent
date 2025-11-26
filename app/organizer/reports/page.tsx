@@ -95,14 +95,34 @@ const ReportsDashboard: React.FC = () => {
         if (!response.ok) throw new Error('No se pudieron obtener los reportes');
         const data = (await response.json()) as ReportResponse;
         const eventsList = data.eventos ?? [];
-        setSummary(
+        const totalCapacidad = eventsList.reduce((sum, current) => sum + (current.capacidad ?? 0), 0);
+        const totalVendidos = eventsList.reduce((sum, current) => sum + (current.ticketsVendidos ?? 0), 0);
+        // Promedio simple de ocupación por evento (tickets / capacidad de ese evento)
+        const ocupaciones = eventsList
+          .map((event) => {
+            const cap = Number(event.capacidad ?? 0);
+            const vend = Number(event.ticketsVendidos ?? 0);
+            if (cap <= 0) return null;
+            return (vend / cap) * 100;
+          })
+          .filter((value): value is number => value !== null);
+        const ocupacionPromedioSimple =
+          ocupaciones.length === 0
+            ? 0
+            : ocupaciones.reduce((sum, value) => sum + value, 0) / ocupaciones.length;
+
+        const resumenBase =
           data.resumen ?? {
             eventosActivos: 0,
             ingresosTotales: 0,
             ticketsVendidos: 0,
             promedioOcupacion: 0,
-          }
-        );
+          };
+
+        setSummary({
+          ...resumenBase,
+          promedioOcupacion: ocupacionPromedioSimple,
+        });
         setEvents(eventsList);
         setEventOptions((previous) => {
           const merged = new Map<number, string>();
