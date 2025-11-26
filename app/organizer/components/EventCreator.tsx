@@ -194,11 +194,31 @@ const normalizeIdentifier = (label: string, fallbackPrefix: string) => {
     .replace(/(^-|-$)+/g, '');
   return slug.length > 0 ? slug : `${fallbackPrefix}-${Date.now()}`;
 };
+const isPastDate = (isoDate: string): boolean => {
+  if (!isoDate) return false;
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const value = new Date(y, m - 1, d);
+  const now = new Date();
+
+  // Normalizamos ambas fechas a medianoche local
+  value.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  return value.getTime() < now.getTime();
+};
 const EventCreator: React.FC = () => {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
   const { user } = useUser();
   const organizerUserId = useMemo(() => resolveOrganizerIdFromUser(user), [user]);
+const todayIsoDate = useMemo(() => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}, []);
+
 
   const [form, setForm] = useState<OrganizerEventForm>(() => createInitialForm());
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -419,6 +439,16 @@ const EventCreator: React.FC = () => {
       publishComplete,
     };
   }, [form]);
+  const isPastEvent = useMemo(() => {
+    if (!form.eventDates || form.eventDates.length === 0) return false;
+    const now = new Date();
+    return form.eventDates.every((date) => {
+      const parsed = new Date(date.fecha);
+      return !Number.isNaN(parsed.getTime()) && parsed < now;
+    });
+  }, [form.eventDates]);
+  const isPublishedEdit = Boolean(eventId) && form.estado === 'PUBLICADO';
+  const isLockedPast = Boolean(eventId) && isPastEvent;
 
   const checklist = [
     {
@@ -701,6 +731,11 @@ const EventCreator: React.FC = () => {
       setDateMessage('Completa la fecha y las horas de inicio y fin.');
       return;
     }
+    if (isPastDate(fecha)) {
+      setDateMessage('La fecha debe ser hoy o posterior.');
+      return; 
+    }
+
     const idTimestamp = Date.now();
     setForm((previous) => ({
       ...previous,
@@ -732,6 +767,7 @@ const EventCreator: React.FC = () => {
       };
     });
   };
+  
 
   const handleMediaUpload = async (key: MediaKey, file: File | null | undefined) => {
     if (!file) return;
@@ -827,6 +863,10 @@ const EventCreator: React.FC = () => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (savingState === 'saving') return;
+    if (isPastEvent) {
+      setValidationErrors(['No puedes editar un evento que ya finalizó.']);
+      return;
+    }
     const nativeEvent = event.nativeEvent as Event & { submitter?: EventTarget | null };
     const submitter = (nativeEvent.submitter as HTMLButtonElement | null) ?? null;
     const intentState = submitter?.dataset.intent as EventState | undefined;
@@ -891,41 +931,25 @@ const EventCreator: React.FC = () => {
         return 0;
       };
 
-      const buildUpdatePayload = () => {
-        const firstDate = payload.eventDates[0];
-        const lastDate = payload.eventDates[payload.eventDates.length - 1];
-        const fechaIni = firstDate?.fecha ?? '';
-        const fechaFin = lastDate?.fecha ?? '';
-
-        return {
-          nuevoLugar: payload.lugar,
-          nuevoEstadoWorkflow: estadoToWorkflow(payload.estado),
-          nuevoEstadoFlag: payload.estado === 'CANCELADO' ? 0 : 1,
-          fechas: payload.eventDates.map((date) => ({
-            idFechaEvento: date.idFechaEvento,
-            idFecha: date.idFecha,
-            nuevaFecha: date.fecha,
-            nuevaHoraInicio: date.horaInicio,
-            nuevaHoraFin: date.horaFin,
-          })),
-          sectores: payload.sectores.map((sector) => ({
-            idSector: Number(sector.id) || 0,
-            totalEntradas: sector.capacidad,
-          })),
-          perfiles: payload.perfiles.map((profile) => ({
-            idPerfil: Number(profile.id) || 0,
-            nombre: profile.label,
-          })),
-          tiposTicket: payload.tiposTicket.map((ticket) => ({
-            idTipoTicket: Number(ticket.id) || 0,
-            nombre: ticket.label,
-            fechaIni,
-            fechaFin,
-            estado: 1,
-          })),
-          usuarioModificacion: resolvedOrganizerId,
-        };
-      };
+      // EditarEventoRequest (API real) solo acepta cambios puntuales y no crea nuevas entidades.
+        const buildUpdatePayload = () => ({
+        nuevaDescripcion: payload.descripcion,
+        nuevaImagenPortada: payload.imagenPortada,
+        nuevaImagenPresentacion: payload.imagenLugar,
+        nuevoVideo: payload.videoUrl,
+        nuevoLugar: payload.lugar,
+        nuevoEstadoWorkflow: estadoToWorkflow(payload.estado),
+        fechas: isPublishedEdit || isLockedPast
+          ? [] // no tocar fechas en eventos publicados o pasados
+          : payload.eventDates.map((date) => ({
+              idFechaEvento: date.idFechaEvento,
+              idFecha: date.idFecha,
+              nuevaFecha: date.fecha,
+              nuevaHoraInicio: date.horaInicio,
+              nuevaHoraFin: date.horaFin,
+            })),
+        usuarioModificacion: resolvedOrganizerId,
+      });
 
       const body = isEditing ? JSON.stringify(buildUpdatePayload()) : JSON.stringify(payload);
       console.log('Enviando a endpoint:', body);
@@ -954,7 +978,7 @@ const EventCreator: React.FC = () => {
     savingState === 'saving'
       ? 'Guardando cambios...'
       : savingState === 'success'
-        ? 'Borrador actualizado.'
+        ? 'Se actualizo el evento.'
         : savingState === 'error'
           ? 'No se pudo guardar el evento.'
           : null;
@@ -1022,7 +1046,7 @@ const EventCreator: React.FC = () => {
                   <select
                     className='input-text'
                     value={form.idCategoria === 0 ? '' : form.idCategoria}
-                    disabled={categoryStatus === 'loading'}
+                    disabled={categoryStatus === 'loading' || isPublishedEdit}
                     onChange={(event) =>
                       setForm((previous) => ({
                         ...previous,
@@ -1057,6 +1081,7 @@ const EventCreator: React.FC = () => {
                   maxLength={160}
                   value={form.titulo}
                   placeholder='Ej. Festival urbano en Lima'
+                  disabled={isPublishedEdit}
                   onChange={(event) =>
                     setForm((previous) => ({ ...previous, titulo: event.target.value }))
                   }
@@ -1082,6 +1107,7 @@ const EventCreator: React.FC = () => {
                   maxLength={180}
                   value={form.lugar}
                   placeholder='Av. Arequipa 1234 - Miraflores'
+                  disabled={categoryStatus === 'loading' || isPublishedEdit}
                   onChange={(event) =>
                     setForm((previous) => ({ ...previous, lugar: event.target.value }))
                   }
@@ -1124,18 +1150,21 @@ const EventCreator: React.FC = () => {
                   ))}
                 </div>
               )}
-              <div className='field-grid three-columns new-date'>
+              {!isPublishedEdit && (
+              <div className='field-grid three-columns new-date'> 
                 <label className='field'>
                   <span className='field-label'>Fecha</span>
                   <input
                     className='input-text'
                     type='date'
                     value={newEventDate.fecha}
+                    min={todayIsoDate}
                     onChange={(event) =>
                       setNewEventDate((previous) => ({ ...previous, fecha: event.target.value }))
                     }
                   />
                 </label>
+
                 <label className='field'>
                   <span className='field-label'>Hora inicio</span>
                   <input
@@ -1150,6 +1179,7 @@ const EventCreator: React.FC = () => {
                     }
                   />
                 </label>
+
                 <label className='field'>
                   <span className='field-label'>Hora fin</span>
                   <input
@@ -1162,13 +1192,17 @@ const EventCreator: React.FC = () => {
                   />
                 </label>
               </div>
-              <Button
-                type='button'
-                color='gray-overlay'
-                text='Agregar fecha'
-                leftIcon='event_available'
-                onClick={() => handleAddEventDate()}
-              />
+            )}
+              {!isPublishedEdit && (
+                <Button
+                  type='button'
+                  color='gray-overlay'
+                  text='Agregar fecha'
+                  leftIcon='event_available'
+                  onClick={() => handleAddEventDate()}
+                />
+              )}
+
               {dateMessage !== null && <p className='field-hint'>{dateMessage}</p>}
             </section>
 
@@ -1268,35 +1302,43 @@ const EventCreator: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <div className='field-grid two-columns new-sector'>
-                <label className='field'>
-                  <span className='field-label'>Nuevo sector</span>
-                  <input
-                    className='input-text'
-                    type='text'
-                    value={newSectorName}
-                    onChange={(event) => setNewSectorName(event.target.value)}
-                    placeholder='Ej. Balcón'
-                  />
-                </label>
-                <label className='field'>
-                  <span className='field-label'>Capacidad</span>
-                  <input
-                    className='input-text'
-                    type='number'
-                    min={0}
-                    value={newSectorCapacity}
-                    onChange={(event) => setNewSectorCapacity(event.target.value)}
-                  />
-                </label>
-              </div>
-              <Button
-                type='button'
-                color='gray-overlay'
-                text='Agregar sector'
-                leftIcon='add'
-                onClick={() => handleAddSector()}
-              />
+              {!isPublishedEdit && (
+  <>
+    <div className='field-grid two-columns new-sector'>
+      <label className='field'>
+        <span className='field-label'>Nuevo sector</span>
+        <input
+          className='input-text'
+          type='text'
+          value={newSectorName}
+          onChange={(event) => setNewSectorName(event.target.value)}
+          placeholder='Ej. Balcón'
+        />
+      </label>
+
+      <label className='field'>
+        <span className='field-label'>Capacidad</span>
+        <input
+          className='input-text'
+          type='number'
+          min={0}
+          value={newSectorCapacity}
+          disabled={isPublishedEdit}
+          onChange={(event) => setNewSectorCapacity(event.target.value)}
+        />
+      </label>
+    </div>
+
+    <Button
+      type='button'
+      color='gray-overlay'
+      text='Agregar sector'
+      leftIcon='add'
+      onClick={() => handleAddSector()}
+    />
+  </>
+)}
+
               {sectorMessage !== null && <p className='field-hint'>{sectorMessage}</p>}
             </section>
 
@@ -1315,7 +1357,7 @@ const EventCreator: React.FC = () => {
                       type='button'
                       className='icon-button danger'
                       onClick={() => handleRemoveProfile(profile.id)}
-                      disabled={form.perfiles.length === 1}
+                      disabled={isPublishedEdit || form.perfiles.length === 1}
                       aria-label={`Eliminar perfil ${profile.label}`}
                     >
                       <span className='material-symbols-outlined'>close</span>
@@ -1323,25 +1365,33 @@ const EventCreator: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <div className='field-grid two-columns new-entity'>
-                <label className='field'>
-                  <span className='field-label'>Nombre del perfil</span>
-                  <input
-                    className='input-text'
-                    type='text'
-                    value={newProfileLabel}
-                    onChange={(event) => setNewProfileLabel(event.target.value)}
-                    placeholder='Ej. Adulto mayor'
-                  />
-                </label>
-              </div>
-              <Button
-                type='button'
-                color='gray-overlay'
-                text='Agregar perfil'
-                leftIcon='person_add'
-                onClick={() => handleAddProfile()}
-              />
+              {!isPublishedEdit && (
+  <>
+    <div className='field-grid two-columns new-entity'>
+      <label className='field'>
+        <span className='field-label'>Nombre del perfil</span>
+        <input
+          className='input-text'
+          type='text'
+          value={newProfileLabel}
+          disabled={isPublishedEdit}
+          onChange={(event) => setNewProfileLabel(event.target.value)}
+          placeholder='Ej. Adulto mayor'
+        />
+      </label>
+    </div>
+
+    <Button
+      type='button'
+      color='gray-overlay'
+      text='Agregar perfil'
+      leftIcon='person_add'
+      disabled={isPublishedEdit}
+      onClick={() => handleAddProfile()}
+    />
+  </>
+)}
+
               {profileMessage !== null && <p className='field-hint'>{profileMessage}</p>}
             </section>
 
@@ -1360,7 +1410,7 @@ const EventCreator: React.FC = () => {
                       type='button'
                       className='icon-button danger'
                       onClick={() => handleRemoveTicketType(ticket.id)}
-                      disabled={form.tiposTicket.length === 1}
+                      disabled={isPublishedEdit || form.tiposTicket.length === 1}
                       aria-label={`Eliminar tipo ${ticket.label}`}
                     >
                       <span className='material-symbols-outlined'>close</span>
@@ -1368,25 +1418,33 @@ const EventCreator: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <div className='field-grid two-columns new-entity'>
-                <label className='field'>
-                  <span className='field-label'>Nombre del tipo</span>
-                  <input
-                    className='input-text'
-                    type='text'
-                    value={newTicketLabel}
-                    onChange={(event) => setNewTicketLabel(event.target.value)}
-                    placeholder='Ej. Preventa fan club'
-                  />
-                </label>
-              </div>
-              <Button
-                type='button'
-                color='gray-overlay'
-                text='Agregar tipo'
-                leftIcon='confirmation_number'
-                onClick={() => handleAddTicketType()}
-              />
+              {!isPublishedEdit && (
+  <>
+    <div className='field-grid two-columns new-entity'>
+      <label className='field'>
+        <span className='field-label'>Nombre del tipo</span>
+        <input
+          className='input-text'
+          type='text'
+          value={newTicketLabel}
+          disabled={isPublishedEdit}
+          onChange={(event) => setNewTicketLabel(event.target.value)}
+          placeholder='Ej. Preventa fan club'
+        />
+      </label>
+    </div>
+
+    <Button
+      type='button'
+      color='gray-overlay'
+      text='Agregar tipo'
+      leftIcon='confirmation_number'
+      disabled={isPublishedEdit}
+      onClick={() => handleAddTicketType()}
+    />
+  </>
+)}
+
               {ticketMessage !== null && <p className='field-hint'>{ticketMessage}</p>}
             </section>
 
@@ -1422,6 +1480,7 @@ const EventCreator: React.FC = () => {
                                   min={0}
                                   step="any"
                                   value={form.precios[sector.id]?.[profile.id]?.[ticket.id] ?? 0}
+                                  disabled={isPublishedEdit}
                                   onChange={(event) =>
                                     handlePriceChange(
                                       sector.id,
@@ -1453,21 +1512,24 @@ const EventCreator: React.FC = () => {
             )}
             <section className='organizer-panel organizer-actions'>
               <div className='button-row'>
-                <Button
-                  type='submit'
-                  color='gray-overlay'
-                  text='Guardar borrador'
-                  leftIcon='save'
-                  dataIntent='BORRADOR'
-                  disabled={savingState === 'saving'}
-                />
+                {!isPublishedEdit && (
+                  <Button
+                    type='submit'
+                    color='gray-overlay'
+                    text='Guardar borrador'
+                    leftIcon='save'
+                    dataIntent='BORRADOR'
+                    disabled={savingState === 'saving' || isLockedPast}
+                  />
+                )}
+
                 <Button
                   type='submit'
                   color='yellow-filled'
-                  text='Publicar evento'
+                  text= {!isPublishedEdit? 'Publicar evento': 'Actualizar y mantener publicado'}
                   rightIcon='rocket_launch'
                   dataIntent='PUBLICADO'
-                  disabled={!stats.publishReady || savingState === 'saving'}
+                  disabled={!stats.publishReady || savingState === 'saving' || isLockedPast}
                 />
               </div>
               {savingMessage !== null && <p className='field-hint'>{savingMessage}</p>}

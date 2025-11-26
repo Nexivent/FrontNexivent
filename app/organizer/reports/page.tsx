@@ -57,7 +57,7 @@ const statusColor: Record<EventReport['estado'], string> = {
   CANCELADO: 'cancelado',
 };
 
-const formatCurrency = (value: number) => `S/ ${value.toLocaleString()}`;
+const formatCurrency = (value: number | string) => `S/ ${value.toLocaleString()}`;
 
 const ReportsDashboard: React.FC = () => {
   const { user, loading: userLoading } = useUser();
@@ -95,14 +95,34 @@ const ReportsDashboard: React.FC = () => {
         if (!response.ok) throw new Error('No se pudieron obtener los reportes');
         const data = (await response.json()) as ReportResponse;
         const eventsList = data.eventos ?? [];
-        setSummary(
+        const totalCapacidad = eventsList.reduce((sum, current) => sum + (current.capacidad ?? 0), 0);
+        const totalVendidos = eventsList.reduce((sum, current) => sum + (current.ticketsVendidos ?? 0), 0);
+        // Promedio simple de ocupación por evento (tickets / capacidad de ese evento)
+        const ocupaciones = eventsList
+          .map((event) => {
+            const cap = Number(event.capacidad ?? 0);
+            const vend = Number(event.ticketsVendidos ?? 0);
+            if (cap <= 0) return null;
+            return (vend / cap) * 100;
+          })
+          .filter((value): value is number => value !== null);
+        const ocupacionPromedioSimple =
+          ocupaciones.length === 0
+            ? 0
+            : ocupaciones.reduce((sum, value) => sum + value, 0) / ocupaciones.length;
+
+        const resumenBase =
           data.resumen ?? {
             eventosActivos: 0,
             ingresosTotales: 0,
             ticketsVendidos: 0,
             promedioOcupacion: 0,
-          }
-        );
+          };
+
+        setSummary({
+          ...resumenBase,
+          promedioOcupacion: ocupacionPromedioSimple,
+        });
         setEvents(eventsList);
         setEventOptions((previous) => {
           const merged = new Map<number, string>();
@@ -138,7 +158,7 @@ const ReportsDashboard: React.FC = () => {
   const capacityUsage = useMemo(() => {
     const totalCapacidad = events.reduce((sum, current) => sum + current.capacidad, 0);
     const totalVendidos = events.reduce((sum, current) => sum + current.ticketsVendidos, 0);
-    return totalCapacidad === 0 ? 0 : Math.round((totalVendidos / totalCapacidad) * 100);
+    return totalCapacidad === 0 ? 0 : ((totalVendidos / totalCapacidad) * 100);
   }, [events]);
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
   const toggleEvent = (eventId: number) => {
@@ -252,7 +272,7 @@ const ReportsDashboard: React.FC = () => {
               </div>
               <div className='report-summary-card'>
                 <span className='label'>Ingresos totales</span>
-                <strong>{formatCurrency(summary.ingresosTotales)}</strong>
+                <strong>{formatCurrency(summary.ingresosTotales.toFixed(2))}</strong>
               </div>
               <div className='report-summary-card'>
                 <span className='label'>Tickets vendidos</span>
@@ -260,11 +280,11 @@ const ReportsDashboard: React.FC = () => {
               </div>
               <div className='report-summary-card'>
                 <span className='label'>Ocupación promedio</span>
-                <strong>{summary.promedioOcupacion}%</strong>
+                <strong>{summary.promedioOcupacion.toFixed(2)}%</strong>
               </div>
               <div className='report-summary-card'>
                 <span className='label'>Uso de capacidad</span>
-                <strong>{capacityUsage}%</strong>
+                <strong>{capacityUsage.toFixed(2)}%</strong>
               </div>
             </div>
           )}
@@ -303,7 +323,7 @@ const ReportsDashboard: React.FC = () => {
         <div className='event-summary-grid'>
           <div>
             <span className='label'>Ingresos totales</span>
-            <strong>{formatCurrency(event.ingresosTotales)}</strong>
+            <strong>{formatCurrency(event.ingresosTotales.toFixed(2))}</strong>
           </div>
           <div>
             <span className='label'>Tickets vendidos</span>
@@ -311,7 +331,7 @@ const ReportsDashboard: React.FC = () => {
           </div>
           <div>
             <span className='label'>Cargos de servicio</span>
-            <strong>{formatCurrency(event.cargosServicio)}</strong>
+            <strong>{formatCurrency(event.cargosServicio.toFixed(2))}</strong>
           </div>
           <div>
             <span className='label'>Comisiones</span>
@@ -328,11 +348,11 @@ const ReportsDashboard: React.FC = () => {
       {/* Contenido desplegable */}
       <div className={`event-details-grid ${isExpanded ? 'expanded' : 'collapsed'}`}>
         <div className='event-card'>
-          <h4>Ventas por tipo</h4>
+          <h4>Ventas por Sector</h4>
           <table>
             <thead>
               <tr>
-                <th>Tipo</th>
+                <th>Sector</th>
                 <th>Vendidos</th>
                 <th>Ingresos</th>
               </tr>
@@ -342,7 +362,7 @@ const ReportsDashboard: React.FC = () => {
                 <tr key={ticket.tipo}>
                   <td>{ticket.tipo}</td>
                   <td>{ticket.vendidos.toLocaleString()}</td>
-                  <td>{formatCurrency(ticket.ingresos)}</td>
+                  <td>{formatCurrency(ticket.ingresos.toFixed(2))}</td>
                 </tr>
               ))}
             </tbody>
@@ -371,7 +391,7 @@ const ReportsDashboard: React.FC = () => {
             {event.ventasPorTipo.map((ticket) => {
               const percent = Math.min(
                 100,
-                Math.round((ticket.vendidos / event.capacidad) * 100)
+                ((ticket.vendidos / event.capacidad) * 100)
               );
               return (
                 <div key={ticket.tipo} className='ticket-share__item'>
@@ -385,7 +405,7 @@ const ReportsDashboard: React.FC = () => {
                   <div className='ticket-share__bar'>
                     <div style={{ width: `${percent}%` }} />
                   </div>
-                  <small>{percent}% de la capacidad total</small>
+                  <small>{percent.toFixed(2)}% de la capacidad total</small>
                 </div>
               );
             })}

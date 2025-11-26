@@ -21,13 +21,16 @@ type UpstreamCoupon = {
   descripcion?: string;
   tipo?: number | string;
   estadoCupon?: number | string;
+  activo?: number | string;
   valor?: number;
   codigo?: string;
   usoPorUsuario?: number;
   usoRealizados?: number;
   fechaInicio?: string;
   fechaFin?: string;
-  eventoId?: number;
+  eventoId?: number | string;
+  evento_id?: number | string;
+  idEvento?: number | string;
 };
 
 const getOrganizerApiBaseUrl = () =>
@@ -64,15 +67,44 @@ const toIsoDateTime = (value?: string | null) => {
   return parsed.toISOString();
 };
 
-const normalizeCoupon = (payload: UpstreamCoupon): OrganizerCoupon => {
+const resolveNumeric = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+type NormalizeOptions = {
+  fallbackEventId?: number | null;
+  fallbackActivo?: number | null;
+};
+
+const normalizeCoupon = (payload: UpstreamCoupon, options: NormalizeOptions = {}): OrganizerCoupon => {
+  const { fallbackEventId = null, fallbackActivo = null } = options;
   const tipoValue = payload.tipo;
   const tipo = tipoValue === 0 || tipoValue === '0' ? 0 : 1;
-  const estadoValue = payload.estadoCupon;
-  const activo = estadoValue === 0 || estadoValue === '0' ? 0 : 1;
+  const estadoValue = payload.estadoCupon ?? (payload as { activo?: number | string }).activo;
+  let activo: 0 | 1 = 1;
+  if (estadoValue === 0 || estadoValue === '0') {
+    activo = 0;
+  } else if (estadoValue === 1 || estadoValue === '1') {
+    activo = 1;
+  } else if (fallbackActivo === 0 || fallbackActivo === 0) {
+    activo = 0;
+  } else if (fallbackActivo === 1 || fallbackActivo === 1) {
+    activo = 1;
+  }
+  const resolvedEventId =
+    resolveNumeric(
+      payload.eventoId ??
+        (payload as { evento_id?: number | string }).evento_id ??
+        (payload as { idEvento?: number | string }).idEvento
+    ) ?? null;
+  const fallbackEventoId =
+    typeof fallbackEventId === 'number' && !Number.isNaN(fallbackEventId) ? fallbackEventId : null;
 
   return {
     idCupon: payload.id ?? Date.now(),
-    idEvento: payload.eventoId ?? 0,
+    idEvento: resolvedEventId ?? fallbackEventoId ?? 0,
     descripcion: payload.descripcion ?? '',
     tipo,
     activo,
@@ -103,7 +135,7 @@ const buildUpstreamPayload = (
 ) => {
   const { includeId = false, includeEstado = false } = options;
 
-  const resolvedType = payload.tipo
+  const resolvedType = payload.tipo;
 
   const resolvedId = includeId
     ? resolveNumeric(
@@ -130,12 +162,6 @@ const buildUpstreamPayload = (
     eventoId: payload.idEvento ?? 0,
     estadoCupon: resolvedEstado,
   });
-};
-
-const resolveNumeric = (value: string | number | null | undefined) => {
-  if (value === null || value === undefined) return null;
-  const parsed = Number(value);
-  return Number.isNaN(parsed) ? null : parsed;
 };
 
 export const dynamic = 'force-dynamic';
@@ -172,7 +198,7 @@ export async function GET(request: NextRequest) {
     if (!upstreamResponse.ok) {
       return NextResponse.json(
         {
-          message: 'La API real respondio con un error al listar los cupones.',
+          message: 'Hubo un error al obtener los cupones',
           details: upstreamBody,
         },
         { status: upstreamResponse.status }
@@ -195,7 +221,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       {
-        message: 'No se pudo obtener los cupones desde la API real.',
+        message: 'No se pudo obtener los cupones.',
         error: error instanceof Error ? error.message : 'Error desconocido',
       },
       { status: 500 }
@@ -248,7 +274,7 @@ export async function POST(request: NextRequest) {
     if (!upstreamResponse.ok) {
       return NextResponse.json(
         {
-          message: 'La API real respondio con un error al crear el cupon.',
+          message: 'Error al crear el cupon.',
           details: upstreamBody,
         },
         { status: upstreamResponse.status }
@@ -262,11 +288,20 @@ export async function POST(request: NextRequest) {
         ? (upstreamBody as Record<string, unknown>).data
         : upstreamBody;
 
-    const data = normalizeCoupon(candidateData as UpstreamCoupon);
+    const fallbackEventId =
+      resolveNumeric(
+        (payload as { idEvento?: number | string }).idEvento ?? (payload as { eventoId?: number | string }).eventoId
+      ) ?? undefined;
+    const fallbackActivo =
+      resolveNumeric((payload as { activo?: number | string }).activo) ?? undefined;
+    const data = normalizeCoupon(candidateData as UpstreamCoupon, {
+      fallbackEventId,
+      fallbackActivo: typeof fallbackActivo === 'number' ? fallbackActivo : null,
+    });
 
     return NextResponse.json(
       {
-        message: 'Cupon sincronizado con la API real.',
+        message: 'Cupon sincronizado',
         data,
         upstream: upstreamBody,
       },
@@ -343,7 +378,7 @@ export async function PUT(request: NextRequest) {
     if (!upstreamResponse.ok) {
       return NextResponse.json(
         {
-          message: 'La API real respondio con un error al actualizar el cupon.',
+          message: 'Error al actualizar el cupon.',
           details: upstreamBody,
         },
         { status: upstreamResponse.status }
@@ -357,11 +392,20 @@ export async function PUT(request: NextRequest) {
         ? (upstreamBody as Record<string, unknown>).data
         : upstreamBody;
 
-    const data = normalizeCoupon(candidateData as UpstreamCoupon);
+    const fallbackEventId =
+      resolveNumeric(
+        (payload as { idEvento?: number | string }).idEvento ?? (payload as { eventoId?: number | string }).eventoId
+      ) ?? undefined;
+    const fallbackActivo =
+      resolveNumeric((payload as { activo?: number | string }).activo) ?? undefined;
+    const data = normalizeCoupon(candidateData as UpstreamCoupon, {
+      fallbackEventId,
+      fallbackActivo: typeof fallbackActivo === 'number' ? fallbackActivo : null,
+    });
 
     return NextResponse.json(
       {
-        message: 'Cupon actualizado en la API real.',
+        message: 'Cupon actualizado.',
         data,
         upstream: upstreamBody,
       },
