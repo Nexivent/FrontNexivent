@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Usuario } from '@utils/api';
 import { useUser } from '@contexts/UserContext';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
@@ -27,7 +27,19 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
   const nombreLowerCase = primerNombre.toLowerCase();
   const nombreMostrado = nombreLowerCase.charAt(0).toUpperCase() + nombreLowerCase.slice(1);
   ///////////////////////////////////////////////////////////////////////
+  const logoHref = useMemo(() => {
+    if (!user) return '/';
 
+    if (user.rol_principal === 'ADMINISTRADOR') {
+      return '/administrator';
+    }
+
+    if (user.tipo_documento === 'RUC_PERSONA' || user.tipo_documento === 'RUC_EMPRESA') {
+      return '/organizer';
+    }
+
+    return '/';
+  }, [user]);
   const handleLogout = async () => {
     try {
       await logout();
@@ -65,15 +77,16 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${scrolled
+      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
+        scrolled
           ? 'bg-black/95 backdrop-blur-sm shadow-lg'
           : 'bg-gradient-to-b from-black/90 to-transparent'
-        }`}
+      }`}
     >
       <div className='container mx-auto grid grid-cols-3 items-center px-4 py-3'>
         {/* Logo */}
         <div className='flex items-center justify-start gap-4'>
-          <Link href='/'>
+          <Link href={logoHref}>
             <img src='/logo_transparente.png' alt='Nexivent' className='h-20 w-auto' />
           </Link>
         </div>
