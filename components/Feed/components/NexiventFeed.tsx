@@ -221,7 +221,7 @@ const resolvePrice = (raw: RawEventoApi): number => {
     : [];
 
   const numericTariffs = sectorTariffs.filter(
-    (value): value is number => typeof value === 'number' && !Number.isNaN(value)
+    (value: unknown): value is number => typeof value === 'number' && !Number.isNaN(value)
   );
 
   const tariffMin = numericTariffs.length > 0 ? Math.min(...numericTariffs) : undefined;
