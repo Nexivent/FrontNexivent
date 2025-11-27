@@ -30,6 +30,7 @@ const nextConfig = {
   },
   // Configurar rewrites si es necesario
   async rewrites() {
+    const apiOrigin = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || 'http://localhost:8098';
     return [
       // Rutas internas del organizador (manejadas por Next, no se proxied)
       {
@@ -38,7 +39,7 @@ const nextConfig = {
       },
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8098/:path*',
+        destination: `${apiOrigin}/api/:path*`,
       },
     ];
   },
