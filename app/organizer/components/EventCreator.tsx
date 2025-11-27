@@ -20,6 +20,12 @@ type Profile = { id: string; label: string };
 type TicketType = { id: string; label: string };
 type EventState = 'BORRADOR' | 'PUBLICADO' | 'CANCELADO';
 type PriceMatrix = Record<string, Record<string, Record<string, number>>>;
+type EventMetadata = {
+  creadoPor: string;
+  fechaCreacion: string;
+  ultimaActualizacion: string;
+  version: number;
+};
 type MediaKey = 'imagenPortada' | 'imagenLugar' | 'videoUrl';
 type MediaMeta = { name: string | null; size: number | null };
 type EventDate = {
@@ -50,6 +56,7 @@ type OrganizerEventForm = {
   sectores: Sector[];
   tiposTicket: TicketType[];
   precios: PriceMatrix;
+  metadata: EventMetadata;
 };
 
 const defaultProfiles: Profile[] = [
@@ -88,6 +95,47 @@ const ensureFullPricing = (
     );
     return { ...acc, [sector.id]: profiles };
   }, {});
+
+const normalizeMetadata = (
+  metadata?: Partial<EventMetadata> | Record<string, unknown> | null,
+  fallbackCreator: string | number | null = null
+): EventMetadata => {
+  const candidate = metadata ?? {};
+  const nowIso = new Date().toISOString();
+  const versionRaw =
+    (candidate as { version?: unknown }).version ??
+    (candidate as { Version?: unknown }).Version ??
+    1;
+  const parsedVersion = Number(versionRaw);
+  const version = Number.isNaN(parsedVersion) ? 1 : parsedVersion;
+  const createdByCandidate =
+    (candidate as { creadoPor?: unknown }).creadoPor ??
+    (candidate as { creado_por?: unknown }).creado_por ??
+    (candidate as { createdBy?: unknown }).createdBy ??
+    (candidate as { created_by?: unknown }).created_by ??
+    (fallbackCreator !== null ? fallbackCreator : '');
+  const createdBy =
+    createdByCandidate !== undefined && createdByCandidate !== null
+      ? String(createdByCandidate)
+      : '';
+
+  const fechaCreacion =
+    typeof (candidate as { fechaCreacion?: unknown }).fechaCreacion === 'string'
+      ? (candidate as { fechaCreacion: string }).fechaCreacion
+      : '';
+  const ultimaActualizacionValue =
+    typeof (candidate as { ultimaActualizacion?: unknown }).ultimaActualizacion === 'string' &&
+    (candidate as { ultimaActualizacion: string }).ultimaActualizacion.trim().length > 0
+      ? (candidate as { ultimaActualizacion: string }).ultimaActualizacion
+      : nowIso;
+
+  return {
+    creadoPor: createdBy,
+    fechaCreacion,
+    ultimaActualizacion: ultimaActualizacionValue,
+    version,
+  };
+};
 
 const defaultPricePreset: PriceMatrix = {
   vip: {
@@ -129,6 +177,7 @@ const createInitialForm = (): OrganizerEventForm => ({
     defaultTicketTypes,
     defaultPricePreset
   ),
+  metadata: normalizeMetadata(null),
 });
 
 const mediaConfig: Record<
@@ -307,6 +356,7 @@ const todayIsoDate = useMemo(() => {
             sectores: event.sectores ?? defaultSectors,
             tiposTicket: event.tiposTicket ?? defaultTicketTypes,
             precios: event.precios ?? {},
+            metadata: normalizeMetadata(event.metadata ?? null, event.idOrganizador ?? organizerUserId ?? null),
           });
         }
         console.log('Evento recibido del API:', event);
@@ -912,18 +962,30 @@ const todayIsoDate = useMemo(() => {
     setValidationErrors([]);
 
     const numericEventId = eventId ? Number(eventId) : form.idEvento;
+    const nowIso = new Date().toISOString();
     const payload: OrganizerEventForm = {
       ...form,
       idEvento: Number.isNaN(numericEventId) ? form.idEvento : numericEventId,
       idOrganizador: resolvedOrganizerId,
       estado: intentState ?? form.estado,
+      metadata: {
+        ...form.metadata,
+        creadoPor:
+          form.metadata.creadoPor?.trim().length > 0
+            ? form.metadata.creadoPor
+            : String(resolvedOrganizerId),
+        ultimaActualizacion: form.metadata.ultimaActualizacion || nowIso,
+      },
     };
 
     setSavingState('saving');
     try {
       console.log('Payload enviado:', JSON.stringify(payload));
       const isEditing = Boolean(eventId);
-      const endpoint = isEditing ? `/api/organizer/events/${eventId}` : '/api/organizer/events';
+      const isDraftEdit = isEditing && form.estado === 'BORRADOR';
+      const endpoint = isEditing
+        ? `/api/organizer/events/${eventId}${isDraftEdit ? '?mode=full' : ''}`
+        : '/api/organizer/events';
       const method = isEditing ? 'PUT' : 'POST';
       const estadoToWorkflow = (estado: EventState) => {
         if (estado === 'PUBLICADO') return 1;
@@ -932,7 +994,7 @@ const todayIsoDate = useMemo(() => {
       };
 
       // EditarEventoRequest (API real) solo acepta cambios puntuales y no crea nuevas entidades.
-        const buildUpdatePayload = () => ({
+      const buildUpdatePayload = () => ({
         nuevaDescripcion: payload.descripcion,
         nuevaImagenPortada: payload.imagenPortada,
         nuevaImagenPresentacion: payload.imagenLugar,
@@ -950,8 +1012,50 @@ const todayIsoDate = useMemo(() => {
             })),
         usuarioModificacion: resolvedOrganizerId,
       });
+      const buildFullUpdatePayload = () => ({
+        idOrganizador: payload.idOrganizador,
+        idCategoria: payload.idCategoria,
+        titulo: payload.titulo,
+        descripcion: payload.descripcion,
+        lugar: payload.lugar,
+        estado: payload.estado,
+        likes: payload.likes,
+        noInteres: payload.noInteres,
+        cantVendidasTotal: payload.cantVendidasTotal,
+        totalRecaudado: payload.totalRecaudado,
+        imagenPortada: payload.imagenPortada,
+        imagenLugar: payload.imagenLugar,
+        videoUrl: payload.videoUrl,
+        eventDates: payload.eventDates.map((date) => ({
+          fecha: date.fecha,
+          horaInicio: date.horaInicio,
+          horaFin: date.horaFin ?? '',
+        })),
+        perfiles: payload.perfiles,
+        sectores: payload.sectores,
+        tiposTicket: payload.tiposTicket,
+        precios: payload.precios,
+        metadata: {
+          creadoPor: (() => {
+            const candidate =
+              payload.metadata.creadoPor !== undefined && payload.metadata.creadoPor !== null
+                ? String(payload.metadata.creadoPor).trim()
+                : '';
+            return candidate.length > 0 ? candidate : String(payload.idOrganizador);
+          })(),
+          fechaCreacion: payload.metadata.fechaCreacion ?? '',
+          ultimaActualizacion: payload.metadata.ultimaActualizacion || nowIso,
+          version: (() => {
+            const numericVersion = Number(payload.metadata.version ?? 1);
+            return Number.isNaN(numericVersion) ? 1 : numericVersion;
+          })(),
+        },
+        usuarioModificacion: resolvedOrganizerId,
+      });
 
-      const body = isEditing ? JSON.stringify(buildUpdatePayload()) : JSON.stringify(payload);
+      const body = isEditing
+        ? JSON.stringify(isDraftEdit ? buildFullUpdatePayload() : buildUpdatePayload())
+        : JSON.stringify(payload);
       console.log('Enviando a endpoint:', body);
       const response = await fetch(endpoint, {
         method,

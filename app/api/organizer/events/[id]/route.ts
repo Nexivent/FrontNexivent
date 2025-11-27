@@ -18,6 +18,25 @@ const resolveNumeric = (value: string | number | null | undefined) => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
+const isFullUpdatePayload = (payload: Record<string, unknown>): boolean => {
+  const candidate = payload as {
+    eventDates?: unknown;
+    perfiles?: unknown;
+    sectores?: unknown;
+    tiposTicket?: unknown;
+    precios?: unknown;
+    metadata?: unknown;
+  };
+  return (
+    Array.isArray(candidate.eventDates) ||
+    Array.isArray(candidate.perfiles) ||
+    Array.isArray(candidate.sectores) ||
+    Array.isArray(candidate.tiposTicket) ||
+    (candidate.precios !== null && typeof candidate.precios === 'object') ||
+    (candidate.metadata !== null && typeof candidate.metadata === 'object')
+  );
+};
+
 const parseResponseBody = async (response: Response) => {
   const text = await response.text();
   if (text.length === 0) return null;
@@ -60,6 +79,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     keys: Object.keys(payload ?? {}),
   });
 
+  const searchParams = request.nextUrl.searchParams;
+  const modeParam = searchParams.get('mode');
+  const useFullUpdate =
+    (typeof modeParam === 'string' && modeParam.toLowerCase() === 'full') ||
+    isFullUpdatePayload(payload);
+  const upstreamPayload = { ...payload, usuarioModificacion };
+
   const apiBaseUrl = getOrganizerApiBaseUrl();
   if (apiBaseUrl.length === 0) {
     return NextResponse.json(
@@ -68,14 +94,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     );
   }
 
-  const endpoint = buildEndpoint(apiBaseUrl, `/api/eventos/${eventId}`);
-  console.log('Endpoint built:', endpoint);
+  const endpoint = buildEndpoint(
+    apiBaseUrl,
+    useFullUpdate ? `/api/eventos/${eventId}/full` : `/api/eventos/${eventId}`
+  );
+  console.log('Endpoint built:', endpoint, 'mode:', useFullUpdate ? 'full' : 'partial');
   try {
     console.log('Sending PUT request to:', endpoint);
     const upstreamResponse = await fetch(endpoint, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(upstreamPayload),
       cache: 'no-store',
     });
 

@@ -276,15 +276,16 @@ const EventManager: React.FC = () => {
 
       {status === 'idle' && filteredEvents.length > 0 && (
         <div className='event-manager-grid'>
-          {filteredEvents.map((event) => {
+          {filteredEvents.map((event, index) => {
             const primaryDate = event.fechas[0];
             const isPast = isEventPast(event.fechas);
             const canEdit =
               (event.estado === 'BORRADOR' || event.estado === 'PUBLICADO') && !isPast;
             const canCancel = !isPast && event.estado !== 'CANCELADO';
 
+            const key = `${event.idEvento}-${index}`;
             return (
-              <div key={event.idEvento} className='event-manager-card'>
+              <div key={key} className='event-manager-card'>
                 {/* Event Image */}
                 {event.imagenPortada && (
                   <div className='event-card-image'>
