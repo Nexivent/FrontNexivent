@@ -10,6 +10,8 @@ interface UserContextType {
   register: (data: RegisterData) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   isAuthenticated: boolean;
+  isOrganizer?: boolean;
+  isAdmin?: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -119,6 +121,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isOrganizer = user
+    ? user.tipo_documento === 'RUC_PERSONA' || user.tipo_documento === 'RUC_EMPRESA'
+    : false;
+
+  const isAdmin = user ? user.rol_principal === 'ADMINISTRADOR' : false;
+
   return (
     <UserContext.Provider
       value={{
@@ -129,6 +137,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         isAuthenticated: !!user,
+        isOrganizer,
+        isAdmin,
       }}
     >
       {children}
