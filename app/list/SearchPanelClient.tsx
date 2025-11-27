@@ -72,12 +72,29 @@ export default function SearchPanel({ initialData }: { initialData: any[] }) {
           <EventCard
             key={ev.ID}
             url={ev.ID?.toString()}
-            from={ev.precioDesde?.toString() ?? ""}
+            from={
+              ev.Sectores?.length
+                ? Math.min(
+                  ...ev.Sectores.flatMap((sector: any) =>
+                    sector.Tarifa?.map((t: any) => t.Precio) ?? []
+                  )
+                ).toString()
+                : ""
+            }
+
             color="yellow"
-            when={ev.fechaHoraInicio}
+            when={
+              ev.eventDates[0]?.fecha
+                ? new Date(ev.eventDates[0].fecha).toLocaleDateString("es-ES", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+                : ""
+            }
             name={ev.Titulo}
             venue={ev.Lugar}
-            image={ev.ImagenPortada ?? "/logo6.png"}
+            image={ev.ImagenPortada || ev.ImagenDescripcion}
           />
         ))}
       </div>
