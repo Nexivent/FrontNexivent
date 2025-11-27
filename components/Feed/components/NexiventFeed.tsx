@@ -320,6 +320,9 @@ const NexiventFeed: React.FC = () => {
   const resolvedUserId = resolveUsuarioId(user);
   const viewedEvents = useRef<Set<number>>(new Set());
   const [authHint, setAuthHint] = useState<{ text: string; target: 'like' | 'no' } | null>(null);
+  const [shareHint, setShareHint] = useState<{ text: string; tone: 'success' | 'error' } | null>(
+    null
+  );
   const updateEventoInteres = useCallback(
     (id: number, value: Evento['interes']) => {
       setEventosState((prev) => prev.map((e) => (e.id === id ? { ...e, interes: value } : e)));
@@ -520,6 +523,49 @@ const NexiventFeed: React.FC = () => {
     }
   }, [authHint, resolvedUserId]);
 
+  const buildEventUrl = useCallback((id: number) => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/event/${id}`;
+    }
+    const base = (process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? '').replace(
+      /\/+$/,
+      ''
+    );
+    return base ? `${base}/event/${id}` : `/event/${id}`;
+  }, []);
+
+  const handleShare = useCallback(
+    async (evento: Evento) => {
+      const url = buildEventUrl(evento.id);
+      const payload = { title: evento.titulo, url };
+
+      try {
+        if (navigator.share) {
+          await navigator.share(payload);
+          setShareHint({ text: 'Evento compartido', tone: 'success' });
+          return;
+        }
+      } catch (error) {
+        console.warn('Share API no disponible', error);
+      }
+
+      try {
+        await navigator.clipboard.writeText(url);
+        setShareHint({ text: 'Link copiado al portapapeles', tone: 'success' });
+      } catch (error) {
+        console.error('No se pudo copiar el link', error);
+        setShareHint({ text: `Copia manual: ${url}`, tone: 'error' });
+      }
+    },
+    [buildEventUrl]
+  );
+
+  useEffect(() => {
+    if (!shareHint) return;
+    const timer = setTimeout(() => setShareHint(null), 2500);
+    return () => clearTimeout(timer);
+  }, [shareHint]);
+
   return (
     <div className='fixed inset-0 w-screen h-screen bg-black overflow-hidden'>
       {status !== 'ready' && (
@@ -699,7 +745,19 @@ const NexiventFeed: React.FC = () => {
                     </span>
                   </button>
 
-                  <button className='flex flex-col items-center gap-1 group'>
+                  <button
+                    className='flex flex-col items-center gap-1 group relative'
+                    onClick={() => void handleShare(evento)}
+                  >
+                    {shareHint && (
+                      <span
+                        className={`absolute -top-10 left-1/2 -translate-x-1/2 text-xs px-3 py-1 rounded-full shadow-md whitespace-nowrap ${
+                          shareHint.tone === 'success' ? 'bg-white/90 text-black' : 'bg-red-500 text-white'
+                        }`}
+                      >
+                        {shareHint.text}
+                      </span>
+                    )}
                     <div className='w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-all'>
                       <Share2 size={22} className='text-white' />
                     </div>
