@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest, { params }: { params: { eventId: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ eventId: string }> }) {
   try {
-    const { eventId } = params;
+    const { eventId } = await context.params;
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
 
     // Llamar al backend para obtener los asistentes
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: { eventId:
     return NextResponse.json({
       data: attendees,
       success: true,
-      total: data.total,
+      total: data.total || attendees.length,
     });
   } catch (error) {
     console.error('❌ [API] Error al obtener asistentes:', error);

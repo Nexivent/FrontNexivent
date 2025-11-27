@@ -87,7 +87,7 @@ const Form: React.FC = () => {
           </div>
         </div>
       )}
-      <DocumentTypeNotice />
+      {activeTab === 'email' ? <DocumentTypeNotice /> : null}
       <div className='form-content'>
         {activeTab === 'email' ? <EmailPasswordSignIn /> : <RucSignIn />}
       </div>
