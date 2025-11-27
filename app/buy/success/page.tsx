@@ -172,7 +172,7 @@ const Page: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [router]); // Sin dependencias para que solo se ejecute una vez
+  }, [router]);
 
   const generateTickets = async (confirmedOrder: ConfirmedOrderData) => {
     try {
@@ -260,8 +260,8 @@ const Page: React.FC = () => {
 
   const handleSendEmail = async () => {
     console.log('INFO: Iniciando envío de email...');
-    console.log('INFO: orderData:', orderData);
-    console.log('INFO: user:', user);
+    console.log('INFO: orderData completo:', JSON.stringify(orderData, null, 2));
+    console.log('INFO: user completo:', JSON.stringify(user, null, 2));
     
     if (!orderData) {
       const errorMsg = 'Error: No se encontraron datos de la compra.';
@@ -281,11 +281,12 @@ const Page: React.FC = () => {
     const userEmail = user.email || user.correo || user.Email || user.Correo;
     const userName = user.nombre || user.name || user.Name || 'Usuario';
     
+    console.log('INFO: Todas las propiedades de user:', Object.keys(user));
     console.log('INFO: Email extraído:', userEmail);
     console.log('INFO: Nombre extraído:', userName);
 
     if (!userEmail) {
-      const errorMsg = 'Error: No se encontró tu correo electrónico. Por favor verifica tu perfil.';
+      const errorMsg = `Error: No se encontró tu correo electrónico en el perfil. Propiedades disponibles: ${Object.keys(user).join(', ')}`;
       console.error('ERROR:', errorMsg);
       setEmailStatus(errorMsg);
       return;
@@ -304,30 +305,41 @@ const Page: React.FC = () => {
         userName: userName,
       };
 
-      console.log('INFO: Payload a enviar:', payload);
+      console.log('INFO: Payload a enviar:', JSON.stringify(payload, null, 2));
+      
+      // ✅ CAMBIO AQUÍ: Usar ruta relativa para API Route de Next.js
+      const apiUrl = '/api/tickets/sendEmail';
+      console.log('INFO: URL del API:', apiUrl);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098'}/api/tickets/sendEmail`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
       console.log('INFO: Response status:', response.status);
+      console.log('INFO: Response headers:', Object.fromEntries(response.headers.entries()));
+
+      const responseText = await response.text();
+      console.log('INFO: Response text:', responseText);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch {
+          errorData = { message: responseText };
+        }
         console.error('ERROR: Respuesta del servidor:', errorData);
-        throw new Error(errorData.message || 'Error al enviar correo');
+        throw new Error(errorData.message || errorData.error || 'Error al enviar correo');
       }
 
-      const result = await response.json();
+      const result = JSON.parse(responseText);
       console.log('SUCCESS: Correo enviado:', result);
       setEmailStatus('¡Correo enviado con éxito!');
     } catch (error: any) {
       console.error('ERROR: Error al enviar correo:', error);
+      console.error('ERROR: Stack trace:', error.stack);
       setEmailStatus(`Error al enviar el correo: ${error.message || 'Error desconocido'}`);
     } finally {
       setIsSendingEmail(false);
