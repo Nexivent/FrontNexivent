@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Heart,
   X,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
+import { useUser } from '@contexts/UserContext';
+import { type Usuario } from '@utils/api';
 
 interface Evento {
   id: number;
@@ -81,14 +83,20 @@ type RawEventoApi = {
   }>;
 };
 
-const FEED_ENDPOINT = (() => {
-  const base =
-    (process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? '').replace(
-      /\/+$/,
-      ''
-    );
-  return base ? `${base}/evento/filter?estado=PUBLICADO` : '/evento/filter?estado=PUBLICADO';
-})();
+type InteractionAction = 0 | 1 | 2;
+
+const API_BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? '').replace(
+  /\/+$/,
+  ''
+);
+
+const buildApiUrl = (path: string) => {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return API_BASE_URL ? `${API_BASE_URL}${normalized}` : normalized;
+};
+
+const FEED_ENDPOINT = buildApiUrl('/evento/filter?estado=PUBLICADO');
+const INTERACTION_ENDPOINT = buildApiUrl('/evento/interaccion');
 
 const fallbackEventos: Evento[] = [
   {
@@ -246,6 +254,30 @@ const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
   };
 };
 
+const toNumericId = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  const numeric = typeof value === 'string' ? Number(value) : (value as number);
+  if (typeof numeric !== 'number' || Number.isNaN(numeric)) return null;
+  return numeric > 0 ? numeric : null;
+};
+
+const resolveUsuarioId = (user?: Partial<Usuario> | null): number | null => {
+  if (!user) return null;
+
+  const candidates: Array<unknown> = [
+    (user as { usuarioId?: unknown }).usuarioId,
+    (user as { idUsuario?: unknown }).idUsuario,
+    (user as { id?: unknown }).id,
+  ];
+
+  for (const candidate of candidates) {
+    const numeric = toNumericId(candidate);
+    if (numeric !== null) return numeric;
+  }
+
+  return null;
+};
+
 const NexiventFeed: React.FC = () => {
   const [eventosState, setEventosState] = useState<Evento[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -260,6 +292,40 @@ const NexiventFeed: React.FC = () => {
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const router = useRouter();
+  const { user } = useUser();
+  const resolvedUserId = resolveUsuarioId(user);
+  const viewedEvents = useRef<Set<number>>(new Set());
+  const [authHint, setAuthHint] = useState<{ text: string; target: 'like' | 'no' } | null>(null);
+  const updateEventoInteres = useCallback(
+    (id: number, value: Evento['interes']) => {
+      setEventosState((prev) => prev.map((e) => (e.id === id ? { ...e, interes: value } : e)));
+    },
+    []
+  );
+  const recordInteraction = useCallback(
+    async (eventoId: number, accion: InteractionAction, method: 'POST' | 'PUT') => {
+      if (!resolvedUserId) {
+        console.warn('No se pudo registrar la interacción porque falta el usuario.');
+        return false;
+      }
+
+      try {
+        const response = await fetch(INTERACTION_ENDPOINT, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventoId, usuarioId: resolvedUserId, accion }),
+        });
+
+        if (!response.ok) throw new Error(`API respondió ${response.status}`);
+        return true;
+      } catch (error) {
+        console.error('No se pudo registrar la interacción del evento', error);
+        return false;
+      }
+    },
+    [resolvedUserId]
+  );
+  const currentEventId = eventosState[currentIndex]?.id;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -284,6 +350,7 @@ const NexiventFeed: React.FC = () => {
         if (mapped.length === 0) throw new Error('Sin eventos publicados');
 
         videoRefs.current = [];
+        viewedEvents.current.clear();
         setEventosState(mapped);
         setCurrentIndex(0);
         setStatus('ready');
@@ -292,6 +359,7 @@ const NexiventFeed: React.FC = () => {
         console.error('No se pudo cargar el feed de eventos', error);
         setEventosState(fallbackEventos);
         setCurrentIndex(0);
+        viewedEvents.current.clear();
         setStatus('error');
       }
     };
@@ -300,6 +368,19 @@ const NexiventFeed: React.FC = () => {
 
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    viewedEvents.current.clear();
+  }, [resolvedUserId]);
+
+  useEffect(() => {
+    if (typeof currentEventId !== 'number') return;
+    if (!resolvedUserId) return;
+    if (viewedEvents.current.has(currentEventId)) return;
+
+    viewedEvents.current.add(currentEventId);
+    void recordInteraction(currentEventId, 0, 'POST');
+  }, [currentEventId, recordInteraction, resolvedUserId]);
 
   const handleTouchStart = (e: any): void => {
     touchStartY.current = e.touches[0].clientY;
@@ -348,19 +429,50 @@ const NexiventFeed: React.FC = () => {
     setTimeout(() => setIsScrolling(false), 600);
   };
 
-  const toggleInteres = (id: number, value: boolean): void => {
-    setEventosState((prev) => prev.map((e) => (e.id === id ? { ...e, interes: value } : e)));
-  };
+  const handleToggleLike = useCallback(
+    async (evento: Evento) => {
+      const previous = evento.interes;
+      const next: Evento['interes'] = evento.interes === true ? null : true;
+      const accion: InteractionAction = next === true ? 1 : 0;
 
-  const handleNoInteres = (): void => {
+      if (!resolvedUserId) {
+        console.warn('Inicia sesión para registrar tu interés.');
+        return;
+      }
+
+      updateEventoInteres(evento.id, next);
+      const ok = await recordInteraction(evento.id, accion, 'PUT');
+      if (!ok) {
+        updateEventoInteres(evento.id, previous);
+      }
+    },
+    [recordInteraction, resolvedUserId, updateEventoInteres]
+  );
+
+  const handleNoInteres = useCallback(async () => {
     const current = eventosState[currentIndex];
     if (!current) return;
 
-    toggleInteres(current.id, false);
-    if (currentIndex < eventosState.length - 1) {
+    if (!resolvedUserId) {
+      console.warn('Inicia sesión para registrar tu interacción.');
+      return;
+    }
+
+    const previous = current.interes;
+    const next: Evento['interes'] = current.interes === false ? null : false;
+    const accion: InteractionAction = next === false ? 2 : 0;
+
+    updateEventoInteres(current.id, next);
+    const ok = await recordInteraction(current.id, accion, 'PUT');
+    if (!ok) {
+      updateEventoInteres(current.id, previous);
+      return;
+    }
+
+    if (next === false && currentIndex < eventosState.length - 1) {
       scrollToIndex(currentIndex + 1);
     }
-  };
+  }, [currentIndex, eventosState, recordInteraction, resolvedUserId, updateEventoInteres]);
 
   const toggleMute = (): void => {
     const newMutedState = !isMuted;
@@ -371,6 +483,18 @@ const NexiventFeed: React.FC = () => {
       currentVideo.muted = newMutedState;
     }
   };
+
+  useEffect(() => {
+    if (!authHint) return;
+    const timer = setTimeout(() => setAuthHint(null), 2500);
+    return () => clearTimeout(timer);
+  }, [authHint]);
+
+  useEffect(() => {
+    if (resolvedUserId && authHint) {
+      setAuthHint(null);
+    }
+  }, [authHint, resolvedUserId]);
 
   return (
     <div className='fixed inset-0 w-screen h-screen bg-black overflow-hidden'>
@@ -463,9 +587,20 @@ const NexiventFeed: React.FC = () => {
               <div className='absolute bottom-8 left-1/2 -translate-x-1/2 z-20'>
                 <div className='flex items-center gap-6 mb-4 relative'>
                   <button
-                    onClick={() => toggleInteres(evento.id, true)}
-                    className='flex flex-col items-center gap-1 group'
+                    onClick={() => {
+                      if (!resolvedUserId) {
+                        setAuthHint({ text: 'Inicia sesión para guardar', target: 'like' });
+                        return;
+                      }
+                      void handleToggleLike(evento);
+                    }}
+                    className='flex flex-col items-center gap-1 group relative'
                   >
+                    {authHint?.target === 'like' && (
+                      <span className='absolute -top-10 left-1/2 -translate-x-1/2 bg-white/90 text-black text-xs px-3 py-1 rounded-full shadow-md whitespace-nowrap'>
+                        {authHint.text}
+                      </span>
+                    )}
                     <div
                       className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${evento.interes === true
                         ? 'bg-green-500'
@@ -481,9 +616,20 @@ const NexiventFeed: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={handleNoInteres}
-                    className='flex flex-col items-center gap-1 group'
+                    onClick={() => {
+                      if (!resolvedUserId) {
+                        setAuthHint({ text: 'Inicia sesión para registrar esta acción.', target: 'no' });
+                        return;
+                      }
+                      void handleNoInteres();
+                    }}
+                    className='flex flex-col items-center gap-1 group relative'
                   >
+                    {authHint?.target === 'no' && (
+                      <span className='absolute -top-10 left-1/2 -translate-x-1/2 bg-white/90 text-black text-xs px-3 py-1 rounded-full shadow-md whitespace-nowrap'>
+                        {authHint.text}
+                      </span>
+                    )}
                     <div
                       className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${evento.interes === false
                         ? 'bg-orange-500'
