@@ -176,6 +176,12 @@ const resolvePrimaryDate = (raw: RawEventoApi): string | undefined => {
   const getString = (value: unknown): string | undefined =>
     typeof value === 'string' ? value : undefined;
 
+  const eventDate = Array.isArray((raw as any).eventDates) ? (raw as any).eventDates[0] : null;
+  if (eventDate && typeof eventDate.fecha === 'string') {
+    const time = typeof eventDate.horaInicio === 'string' && eventDate.horaInicio.length > 0 ? eventDate.horaInicio : undefined;
+    return [eventDate.fecha, time].filter(Boolean).join(' ');
+  }
+
   const nestedDate =
     (raw.Fecha && typeof raw.Fecha === 'object'
       ? getString(raw.Fecha.Fecha) ?? getString(raw.Fecha.FechaEvento)
@@ -185,10 +191,15 @@ const resolvePrimaryDate = (raw: RawEventoApi): string | undefined => {
       getString((raw.fecha as any).FechaEvento)
       : undefined);
 
+  const fe = Array.isArray((raw as any).Fechas) ? (raw as any).Fechas[0] : null;
+  const feDate = fe?.Fecha?.FechaEvento ?? fe?.Fecha?.Fecha ?? fe?.FechaEvento ?? fe?.Fecha;
+  const feHora = fe?.HoraInicio;
+
   const candidates = [
+    feDate ? [feDate, feHora].filter(Boolean).join(' ') : undefined,
     getString(raw.FechaEvento),
     getString(raw.fechaEvento),
-    getString(raw.Fecha),          // <-- ahora no devuelve objetos
+    getString(raw.Fecha), // <-- ahora no devuelve objetos
     nestedDate,
     getString(raw.Fechas?.[0]?.Fecha),
     getString(raw.EventoFechas?.[0]?.FechaEvento),
@@ -203,7 +214,20 @@ const resolvePrimaryDate = (raw: RawEventoApi): string | undefined => {
 
 
 const resolvePrice = (raw: RawEventoApi): number => {
+  const sectorTariffs = Array.isArray((raw as any).Sectores)
+    ? (raw as any).Sectores.flatMap((sector: any) =>
+        Array.isArray(sector.Tarifa) ? sector.Tarifa.map((t: any) => t?.Precio) : []
+      )
+    : [];
+
+  const numericTariffs = sectorTariffs.filter(
+    (value): value is number => typeof value === 'number' && !Number.isNaN(value)
+  );
+
+  const tariffMin = numericTariffs.length > 0 ? Math.min(...numericTariffs) : undefined;
+
   const candidates: Array<number | undefined> = [
+    tariffMin,
     raw.Tarifa,
     raw.Tarifas?.[0]?.Precio,
     raw.Tarifas?.[0]?.PrecioBase,
@@ -244,7 +268,7 @@ const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
   return {
     id: Number.isNaN(numericId) ? index + 1 : numericId,
     titulo,
-    fecha: formatEventDate(firstDate),
+    fecha: firstDate ? formatEventDate(firstDate) : 'Fecha por definir',
     lugar,
     descripcion,
     precio: String(priceCandidate ?? 0),
@@ -539,13 +563,6 @@ const NexiventFeed: React.FC = () => {
                     muted={isMuted}
                     playsInline
                   >
-                    <track
-                      default
-                      kind='captions'
-                      src={`/captions/evento-${evento.id}.vtt`}
-                      srcLang='es'
-                      label='Español'
-                    />
                   </video>
                 ) : (
                   <img
@@ -579,7 +596,7 @@ const NexiventFeed: React.FC = () => {
                 </p>
                 <div className='flex items-center justify-center gap-3'>
                   <span className='text-white text-3xl font-bold drop-shadow-lg'>
-                    Desde S/{evento.precio}
+                    Desde S/{Math.round(Number(evento.precio))}
                   </span>
                 </div>
               </div>
