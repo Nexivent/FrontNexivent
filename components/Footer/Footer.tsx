@@ -45,23 +45,8 @@ const Footer: React.FC = () => (
         <Link href='/members/signup' className='white'>
           Registrarse
         </Link>
-        <span>or</span>
+        <span>o</span>
         <ButtonLink color='yellow-filled' text='Acceder' url='members/signin' />
-      </div>
-    </div>
-    <div className='newsletter'>
-      <p>No te pierdas la nueva plataforma de eventos y animate a descubrir nuevas experiencias.</p>
-      <div className='input-container'>
-        <input
-          type='email'
-          name='email'
-          autoComplete='off'
-          placeholder='tuNombre@email.com'
-          required
-        />
-        <button type='submit'>
-          <span className='material-symbols-outlined'>arrow_forward</span>
-        </button>
       </div>
     </div>
     <div className='copy'>
