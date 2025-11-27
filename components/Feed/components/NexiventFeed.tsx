@@ -95,7 +95,7 @@ const buildApiUrl = (path: string) => {
   return API_BASE_URL ? `${API_BASE_URL}${normalized}` : normalized;
 };
 
-const FEED_ENDPOINT = buildApiUrl('/evento/filter?estado=PUBLICADO');
+const FEED_ENDPOINT = buildApiUrl('/feed/eventos');
 const INTERACTION_ENDPOINT = buildApiUrl('/evento/interaccion');
 
 const fallbackEventos: Evento[] = [
@@ -280,8 +280,8 @@ const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
 
 const toNumericId = (value: unknown): number | null => {
   if (value === null || value === undefined) return null;
-  const numeric = typeof value === 'string' ? Number(value) : (value as number);
-  if (typeof numeric !== 'number' || Number.isNaN(numeric)) return null;
+  const numeric = typeof value === 'string' || typeof value === 'number' ? Number(value) : NaN;
+  if (!Number.isInteger(numeric)) return null;
   return numeric > 0 ? numeric : null;
 };
 
@@ -356,11 +356,15 @@ const NexiventFeed: React.FC = () => {
 
   useEffect(() => {
     const controller = new AbortController();
+    const feedUrl =
+      resolvedUserId && resolvedUserId > 0
+        ? `${FEED_ENDPOINT}?usuarioId=${resolvedUserId}`
+        : FEED_ENDPOINT;
 
     const loadFeed = async () => {
       try {
         setStatus('loading');
-        const response = await fetch(FEED_ENDPOINT, {
+        const response = await fetch(feedUrl, {
           cache: 'no-store',
           signal: controller.signal,
         });
@@ -394,7 +398,7 @@ const NexiventFeed: React.FC = () => {
     void loadFeed();
 
     return () => controller.abort();
-  }, []);
+  }, [resolvedUserId]);
 
   useEffect(() => {
     viewedEvents.current.clear();
