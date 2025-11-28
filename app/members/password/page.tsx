@@ -11,12 +11,8 @@ const Page: React.FC = () => (
   <Master>
     <Section className='gray-background hero-offset'>
       <div className='container'>
-        <div className='center'>
-          <Heading type={1} color='gray' text='Change password' />
-          <p className='gray form-information'>
-            Please enter your new password. It&apos;s a good idea to use a strong password that you
-            are not using elsewhere. Your new password must be at least 8 characters.
-          </p>
+        <div className='center' style={{ marginBottom: '30px' }}>
+          <Heading type={1} color='gray' text='Cambio de Contraseña' />
         </div>
         <Form />
       </div>
@@ -24,22 +20,22 @@ const Page: React.FC = () => (
   </Master>
 );
 
-const title = 'Change password';
-const canonical = 'https://modern-ticketing.com/members/password';
-const description = 'Modern ticketing is a modern ticketing solution';
+const title = 'Cambio de Contraseña | Nexivent';
+const canonical = 'https://nexivent.com/members/password';
+const description = 'Gestión de cambio de contraseña en Nexivent';
 
 export const metadata: Metadata = {
   title,
   description,
-  keywords: 'modern ticketing',
+  keywords: 'nexivent, cambio contraseña, seguridad',
   alternates: { canonical },
   openGraph: {
     title,
     description,
     url: canonical,
     type: 'website',
-    siteName: 'Modern Ticketing',
-    images: 'https://modern-ticketing.com/logo192.png',
+    siteName: 'Nexivent',
+    images: 'https://nexivent.com/logo.png',
   },
 };
 

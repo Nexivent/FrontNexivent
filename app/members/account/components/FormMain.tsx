@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import Link from 'next/link';
 
@@ -21,14 +21,12 @@ interface IProps {
   data: {
     name: string;
     email: string;
-    lastname: string;
+    phoneNumber: string;
   };
 }
 
 interface IFormProps {
   name: string;
-  email: string;
-  lastname: string;
 }
 
 const FormMain: React.FC<IProps> = ({ data }) => {
@@ -36,10 +34,17 @@ const FormMain: React.FC<IProps> = ({ data }) => {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<IFormProps>({
-    name: data.name,
-    email: data.email,
-    lastname: data.lastname,
+    name: '',
   });
+
+  // Sincronizar formValues cuando data cambie
+  useEffect(() => {
+    if (data.name) {
+      setFormValues({
+        name: data.name,
+      });
+    }
+  }, [data]);
 
   /**
    * Handles the change event for input fields in the form.
@@ -69,11 +74,10 @@ const FormMain: React.FC<IProps> = ({ data }) => {
     setLoading(true);
 
     const parameters: IRequest = {
-      url: 'v1/signin/password',
+      url: 'v1/profile/update',
       method: 'POST',
       postData: {
-        email: '',
-        password: '',
+        name: formValues.name,
       },
     };
 
@@ -82,16 +86,16 @@ const FormMain: React.FC<IProps> = ({ data }) => {
     const { status, data } = req;
 
     if (status === 200) {
-      //
+      showAlert({ type: 'success', text: 'Perfil actualizado correctamente' });
     } else {
-      showAlert({ type: 'error', text: data.title ?? '' });
+      showAlert({ type: 'error', text: data.title ?? 'Error al actualizar el perfil' });
     }
 
     setLoading(false);
   };
 
   if (loading) {
-    return <Loader type='inline' color='gray' text='Hang on a second' />;
+    return <Loader type='inline' color='gray' text='Actualizando perfil...' />;
   }
 
   return (
@@ -106,49 +110,48 @@ const FormMain: React.FC<IProps> = ({ data }) => {
         <div className='form-line'>
           <div className='one-line'>
             <div className='label-line'>
-              <label htmlFor='name'>Nombre</label>
+              <label htmlFor='name'>Nombre completo</label>
             </div>
             <Input
               type='text'
               name='name'
               value={formValues.name}
-              maxLength={64}
-              placeholder='Ingresa tu nombre'
+              maxLength={128}
+              placeholder='Ingresa tu nombre completo'
               required
+              disabled
               onChange={handleChange}
             />
           </div>
         </div>
-        {/*<div className='form-line'>
-          <div className='one-line'>
-            <div className='label-line'>
-              <label htmlFor='lastname'>Apellido</label>
-            </div>
-            <Input
-              type='text'
-              name='lastname'
-              value={formValues.lastname}
-              maxLength={64}
-              placeholder='Ingresa tu apellido'
-              required
-              onChange={handleChange}
-            />
-          </div>
-        </div>*/}
         <div className='form-line'>
           <div className='one-line'>
-            <div className='label-line flex flex-v-center flex-space-between'>
-              <label htmlFor='email'>Correo electronico</label>
-              <Link href='/members/email' className='blue'>
-                Cambiar e-mail
-              </Link>
+            <div className='label-line'>
+              <label htmlFor='email'>Correo electrónico</label>
             </div>
             <Input
               type='email'
               name='email'
-              value={formValues.email}
+              value={data.email}
               maxLength={128}
-              placeholder='Enter your e-mail address'
+              placeholder='Correo electrónico'
+              required
+              disabled
+              onChange={() => {}}
+            />
+          </div>
+        </div>
+        <div className='form-line'>
+          <div className='one-line'>
+            <div className='label-line'>
+              <label htmlFor='phoneNumber'>Teléfono</label>
+            </div>
+            <Input
+              type='tel'
+              name='phoneNumber'
+              value={data.phoneNumber}
+              maxLength={20}
+              placeholder='Número de teléfono'
               required
               disabled
               onChange={() => {}}
@@ -162,15 +165,6 @@ const FormMain: React.FC<IProps> = ({ data }) => {
               Cambiar contraseña
             </Link>
           </div>
-          <Input
-            type='password'
-            name='password'
-            value='dummypassword'
-            maxLength={64}
-            placeholder='Enter your password'
-            required
-            disabled
-          />
         </div>
         <div className='form-buttons'>
           <ButtonLink color='yellow-overlay' text='Cerrar sesión' url='members/signout' />

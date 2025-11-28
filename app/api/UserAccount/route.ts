@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
               </div>
 
               <div class="warning">
-                <strong>⏰ Importante:</strong> Este código expirará en <strong>15 minutos</strong>.
+                <strong>⏰ Importante:</strong> Este código expirará en <strong>1 minuto</strong>.
               </div>
 
               <div class="info">

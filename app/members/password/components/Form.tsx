@@ -1,154 +1,169 @@
 'use client';
 
-import { useState } from 'react';
-
-// hooks
-import useAlert from '@hooks/useAlert';
+import { useRouter } from 'next/navigation';
 
 // components
-import Input from '@components/Form/Input';
 import Button from '@components/Button/Button';
-import Loader from '@components/Loader/Loader';
-import ButtonLink from '@components/Button/ButtonLink';
-
-// utils
-import Request, { type IRequest, type IResponse } from '@utils/Request';
-
-// interfaces
-interface IFormProps {
-  password: string;
-  newPassword: string;
-  newPasswordAgain: string;
-}
 
 const Form: React.FC = () => {
-  const { showAlert, hideAlert } = useAlert();
-
-  const [loading, setLoading] = useState<boolean>(false);
-  const [formValues, setFormValues] = useState<IFormProps>({
-    password: '',
-    newPassword: '',
-    newPasswordAgain: '',
-  });
-
-  /**
-   * Handles the change event for input fields in the form.
-   *
-   * This function is called when the value of an input field in the form changes. It updates the state of the form values with the new value.
-   *
-   * @param {React.ChangeEvent<HTMLInputElement>} e - The change event.
-   */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const { name, value } = e.target;
-
-    setFormValues({
-      ...formValues,
-      [name]: value,
-    });
-  };
-
-  /**
-   * Handles the form submission event.
-   *
-   * This function is called when the form is submitted. It prevents the default form submission behavior,
-   * hides any existing alert, sets the loading state to true, sends a POST request to the signin/password endpoint,
-   * and handles the response. If the response status is 200, it does nothing. If the status is not 200, it shows an error alert.
-   * Finally, it sets the loading state back to false.
-   *
-   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
-   * @returns {Promise<any>} A promise that resolves when the request is complete.
-   */
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<any> => {
-    e.preventDefault();
-
-    hideAlert();
-
-    setLoading(true);
-
-    const parameters: IRequest = {
-      url: 'v1/signin/password',
-      method: 'POST',
-      postData: {
-        email: '',
-        password: '',
-      },
-    };
-
-    const req: IResponse = await Request.getResponse(parameters);
-
-    const { status, data } = req;
-
-    if (status === 200) {
-      //
-    } else {
-      showAlert({ type: 'error', text: data.title ?? '' });
-    }
-
-    setLoading(false);
-  };
-
-  if (loading) {
-    return <Loader type='inline' color='gray' text='Hang on a second' />;
-  }
+  const router = useRouter();
 
   return (
-    <form
-      className='form shrink'
-      noValidate
-      onSubmit={(e) => {
-        void handleSubmit(e);
-      }}
-    >
+    <div className='form shrink' style={{ maxWidth: '900px', margin: '0 auto' }}>
       <div className='form-elements'>
-        <div className='form-line'>
-          <div className='label-line'>
-            <label htmlFor='password'>Current password</label>
-          </div>
-          <Input
-            type='password'
-            name='password'
-            value={formValues.password}
-            maxLength={64}
-            placeholder='Enter your current password'
-            required
-            onChange={handleChange}
-          />
+        {/* Aviso principal */}
+        <div
+          style={{
+            padding: '25px 30px',
+            backgroundColor: '#1a1a1a',
+            borderRadius: '12px',
+            border: '2px solid #FFD700',
+            textAlign: 'center',
+            marginBottom: '20px',
+          }}
+        >
+          <div style={{ fontSize: '42px', marginBottom: '12px' }}>🔒</div>
+          <h2
+            style={{
+              color: '#FFD700',
+              marginBottom: '12px',
+              fontSize: '22px',
+              fontWeight: '600',
+            }}
+          >
+            Cambio de Contraseña
+          </h2>
+          <p
+            style={{
+              color: '#e0e0e0',
+              fontSize: '14px',
+              lineHeight: '1.6',
+              marginBottom: '8px',
+            }}
+          >
+            Por seguridad, el cambio de contraseña debe ser gestionado por nuestro equipo de
+            soporte.
+          </p>
+          <p
+            style={{
+              color: '#e0e0e0',
+              fontSize: '14px',
+              lineHeight: '1.6',
+              marginBottom: '0',
+            }}
+          >
+            Por favor, contáctate con nosotros para proceder con esta solicitud.
+          </p>
         </div>
-        <div className='form-line'>
-          <div className='label-line'>
-            <label htmlFor='newPassword'>New password</label>
+
+        {/* Información de contacto */}
+        <div
+          style={{
+            padding: '20px 25px',
+            backgroundColor: '#2a2a2a',
+            borderRadius: '12px',
+            border: '1px solid #3a3a3a',
+            marginBottom: '20px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+            <span style={{ fontSize: '20px', marginRight: '10px' }}>📧</span>
+            <h3
+              style={{
+                color: '#FFD700',
+                fontSize: '18px',
+                fontWeight: '600',
+                margin: 0,
+              }}
+            >
+              Información de Contacto
+            </h3>
           </div>
-          <Input
-            type='password'
-            name='newPassword'
-            value={formValues.newPassword}
-            maxLength={64}
-            placeholder='Enter your new password'
-            required
-            onChange={handleChange}
-          />
-        </div>
-        <div className='form-line'>
-          <div className='label-line'>
-            <label htmlFor='newPasswordAgain'>Confirm new password</label>
+
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px 12px',
+                backgroundColor: '#1a1a1a',
+                borderRadius: '8px',
+              }}
+            >
+              <span style={{ fontSize: '18px', marginRight: '10px' }}>📩</span>
+              <div style={{ fontSize: '14px' }}>
+                <strong style={{ color: '#FFD700' }}>Email:</strong>{' '}
+                <a
+                  href='mailto:nexivent.team@gmail.com'
+                  style={{
+                    color: '#e0e0e0',
+                    textDecoration: 'none',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.color = '#FFD700')}
+                  onMouseOut={(e) => (e.currentTarget.style.color = '#e0e0e0')}
+                >
+                  nexivent.team@gmail.com
+                </a>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px 12px',
+                backgroundColor: '#1a1a1a',
+                borderRadius: '8px',
+              }}
+            >
+              <span style={{ fontSize: '18px', marginRight: '10px' }}>💬</span>
+              <div style={{ fontSize: '14px' }}>
+                <strong style={{ color: '#FFD700' }}>WhatsApp:</strong>{' '}
+                <a
+                  href='https://wa.me/51944975049'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  style={{
+                    color: '#e0e0e0',
+                    textDecoration: 'none',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.color = '#FFD700')}
+                  onMouseOut={(e) => (e.currentTarget.style.color = '#e0e0e0')}
+                >
+                  +51 944 975 049
+                </a>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px 12px',
+                backgroundColor: '#1a1a1a',
+                borderRadius: '8px',
+              }}
+            >
+              <span style={{ fontSize: '18px', marginRight: '10px' }}>🕐</span>
+              <div style={{ fontSize: '14px' }}>
+                <strong style={{ color: '#FFD700' }}>Horario:</strong>{' '}
+                <span style={{ color: '#e0e0e0' }}>Lunes a Viernes, 9:00 AM - 6:00 PM</span>
+              </div>
+            </div>
           </div>
-          <Input
-            type='password'
-            name='newPasswordAgain'
-            value={formValues.newPasswordAgain}
-            maxLength={64}
-            placeholder='Re-enter your new password'
-            required
-            onChange={handleChange}
-          />
         </div>
-        <div className='form-buttons'>
-          <ButtonLink color='gray-overlay' text='Go back' url='members/account' />
-          &nbsp; &nbsp;
-          <Button type='submit' color='blue-filled' text='Submit' />
+
+        {/* Botón de acción */}
+        <div className='form-buttons' style={{ textAlign: 'center', marginTop: '20px' }}>
+          <Button
+            type='button'
+            color='yellow-filled'
+            text='Volver a Mi Cuenta'
+            onClick={() => router.push('/members/account')}
+          />
         </div>
       </div>
-    </form>
+    </div>
   );
 };
 
