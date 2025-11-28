@@ -27,6 +27,17 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
   const nombreLowerCase = primerNombre.toLowerCase();
   const nombreMostrado = nombreLowerCase.charAt(0).toUpperCase() + nombreLowerCase.slice(1);
   ///////////////////////////////////////////////////////////////////////
+
+  // Determinar si mostrar "Mis tickets"
+  const showMisTickets = useMemo(() => {
+    if (!user) return false;
+
+    const isAsistente = user.rol_principal === 'ASISTENTE';
+    const isDNIorCE = user.tipo_documento === 'DNI' || user.tipo_documento === 'CE';
+
+    return isAsistente || isDNIorCE;
+  }, [user]);
+
   const logoHref = useMemo(() => {
     if (!user) return '/';
 
@@ -40,6 +51,7 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
 
     return '/';
   }, [user]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -137,6 +149,7 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
               </div>
 
               {isDropdownOpen && (
+<<<<<<< Updated upstream
                 <div className='absolute right-0 mt-3 w-48 bg-white !bg-opacity-100 backdrop-blur-none rounded-md shadow-md py-1 z-50 text-black'>
 
                   <Link
@@ -144,16 +157,37 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
                     className='block px-4 py-2 text-sm text-black hover:bg-gray-300'>
                     Mis tickets
                   </Link>
+=======
+                <div
+                  className='absolute right-0 mt-3 w-48 rounded-lg shadow-2xl py-1 z-20 overflow-hidden'
+                  style={{
+                    background: 'rgba(20, 20, 20, 0.65)',
+                    backdropFilter: 'blur(10px) saturate(150%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(150%)',
+                    border: '1px solid rgba(255, 255, 255, 0.125)',
+                  }}
+                >
+                  {showMisTickets && (
+                    <Link
+                      href='/members/tickets'
+                      className='block px-4 py-2 text-sm text-gray-200 hover:bg-white/10 transition-colors'
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Mis tickets
+                    </Link>
+                  )}
+>>>>>>> Stashed changes
                   <Link
                     href='/members/account'
-                    className='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
+                    className='block px-4 py-2 text-sm text-gray-200 hover:bg-white/10 transition-colors'
+                    onClick={() => setDropdownOpen(false)}
                   >
                     Mi cuenta
                   </Link>
-                  <div className='border-t border-gray-200 my-1'></div>
+                  <div className='border-t border-white/10 my-1'></div>
                   <button
                     onClick={handleLogout}
-                    className='block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50'
+                    className='block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors font-medium'
                   >
                     Cerrar sesión
                   </button>
