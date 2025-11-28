@@ -1,5 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import CheckAnimated from '../../Check/CheckAnimated';
 import {
   Heart,
   X,
@@ -305,6 +306,8 @@ const resolveUsuarioId = (user?: Partial<Usuario> | null): number | null => {
 const NexiventFeed: React.FC = () => {
   const [eventosState, setEventosState] = useState<Evento[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [useNeutralFeed, setUseNeutralFeed] = useState<boolean>(false);
+  const [exhaustedFeed, setExhaustedFeed] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(true);
   const [showDescription, setShowDescription] = useState<boolean>(false);
@@ -355,18 +358,23 @@ const NexiventFeed: React.FC = () => {
   const currentEventId = eventosState[currentIndex]?.id;
 
   useEffect(() => {
-    const controller = new AbortController();
-    const feedUrl =
-      resolvedUserId && resolvedUserId > 0
-        ? `${FEED_ENDPOINT}?usuarioId=${resolvedUserId}`
-        : FEED_ENDPOINT;
+    setUseNeutralFeed(!resolvedUserId);
+    setExhaustedFeed(false);
+  }, [resolvedUserId]);
 
-    const loadFeed = async () => {
+  const loadFeed = useCallback(
+    async (signal?: AbortSignal) => {
       try {
         setStatus('loading');
+        const shouldUseNeutralFeed = useNeutralFeed || !resolvedUserId;
+        const feedUrl =
+          shouldUseNeutralFeed || !resolvedUserId
+            ? FEED_ENDPOINT
+            : `${FEED_ENDPOINT}?usuarioId=${resolvedUserId}`;
+
         const response = await fetch(feedUrl, {
           cache: 'no-store',
-          signal: controller.signal,
+          signal,
         });
         if (!response.ok) throw new Error(`API respondio ${response.status}`);
 
@@ -378,27 +386,42 @@ const NexiventFeed: React.FC = () => {
           .map((item: RawEventoApi, index: number) => mapApiEvent(item, index))
           .filter((item) => Boolean(item));
 
-        if (mapped.length === 0) throw new Error('Sin eventos publicados');
+        if (mapped.length === 0) {
+          if (!shouldUseNeutralFeed && resolvedUserId) {
+            setExhaustedFeed(true);
+            setEventosState([]);
+            setCurrentIndex(0);
+            setStatus('ready');
+            return;
+          }
+          throw new Error('Sin eventos publicados');
+        }
 
+        setExhaustedFeed(false);
         videoRefs.current = [];
         viewedEvents.current.clear();
         setEventosState(mapped);
         setCurrentIndex(0);
         setStatus('ready');
       } catch (error) {
-        if (controller.signal.aborted) return;
+        if (signal?.aborted) return;
         console.error('No se pudo cargar el feed de eventos', error);
+        setExhaustedFeed(false);
         setEventosState(fallbackEventos);
         setCurrentIndex(0);
         viewedEvents.current.clear();
         setStatus('error');
       }
-    };
+    },
+    [resolvedUserId, useNeutralFeed]
+  );
 
-    void loadFeed();
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadFeed(controller.signal);
 
     return () => controller.abort();
-  }, [resolvedUserId]);
+  }, [loadFeed]);
 
   useEffect(() => {
     viewedEvents.current.clear();
@@ -570,6 +593,14 @@ const NexiventFeed: React.FC = () => {
     return () => clearTimeout(timer);
   }, [shareHint]);
 
+  const handleShowAllEvents = () => {
+    setStatus('loading');
+    setCurrentIndex(0);
+    viewedEvents.current.clear();
+    setExhaustedFeed(false);
+    setUseNeutralFeed(true);
+  };
+
   return (
     <div className='fixed inset-0 w-screen h-screen bg-black overflow-hidden'>
       {status !== 'ready' && (
@@ -577,7 +608,27 @@ const NexiventFeed: React.FC = () => {
           {status === 'loading' ? 'Cargando eventos...' : 'Mostrando eventos de respaldo'}
         </div>
       )}
-      {eventosState.length === 0 && (
+      {exhaustedFeed && (
+        <div className='absolute inset-0 z-50 flex items-center justify-center px-6 text-center bg-black/80'>
+          <div className='max-w-md w-full bg-black/60 border border-white/10 rounded-2xl p-8 shadow-2xl space-y-4'>
+            <h2 className='text-white text-2xl font-semibold'>¡Ya viste todos los eventos!</h2>
+                    
+              <div className="flex justify-center items-center w-full">
+  <CheckAnimated />
+</div>
+            <p className='text-white/80 text-sm'>
+              Si quieres volver a recorrer el feed completo, puedes reiniciarlo ahora mismo.
+            </p>
+            <button
+              onClick={handleShowAllEvents}
+              className='button yellow-filled'
+            >
+              Volver a ver todos los eventos
+            </button>
+            </div>
+        </div>
+      )}
+      {eventosState.length === 0 && !exhaustedFeed && (
         <div className='absolute inset-0 flex items-center justify-center text-white z-40 pointer-events-none'>
           {status === 'loading' ? 'Cargando eventos...' : 'No hay eventos publicados'}
         </div>
