@@ -7,8 +7,8 @@ type Evento = {
   id_evento: number;
   titulo: string;
   lugar: string;
-  imagen_portada: string;
-  estado: string;
+  imagen_portada?: string;
+  estado?: string;
 };
 
 type OrdenDeCompra = {
@@ -34,25 +34,58 @@ const styles = {
     maxHeight: '80vh',
     overflowY: 'auto' as const,
   },
-  eventoItem: {
-    padding: '16px',
+  eventoCard: {
     marginBottom: 12,
     borderRadius: 8,
     background: '#1a1a1a',
     border: '1px solid #262626',
+    padding: 12,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    transition: 'all 0.2s ease',
+  },
+  eventoCardSelected: {
+    background: '#1f1f1f',
+    border: '1px solid #cddc39',
+  },
+  eventoInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  eventoTitulo: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#fff',
+    marginBottom: 4,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  eventoLugar: {
+    fontSize: 12,
+    color: '#888',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  selectButton: {
+    padding: '8px 16px',
+    borderRadius: 6,
+    background: '#262626',
+    border: '1px solid #333',
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 500,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    width: '100%',
-    textAlign: 'left' as const,
-    fontFamily: 'inherit',
+    whiteSpace: 'nowrap' as const,
   },
-  eventoItemSelected: {
+  selectButtonSelected: {
     background: 'linear-gradient(135deg, #cddc39 0%, #afb42b 100%)',
     border: '1px solid #cddc39',
     color: '#000',
   },
-  eventoTitulo: { fontSize: 16, fontWeight: 600, marginBottom: 4 },
-  eventoLugar: { fontSize: 14, color: '#888' },
   transactionsPanel: {
     background: '#0b0b0b',
     borderRadius: 12,
@@ -102,11 +135,6 @@ const styles = {
     width: '100%',
     fontSize: 14,
   },
-  eventosList: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 0,
-  },
 };
 
 const getEstadoOrdenText = (estado: number): string => {
@@ -129,6 +157,32 @@ const getEstadoColor = (estado: number): string => {
   }
 };
 
+const getMetodoPagoText = (metodoPagoId: number): string => {
+  switch (metodoPagoId) {
+    case 0:
+      return 'PENDIENTE';
+    case 1:
+      return 'TARJETA';
+    case 2:
+      return 'YAPE';
+    default:
+      return 'DESCONOCIDO';
+  }
+};
+
+const getMetodoPagoColor = (metodoPagoId: number): string => {
+  switch (metodoPagoId) {
+    case 0:
+      return '#ff9800'; // naranja
+    case 1:
+      return '#2196f3'; // azul
+    case 2:
+      return '#9c27b0'; // morado
+    default:
+      return '#666';
+  }
+};
+
 const TransactionsAdmin: React.FC = () => {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [selectedEventoId, setSelectedEventoId] = useState<number | null>(null);
@@ -145,8 +199,19 @@ const TransactionsAdmin: React.FC = () => {
         const response = await fetch(`${API_URL}/evento/`);
         if (response.ok) {
           const data = await response.json();
-          console.log('Eventos:', data.eventos);
-          setEventos(data.eventos || []);
+          console.log('Data completa:', data);
+
+          // Normalizar los eventos
+          const eventosNormalizados = (data.eventos || []).map((e: any) => ({
+            id_evento: e.ID || e.id_evento,
+            titulo: e.Titulo || e.titulo,
+            lugar: e.Lugar || e.lugar,
+            imagen_portada: e.imagen_portada,
+            estado: e.estado,
+          }));
+
+          console.log('Eventos normalizados:', eventosNormalizados);
+          setEventos(eventosNormalizados);
         } else {
           console.error('Error en respuesta:', response.status);
         }
@@ -174,8 +239,23 @@ const TransactionsAdmin: React.FC = () => {
         const response = await fetch(`${API_URL}/api/admin/transactions/${selectedEventoId}`);
         if (response.ok) {
           const data = await response.json();
-          console.log('Transacciones:', data);
-          setOrdenes(data || []);
+          console.log('Transacciones raw:', data);
+
+          // Normalizar las órdenes de compra
+          const ordenesNormalizadas = (data || []).map((o: any) => ({
+            orden_de_compra_id: o.ID || o.orden_de_compra_id,
+            usuario_id: o.UsuarioID || o.usuario_id,
+            fecha: o.Fecha || o.fecha,
+            total: o.Total || o.total || 0,
+            metodo_de_pago_id: o.MetodoDePagoID || o.metodo_de_pago_id,
+            estado_de_orden: o.EstadoDeOrden || o.estado_de_orden || 0,
+            monto_fee_servicio: o.MontoFeeServicio || o.monto_fee_servicio || 0,
+            fecha_hora_ini: o.FechaHoraIni || o.fecha_hora_ini,
+            fecha_hora_fin: o.FechaHoraFin || o.fecha_hora_fin,
+          }));
+
+          console.log('Órdenes normalizadas:', ordenesNormalizadas);
+          setOrdenes(ordenesNormalizadas);
         }
       } catch (error) {
         console.error('Error fetching transacciones:', error);
@@ -192,22 +272,27 @@ const TransactionsAdmin: React.FC = () => {
     if (!searchQuery) return eventos;
     return eventos.filter(
       (e) =>
-        e.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.lugar.toLowerCase().includes(searchQuery.toLowerCase())
+        e.titulo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.lugar?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [eventos, searchQuery]);
 
   // Calcular estadísticas
   const stats = useMemo(() => {
     const totalOrdenes = ordenes.length;
-    const totalMonto = ordenes.reduce((sum, o) => sum + o.total, 0);
-    const totalFees = ordenes.reduce((sum, o) => sum + o.monto_fee_servicio, 0);
+    const totalMonto = ordenes.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalFees = ordenes.reduce((sum, o) => sum + (o.monto_fee_servicio || 0), 0);
     const ordenesConfirmadas = ordenes.filter((o) => o.estado_de_orden === 1).length;
 
     return { totalOrdenes, totalMonto, totalFees, ordenesConfirmadas };
   }, [ordenes]);
 
   const selectedEvento = eventos.find((e) => e.id_evento === selectedEventoId);
+
+  const handleSelectEvento = (eventoId: number) => {
+    console.log('Seleccionando evento:', eventoId);
+    setSelectedEventoId(eventoId);
+  };
 
   return (
     <div style={styles.container}>
@@ -219,7 +304,7 @@ const TransactionsAdmin: React.FC = () => {
       <div style={styles.mainGrid}>
         <div style={styles.eventosPanel}>
           <h3 style={{ marginBottom: 16, fontSize: 18, color: '#fff' }}>
-            Eventos Disponibles ({eventos.length})
+            Eventos ({eventos.length})
           </h3>
           <input
             type='text'
@@ -234,39 +319,41 @@ const TransactionsAdmin: React.FC = () => {
           ) : filteredEventos.length === 0 ? (
             <p style={{ color: '#888', textAlign: 'center' }}>No hay eventos disponibles</p>
           ) : (
-            <>
-              {filteredEventos.map((evento) => {
-                const isSelected = selectedEventoId === evento.id_evento;
-                return (
+            filteredEventos.map((evento, index) => {
+              const isSelected = selectedEventoId === evento.id_evento;
+              const eventoId = evento.id_evento || index;
+
+              return (
+                <div
+                  key={`evento-${eventoId}`}
+                  style={{
+                    ...styles.eventoCard,
+                    ...(isSelected ? styles.eventoCardSelected : {}),
+                  }}
+                >
+                  <div style={styles.eventoInfo}>
+                    <div style={styles.eventoTitulo}>{evento.titulo || 'Sin título'}</div>
+                    <div style={styles.eventoLugar}>📍 {evento.lugar || 'Sin ubicación'}</div>
+                  </div>
                   <button
-                    key={evento.id_evento}
                     type='button'
                     style={{
-                      ...styles.eventoItem,
-                      ...(isSelected ? styles.eventoItemSelected : {}),
+                      ...styles.selectButton,
+                      ...(isSelected ? styles.selectButtonSelected : {}),
                     }}
-                    onClick={() => setSelectedEventoId(evento.id_evento)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (evento.id_evento) {
+                        handleSelectEvento(evento.id_evento);
+                      }
+                    }}
+                    disabled={!evento.id_evento}
                   >
-                    <div
-                      style={{
-                        ...styles.eventoTitulo,
-                        color: isSelected ? '#000' : '#fff',
-                      }}
-                    >
-                      {evento.titulo}
-                    </div>
-                    <div
-                      style={{
-                        ...styles.eventoLugar,
-                        color: isSelected ? '#333' : '#888',
-                      }}
-                    >
-                      📍 {evento.lugar}
-                    </div>
+                    {isSelected ? '✓' : 'Ver'}
                   </button>
-                );
-              })}
-            </>
+                </div>
+              );
+            })
           )}
         </div>
 
@@ -278,12 +365,9 @@ const TransactionsAdmin: React.FC = () => {
             </div>
           ) : (
             <>
-              <div style={{ marginBottom: 24 }}>
-                <h3 style={{ fontSize: 22, color: '#fff', marginBottom: 8 }}>
-                  {selectedEvento?.titulo}
-                </h3>
-                <p style={{ color: '#888', fontSize: 14 }}>📍 {selectedEvento?.lugar}</p>
-              </div>
+              <h3 style={{ fontSize: 22, color: '#fff', marginBottom: 24 }}>
+                {selectedEvento?.titulo || 'Evento seleccionado'}
+              </h3>
 
               <div style={styles.statsRow}>
                 <div style={styles.statCard}>
@@ -335,13 +419,15 @@ const TransactionsAdmin: React.FC = () => {
                         <td style={styles.td}>#{orden.orden_de_compra_id}</td>
                         <td style={styles.td}>{orden.usuario_id}</td>
                         <td style={styles.td}>
-                          {new Date(orden.fecha).toLocaleDateString('es-PE', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {orden.fecha
+                            ? new Date(orden.fecha).toLocaleDateString('es-PE', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Sin fecha'}
                         </td>
                         <td style={styles.td}>S/ {orden.total.toFixed(2)}</td>
                         <td style={styles.td}>S/ {orden.monto_fee_servicio.toFixed(2)}</td>
@@ -354,7 +440,15 @@ const TransactionsAdmin: React.FC = () => {
                         >
                           {getEstadoOrdenText(orden.estado_de_orden)}
                         </td>
-                        <td style={styles.td}>ID: {orden.metodo_de_pago_id}</td>
+                        <td
+                          style={{
+                            ...styles.td,
+                            color: getMetodoPagoColor(orden.metodo_de_pago_id),
+                            fontWeight: 600,
+                          }}
+                        >
+                          {getMetodoPagoText(orden.metodo_de_pago_id)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

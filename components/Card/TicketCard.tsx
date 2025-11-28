@@ -70,7 +70,7 @@ const TicketCard: React.FC<IProps> = ({
       });
 
       const json = await res.json();
-      console.log("Respuesta del backend:", json);
+      console.log('Respuesta del backend:', json);
 
       if (res.ok && json.cancelados && json.cancelados.length > 0) {
         alert(`Ticket cancelado correctamente (ID: ${id})`);
@@ -84,7 +84,6 @@ const TicketCard: React.FC<IProps> = ({
       setCancelling(false);
     }
   };
-
 
   return (
     <div className='card'>
@@ -120,16 +119,7 @@ const TicketCard: React.FC<IProps> = ({
         <button className={`button ${color}`} onClick={handleDownload}>
           <span className='material-symbols-outlined'>download</span> Descargar
         </button>
-
-        <Link href={sendUrl} className={`button ${color}-overlay`}>
-          <span className='material-symbols-outlined'>forward_to_inbox</span> Enviar
-        </Link>
-
-        <button
-          className={`button button-red`}
-          onClick={handleCancel}
-          disabled={cancelling}
-        >
+        <button className={`button button-red`} onClick={handleCancel} disabled={cancelling}>
           <span className='material-symbols-outlined'>cancel</span>{' '}
           {cancelling ? 'Cancelando...' : 'Cancelar'}
         </button>
