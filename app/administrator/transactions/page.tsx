@@ -21,6 +21,8 @@ type OrdenDeCompra = {
   monto_fee_servicio: number;
   fecha_hora_ini: string;
   fecha_hora_fin?: string;
+  ticket_id: number;
+  precio_entrada: number; // ✅ Campo correcto del backend
 };
 
 const styles = {
@@ -92,23 +94,39 @@ const styles = {
     padding: 24,
     border: '1px solid #262626',
   },
-  statsRow: { display: 'flex', gap: 20, marginBottom: 24, flexWrap: 'wrap' as const },
+  statsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 20,
+    marginBottom: 24,
+  },
   statCard: {
-    padding: '20px 28px',
+    padding: '16px 20px',
     borderRadius: 12,
     background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)',
     color: '#fff',
-    minWidth: 200,
     border: '1px solid #262626',
     boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    justifyContent: 'space-between',
+    minHeight: '110px',
   },
-  statValue: { fontSize: 46, fontWeight: 700, color: '#cddc39', marginTop: 8 },
+  statValue: {
+    fontSize: 32,
+    fontWeight: 700,
+    color: '#cddc39',
+    marginTop: 6,
+    marginBottom: 4,
+    lineHeight: 1,
+  },
   statLabel: {
-    fontSize: 13,
+    fontSize: 11,
     textTransform: 'uppercase' as const,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     color: '#888',
     fontWeight: 600,
+    marginBottom: 4,
   },
   table: { width: '100%', borderCollapse: 'collapse' as const, color: '#ddd' },
   th: {
@@ -119,7 +137,12 @@ const styles = {
     fontWeight: 600,
   },
   td: { padding: '12px', borderBottom: '1px solid #161616', fontSize: 14 },
-  hint: { color: '#666', marginTop: 6, fontSize: 14 },
+  hint: {
+    color: '#666',
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 1,
+  },
   emptyState: {
     textAlign: 'center' as const,
     padding: '60px 20px',
@@ -191,7 +214,6 @@ const TransactionsAdmin: React.FC = () => {
   const [loadingOrdenes, setLoadingOrdenes] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Cargar eventos disponibles
   useEffect(() => {
     const fetchEventos = async () => {
       try {
@@ -201,7 +223,6 @@ const TransactionsAdmin: React.FC = () => {
           const data = await response.json();
           console.log('Data completa:', data);
 
-          // Normalizar los eventos
           const eventosNormalizados = (data.eventos || []).map((e: any) => ({
             id_evento: e.ID || e.id_evento,
             titulo: e.Titulo || e.titulo,
@@ -225,7 +246,6 @@ const TransactionsAdmin: React.FC = () => {
     fetchEventos();
   }, []);
 
-  // Cargar transacciones del evento seleccionado
   useEffect(() => {
     if (!selectedEventoId) {
       setOrdenes([]);
@@ -243,15 +263,17 @@ const TransactionsAdmin: React.FC = () => {
 
           // Normalizar las órdenes de compra
           const ordenesNormalizadas = (data || []).map((o: any) => ({
-            orden_de_compra_id: o.ID || o.orden_de_compra_id,
-            usuario_id: o.UsuarioID || o.usuario_id,
-            fecha: o.Fecha || o.fecha,
-            total: o.Total || o.total || 0,
-            metodo_de_pago_id: o.MetodoDePagoID || o.metodo_de_pago_id,
-            estado_de_orden: o.EstadoDeOrden || o.estado_de_orden || 0,
-            monto_fee_servicio: o.MontoFeeServicio || o.monto_fee_servicio || 0,
-            fecha_hora_ini: o.FechaHoraIni || o.fecha_hora_ini,
-            fecha_hora_fin: o.FechaHoraFin || o.fecha_hora_fin,
+            orden_de_compra_id: o.orden_de_compra_id,
+            usuario_id: o.usuario_id,
+            fecha: o.fecha,
+            total: o.total || 0,
+            metodo_de_pago_id: o.metodo_de_pago_id,
+            estado_de_orden: o.estado_de_orden || 0,
+            monto_fee_servicio: o.monto_fee_servicio || 0,
+            fecha_hora_ini: o.fecha_hora_ini,
+            fecha_hora_fin: o.fecha_hora_fin,
+            ticket_id: o.ticket_id,
+            precio_entrada: o.precio_entrada || 0, // ✅ Usar el campo correcto
           }));
 
           console.log('Órdenes normalizadas:', ordenesNormalizadas);
@@ -267,7 +289,6 @@ const TransactionsAdmin: React.FC = () => {
     fetchTransacciones();
   }, [selectedEventoId]);
 
-  // Filtrar eventos por búsqueda
   const filteredEventos = useMemo(() => {
     if (!searchQuery) return eventos;
     return eventos.filter(
@@ -279,12 +300,34 @@ const TransactionsAdmin: React.FC = () => {
 
   // Calcular estadísticas
   const stats = useMemo(() => {
-    const totalOrdenes = ordenes.length;
-    const totalMonto = ordenes.reduce((sum, o) => sum + (o.total || 0), 0);
-    const totalFees = ordenes.reduce((sum, o) => sum + (o.monto_fee_servicio || 0), 0);
-    const ordenesConfirmadas = ordenes.filter((o) => o.estado_de_orden === 1).length;
+    // Obtener órdenes únicas
+    const ordenesUnicas = new Map<number, OrdenDeCompra>();
 
-    return { totalOrdenes, totalMonto, totalFees, ordenesConfirmadas };
+    ordenes.forEach((orden) => {
+      if (!ordenesUnicas.has(orden.orden_de_compra_id)) {
+        ordenesUnicas.set(orden.orden_de_compra_id, orden);
+      }
+    });
+
+    const totalTickets = ordenes.length;
+    const totalMonto = ordenes.reduce(
+      (sum, o) => sum + (o.precio_entrada - o.precio_entrada * 0.0225),
+      0
+    );
+
+    const totalFees = ordenes.reduce((sum, o) => sum + o.precio_entrada * 0.0225, 0);
+
+    // ✅ Contar solo órdenes únicas confirmadas (estado_de_orden === 1)
+    const ordenesConfirmadas = Array.from(ordenesUnicas.values()).filter(
+      (o) => o.estado_de_orden === 1
+    ).length;
+
+    return {
+      totalTickets,
+      totalMonto,
+      totalFees,
+      ordenesConfirmadas,
+    };
   }, [ordenes]);
 
   const selectedEvento = eventos.find((e) => e.id_evento === selectedEventoId);
@@ -371,19 +414,19 @@ const TransactionsAdmin: React.FC = () => {
 
               <div style={styles.statsRow}>
                 <div style={styles.statCard}>
-                  <div style={styles.statLabel}>TOTAL ÓRDENES</div>
-                  <div style={styles.statValue}>{stats.totalOrdenes}</div>
-                  <div style={styles.hint}>Registradas</div>
+                  <div style={styles.statLabel}>TOTAL TICKETS</div>
+                  <div style={styles.statValue}>{stats.totalTickets}</div>
+                  <div style={styles.hint}>Vendidos</div>
                 </div>
                 <div style={styles.statCard}>
-                  <div style={styles.statLabel}>CONFIRMADAS</div>
+                  <div style={styles.statLabel}>ORDENES CONFIRMADAS</div>
                   <div style={styles.statValue}>{stats.ordenesConfirmadas}</div>
                   <div style={styles.hint}>Pagadas</div>
                 </div>
                 <div style={styles.statCard}>
-                  <div style={styles.statLabel}>MONTO TOTAL</div>
+                  <div style={styles.statLabel}>MONTO RECAUDADO</div>
                   <div style={styles.statValue}>S/ {stats.totalMonto.toFixed(2)}</div>
-                  <div style={styles.hint}>Ingresos</div>
+                  <div style={styles.hint}>Total Entradas - Fee Serv.</div>
                 </div>
                 <div style={styles.statCard}>
                   <div style={styles.statLabel}>FEES SERVICIO</div>
@@ -407,50 +450,59 @@ const TransactionsAdmin: React.FC = () => {
                       <th style={styles.th}>ID Orden</th>
                       <th style={styles.th}>Usuario ID</th>
                       <th style={styles.th}>Fecha</th>
-                      <th style={styles.th}>Total (S/)</th>
-                      <th style={styles.th}>Fee Servicio</th>
+                      <th style={styles.th}>Precio (S/)</th>
+                      <th style={styles.th}>Fee Servicio (2.25%)</th>
                       <th style={styles.th}>Estado</th>
                       <th style={styles.th}>Método Pago</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {ordenes.map((orden) => (
-                      <tr key={orden.orden_de_compra_id}>
-                        <td style={styles.td}>#{orden.orden_de_compra_id}</td>
-                        <td style={styles.td}>{orden.usuario_id}</td>
-                        <td style={styles.td}>
-                          {orden.fecha
-                            ? new Date(orden.fecha).toLocaleDateString('es-PE', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : 'Sin fecha'}
-                        </td>
-                        <td style={styles.td}>S/ {orden.total.toFixed(2)}</td>
-                        <td style={styles.td}>S/ {orden.monto_fee_servicio.toFixed(2)}</td>
-                        <td
-                          style={{
-                            ...styles.td,
-                            color: getEstadoColor(orden.estado_de_orden),
-                            fontWeight: 600,
-                          }}
-                        >
-                          {getEstadoOrdenText(orden.estado_de_orden)}
-                        </td>
-                        <td
-                          style={{
-                            ...styles.td,
-                            color: getMetodoPagoColor(orden.metodo_de_pago_id),
-                            fontWeight: 600,
-                          }}
-                        >
-                          {getMetodoPagoText(orden.metodo_de_pago_id)}
-                        </td>
-                      </tr>
-                    ))}
+                    {ordenes.map((orden, index) => {
+                      const uniqueKey = orden.ticket_id
+                        ? `ticket-${orden.ticket_id}`
+                        : `orden-${orden.orden_de_compra_id}-${index}`;
+
+                      // ✅ Calcular fee individual: 2.25% del precio de entrada
+                      const feeIndividual = orden.precio_entrada * 0.0225;
+
+                      return (
+                        <tr key={uniqueKey}>
+                          <td style={styles.td}>#{orden.orden_de_compra_id}</td>
+                          <td style={styles.td}>{orden.usuario_id}</td>
+                          <td style={styles.td}>
+                            {orden.fecha
+                              ? new Date(orden.fecha).toLocaleDateString('es-PE', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : 'Sin fecha'}
+                          </td>
+                          <td style={styles.td}>S/ {orden.precio_entrada.toFixed(2)}</td>
+                          <td style={styles.td}>S/ {feeIndividual.toFixed(2)}</td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              color: getEstadoColor(orden.estado_de_orden),
+                              fontWeight: 600,
+                            }}
+                          >
+                            {getEstadoOrdenText(orden.estado_de_orden)}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              color: getMetodoPagoColor(orden.metodo_de_pago_id),
+                              fontWeight: 600,
+                            }}
+                          >
+                            {getMetodoPagoText(orden.metodo_de_pago_id)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
