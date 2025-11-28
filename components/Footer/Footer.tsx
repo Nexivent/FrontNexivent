@@ -42,11 +42,7 @@ const Footer: React.FC = () => (
         </Link>
       </div>
       <div className='members'>
-        <Link href='/members/signup' className='white'>
-          Registrarse
-        </Link>
-        <span>o</span>
-        <ButtonLink color='yellow-filled' text='Acceder' url='members/signin' />
+
       </div>
     </div>
     <div className='copy'>

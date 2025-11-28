@@ -12,6 +12,7 @@ export async function searchEvents(params: any = {}, useAbsolute = false) {
     if (params.lugar) query.append("lugar", params.lugar);
     if (params.fecha) query.append("fecha", params.fecha);
     if (params.horaInicio) query.append("horaInicio", params.horaInicio);
+    if (1) query.append("estado", "PUBLICADO");
 
     const finalUrl = `${baseUrl}?${query.toString()}`;
 
