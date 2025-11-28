@@ -52,15 +52,6 @@ const styles = {
     color: 'white',
   },
   td: { padding: '16px', borderBottom: '1px solid #333', color: '#ccc' },
-  statusBadge: (estado: string) => ({
-    padding: '4px 12px',
-    borderRadius: '20px',
-    fontSize: '12px',
-    fontWeight: 600,
-    textTransform: 'uppercase' as const,
-    backgroundColor: estado === 'activo' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-    color: estado === 'activo' ? '#4caf50' : '#f44336',
-  }),
   rolesList: { display: 'flex', flexWrap: 'wrap' as const, gap: '8px' },
   roleBadge: {
     display: 'inline-flex',
@@ -87,40 +78,71 @@ const styles = {
     justifyContent: 'center',
   },
   btnAction: {
-    padding: '8px 16px',
+    padding: '6px 12px',
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: 600,
     backgroundColor: '#cddc39',
     color: '#000',
-    marginRight: '8px',
-  },
-  btnStatusActive: {
-    padding: '8px 16px',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: 600,
-    backgroundColor: '#4caf50',
-    color: '#fff',
-    marginRight: '8px',
-  },
-  btnStatusInactive: {
-    padding: '8px 16px',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: 600,
-    backgroundColor: '#f44336',
-    color: '#fff',
-    marginRight: '8px',
+    fontSize: '13px',
+    whiteSpace: 'nowrap' as const,
   },
   actionsCell: {
     display: 'flex',
-    gap: '8px',
+    gap: '12px',
     alignItems: 'center',
   },
+  // ✨ TOGGLE CONTAINER
+  toggleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  // TOGGLE SWITCH
+  toggleSwitch: {
+    position: 'relative' as const,
+    display: 'inline-block',
+    width: '56px',
+    height: '28px',
+  },
+  toggleInput: {
+    opacity: 0,
+    width: 0,
+    height: 0,
+  },
+  toggleSlider: (isActive: boolean, disabled: boolean) => ({
+    position: 'absolute' as const,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: isActive ? '#4caf50' : '#f44336',
+    transition: '0.3s',
+    borderRadius: '28px',
+    opacity: disabled ? 0.6 : 1,
+  }),
+  toggleSliderBefore: (isActive: boolean) => ({
+    position: 'absolute' as const,
+    content: '""',
+    height: '20px',
+    width: '20px',
+    left: isActive ? '32px' : '4px',
+    bottom: '4px',
+    backgroundColor: 'white',
+    transition: '0.3s',
+    borderRadius: '50%',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+  }),
+  // ETIQUETA DEL TOGGLE
+  toggleLabel: (isActive: boolean) => ({
+    fontSize: '12px',
+    fontWeight: 600,
+    color: isActive ? '#4caf50' : '#f44336',
+    minWidth: '60px',
+    textTransform: 'uppercase' as const,
+  }),
   modalOverlay: {
     position: 'fixed' as const,
     top: 0,
@@ -410,9 +432,11 @@ export default function UsersManagement() {
     }
   };
 
-  // ✨ NUEVA FUNCIÓN: Cambiar estado de usuario
-  const handleChangeUserStatus = async (userId: number, newStatus: 'activo' | 'inactivo') => {
+  // ✨ FUNCIÓN MEJORADA: Toggle para cambiar estado de usuario
+  const handleToggleUserStatus = async (userId: number, currentStatus: string) => {
+    const newStatus = currentStatus === 'activo' ? 'inactivo' : 'activo';
     const action = newStatus === 'activo' ? 'activar' : 'desactivar';
+
     if (!confirm(`¿Estás seguro de que deseas ${action} este usuario?`)) return;
 
     setActionLoading(true);
@@ -509,8 +533,28 @@ export default function UsersManagement() {
                   <td style={styles.td}>{user.idUsuario}</td>
                   <td style={styles.td}>{user.nombre}</td>
                   <td style={styles.td}>{user.correo}</td>
+                  {/* ✨ COLUMNA ESTADO CON TOGGLE SLIDER */}
                   <td style={styles.td}>
-                    <span style={styles.statusBadge(user.estado)}>{user.estado}</span>
+                    <div style={styles.toggleContainer}>
+                      <label
+                        style={styles.toggleSwitch}
+                        title={user.estado === 'activo' ? 'Desactivar usuario' : 'Activar usuario'}
+                      >
+                        <input
+                          type='checkbox'
+                          style={styles.toggleInput}
+                          checked={user.estado === 'activo'}
+                          onChange={() => handleToggleUserStatus(user.idUsuario, user.estado)}
+                          disabled={actionLoading}
+                        />
+                        <span style={styles.toggleSlider(user.estado === 'activo', actionLoading)}>
+                          <span style={styles.toggleSliderBefore(user.estado === 'activo')} />
+                        </span>
+                      </label>
+                      <span style={styles.toggleLabel(user.estado === 'activo')}>
+                        {user.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
                   </td>
                   <td style={styles.td}>
                     <div style={styles.rolesList}>
@@ -549,34 +593,6 @@ export default function UsersManagement() {
                       >
                         Asignar Rol
                       </button>
-
-                      {user.estado === 'activo' ? (
-                        <button
-                          style={{
-                            ...styles.btnStatusInactive,
-                            opacity: actionLoading ? 0.6 : 1,
-                            cursor: actionLoading ? 'not-allowed' : 'pointer',
-                          }}
-                          onClick={() => handleChangeUserStatus(user.idUsuario, 'inactivo')}
-                          disabled={actionLoading}
-                          title='Desactivar usuario'
-                        >
-                          Desactivar
-                        </button>
-                      ) : (
-                        <button
-                          style={{
-                            ...styles.btnStatusActive,
-                            opacity: actionLoading ? 0.6 : 1,
-                            cursor: actionLoading ? 'not-allowed' : 'pointer',
-                          }}
-                          onClick={() => handleChangeUserStatus(user.idUsuario, 'activo')}
-                          disabled={actionLoading}
-                          title='Activar usuario'
-                        >
-                          Activar
-                        </button>
-                      )}
                     </div>
                   </td>
                 </tr>
