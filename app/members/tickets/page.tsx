@@ -7,18 +7,47 @@ import Master from "@components/Layout/Master";
 import Section from "@components/Section/Section";
 import Heading from "@components/Heading/Heading";
 import TicketCard from "@components/Card/TicketCard";
+import { useRouter } from "next/navigation";
+
 
 const Page: React.FC = () => {
+  const router = useRouter();
   const { user } = useUser();
   const userId = user?.id ? parseInt(user.id) : 2;
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [shouldRenderFeed, setShouldRenderFeed] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+
+    setShouldRenderFeed(false);
+
+    const isOrganizer =
+      user.tipo_documento === "RUC_PERSONA" ||
+      user.tipo_documento === "RUC_EMPRESA";
+
+    const isAdmin = user.rol_principal === "ADMINISTRADOR";
+
+    if (isAdmin) {
+      console.log("REDIRECT → /app/administrator");
+      router.replace("/administrator");
+      return;
+    }
+
+    if (isOrganizer) {
+      console.log("REDIRECT → /organizer");
+      router.replace("/organizer");
+      return;
+    }
+
+    // Si no redirige, cargamos tickets
     const fetchTickets = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/member/tickets/${userId}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/member/tickets/${userId}`
+        );
 
         if (!res.ok) {
           throw new Error("Error cargando tickets");
@@ -34,26 +63,26 @@ const Page: React.FC = () => {
     };
 
     fetchTickets();
-  }, [userId]);
+  }, [user]); // <--- IMPORTANTÍSIMO: depende de user, no userId
 
   return (
     <Master>
-      <Section className='black-background hero-offset'>
-        <div className='container'>
-          <div className='center'>
-            <Heading type={1} color='gray' text='Mis Tickets' />
-            <p className='gray form-information'>
-              Puedes acceder a los boletos que compraste desde esta página en cualquier momento.
-              Puedes descargarlos o enviarlos. Ten en cuenta que no podrás ver los boletos de eventos
-              que ya hayan finalizado o sido cancelados en esta página.
+      <Section className="black-background hero-offset">
+        <div className="container">
+          <div className="center">
+            <Heading type={1} color="gray" text="Mis Tickets" />
+            <p className="gray form-information">
+              Puedes acceder a los boletos que compraste desde esta página en
+              cualquier momento. Puedes descargarlos o enviarlos. Ten en cuenta
+              que no podrás ver los boletos de eventos que ya hayan finalizado o
+              sido cancelados en esta página.
             </p>
           </div>
         </div>
       </Section>
 
-      <Section className='list-cards'>
-        <div className='container events-grid'>
-
+      <Section className="list-cards">
+        <div className="container events-grid">
           {loading && <p className="gray">Cargando tickets...</p>}
 
           {!loading && tickets.length === 0 && (
@@ -68,7 +97,7 @@ const Page: React.FC = () => {
               eventName={t.evento.titulo}
               eventWhen={new Date(t.fechaInicio).toLocaleString("es-PE", {
                 dateStyle: "long",
-                timeStyle: "short"
+                timeStyle: "short",
               })}
               eventVenue={t.evento.lugar}
               eventImage={t.evento.imagenPortada || "/placeholder.jpg"}
@@ -77,7 +106,6 @@ const Page: React.FC = () => {
               sendUrl={`/tickets/send/${t.idTicket}`}
             />
           ))}
-
         </div>
       </Section>
     </Master>
