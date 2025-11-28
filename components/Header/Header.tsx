@@ -77,11 +77,10 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
-        scrolled
-          ? 'bg-black/95 backdrop-blur-sm shadow-lg'
-          : 'bg-gradient-to-b from-black/90 to-transparent'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${scrolled
+        ? 'bg-black/95 backdrop-blur-sm shadow-lg'
+        : 'bg-gradient-to-b from-black/90 to-transparent'
+        }`}
     >
       <div className='container mx-auto grid grid-cols-3 items-center px-4 py-3'>
         {/* Logo */}
@@ -138,11 +137,11 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
               </div>
 
               {isDropdownOpen && (
-                <div className='absolute right-0 mt-3 w-48 bg-white rounded-md shadow-lg py-1 z-20 text-black'>
+                <div className='absolute right-0 mt-3 w-48 bg-white !bg-opacity-100 backdrop-blur-none rounded-md shadow-md py-1 z-50 text-black'>
+
                   <Link
                     href='/members/tickets'
-                    className='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
-                  >
+                    className='block px-4 py-2 text-sm text-black hover:bg-gray-300'>
                     Mis tickets
                   </Link>
                   <Link
