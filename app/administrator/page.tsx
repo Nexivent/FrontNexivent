@@ -269,7 +269,7 @@ export default function UsersManagement() {
       }
 
       const rolesData = await rolesRes.json();
-      const roles = Array.isArray(rolesData) ? rolesData : (rolesData.items || []);
+      const roles = Array.isArray(rolesData) ? rolesData : rolesData.items || [];
       setAvailableRoles(Array.isArray(roles) ? roles : []);
 
       let usersUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/users`;
@@ -287,7 +287,9 @@ export default function UsersManagement() {
       }
 
       const usersData = await usersRes.json();
-      const usersList = Array.isArray(usersData) ? usersData : (usersData.items || usersData.users || []);
+      const usersList = Array.isArray(usersData)
+        ? usersData
+        : usersData.items || usersData.users || [];
 
       if (!Array.isArray(usersList)) {
         setUsers([]);
@@ -311,7 +313,10 @@ export default function UsersManagement() {
               idUsuario: user.idUsuario,
               nombre: user.nombre,
               correo: user.correo,
-              estado: user.estado === 1 || user.estado === '1' || user.estado === 'activo' ? 'activo' : 'inactivo',
+              estado:
+                user.estado === 1 || user.estado === '1' || user.estado === 'activo'
+                  ? 'activo'
+                  : 'inactivo',
               roles: Array.isArray(userRoles) ? userRoles : [],
             };
           } catch (err) {
@@ -319,7 +324,10 @@ export default function UsersManagement() {
               idUsuario: user.idUsuario,
               nombre: user.nombre,
               correo: user.correo,
-              estado: user.estado === 1 || user.estado === '1' || user.estado === 'activo' ? 'activo' : 'inactivo',
+              estado:
+                user.estado === 1 || user.estado === '1' || user.estado === 'activo'
+                  ? 'activo'
+                  : 'inactivo',
               roles: [],
             };
           }
@@ -412,11 +420,14 @@ export default function UsersManagement() {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: newStatus === 'activo' ? 1 : 0 }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/status`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: newStatus === 'activo' ? 1 : 0 }),
+        }
+      );
 
       const responseText = await response.text();
       const result = responseText ? JSON.parse(responseText) : {};
@@ -425,7 +436,10 @@ export default function UsersManagement() {
         throw new Error(result.error || `Error ${response.status}: No se pudo cambiar el estado`);
       }
 
-      setSuccessMessage(result.message || `Usuario ${newStatus === 'activo' ? 'activado' : 'desactivado'} correctamente`);
+      setSuccessMessage(
+        result.message ||
+          `Usuario ${newStatus === 'activo' ? 'activado' : 'desactivado'} correctamente`
+      );
       await loadData();
     } catch (err: any) {
       setError(handleApiError(err, 'Error al cambiar el estado del usuario'));
@@ -535,8 +549,7 @@ export default function UsersManagement() {
                       >
                         Asignar Rol
                       </button>
-                      
-                      
+
                       {user.estado === 'activo' ? (
                         <button
                           style={{
@@ -546,7 +559,7 @@ export default function UsersManagement() {
                           }}
                           onClick={() => handleChangeUserStatus(user.idUsuario, 'inactivo')}
                           disabled={actionLoading}
-                          title="Desactivar usuario"
+                          title='Desactivar usuario'
                         >
                           Desactivar
                         </button>
@@ -559,7 +572,7 @@ export default function UsersManagement() {
                           }}
                           onClick={() => handleChangeUserStatus(user.idUsuario, 'activo')}
                           disabled={actionLoading}
-                          title="Activar usuario"
+                          title='Activar usuario'
                         >
                           Activar
                         </button>

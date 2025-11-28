@@ -41,21 +41,17 @@ const RucSignInForm: React.FC = () => {
         }),
       });
       const result = await response.json();
-      console.log('Respuesta del servidor:', result);
 
-      if (response.status === 403) {
+      if (result.error) {
         // Cuenta no activa o deshabilitada
         if (result.error === 'ACCOUNT_NOT_ACTIVE') {
           setError(
             'Tu cuenta está pendiente de aprobación por un administrador. Recibirás un correo cuando sea activada.'
           );
-          alert('⏳ Cuenta pendiente de aprobación\n\n' + result.message);
         } else if (result.error === 'ACCOUNT_DISABLED') {
           setError('Tu cuenta ha sido deshabilitada. Por favor, contacta al soporte.');
-          alert('❌ Cuenta deshabilitada\n\n' + result.message);
         } else {
           setError(result.message || 'No tienes permiso para acceder');
-          alert(result.message || 'No tienes permiso para acceder');
         }
         setIsLoading(false);
         return;
@@ -99,10 +95,11 @@ const RucSignInForm: React.FC = () => {
         alert('¡Inicio de sesión exitoso!');
         router.push('/organizer');
       } else {
-        throw new Error(result.message || 'Credenciales incorrectas');
+        setError(result.message || 'Error al iniciar sesión');
       }
     } catch (error: any) {
-      console.error('Error al iniciar sesión como organizador:', error);
+      console.error('💥 [LOGIN] Error:', error);
+      setError('Error al iniciar sesión');
       if (setUser) {
         setUser(null);
       }
@@ -111,6 +108,20 @@ const RucSignInForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#fee',
+            color: '#c33',
+            padding: '12px',
+            borderRadius: '4px',
+            marginBottom: '16px',
+            fontSize: '14px',
+          }}
+        >
+          {error}
+        </div>
+      )}
       <div className='form-elements'>
         <Input label='RUC' type='text' error={errors.ruc?.message} {...register('ruc')} />
         <Input

@@ -10,12 +10,14 @@ import { useUser } from '@contexts/UserContext';
 import Input from '@components/Form/Input';
 import Button from '@components/Button/Button';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { useState } from 'react';
 
 type FormInputs = z.infer<typeof emailLoginSchema>;
 
 const EmailPasswordSignInForm: React.FC = () => {
   const { setUser } = useUser();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   const {
     register,
@@ -43,6 +45,12 @@ const EmailPasswordSignInForm: React.FC = () => {
 
       const result = await response.json();
 
+      // Manejar cuenta deshabilitada
+      if (result.error === 'ACCOUNT_DISABLED') {
+        setError(result.message || 'Tu cuenta ha sido deshabilitada. Contacta al soporte.');
+        return;
+      }
+
       if (response.ok && result.token) {
         localStorage.setItem('auth_token', result.token.token);
         localStorage.setItem('user', JSON.stringify(result.usuario));
@@ -68,16 +76,33 @@ const EmailPasswordSignInForm: React.FC = () => {
         }
       } else {
         console.error('❌ [LOGIN] Error en respuesta:', result);
-        throw new Error(result.message || 'Credenciales incorrectas');
+        setError(result.message || 'Error al iniciar sesión');
       }
     } catch (error: any) {
       console.error('💥 [LOGIN] Error:', error);
-      alert(error.message || 'Error al iniciar sesión');
+      setError('Error al iniciar sesión');
+      if (setUser) {
+        setUser(null);
+      }
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#fee',
+            color: '#c33',
+            padding: '12px',
+            borderRadius: '4px',
+            marginBottom: '16px',
+            fontSize: '14px',
+          }}
+        >
+          {error}
+        </div>
+      )}
       <div className='form-elements'>
         <Input
           label='Correo electrónico'

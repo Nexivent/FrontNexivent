@@ -1,5 +1,5 @@
 // app/members/signup/components/CompletionStep.tsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { type PrefilledData } from './Form';
 
@@ -10,6 +10,7 @@ import Button from '@components/Button/Button';
 import Link from 'next/dist/client/link';
 import GoogleSignIn from '../../signin/components/GoogleSignIn';
 import PasswordConditions from '@components/Form/PasswordStrengthIndicator';
+import { set } from 'zod';
 
 interface IProps {
   prefilledData: PrefilledData;
@@ -30,13 +31,20 @@ const CompletionStep: React.FC<IProps> = ({
     handleSubmit,
     setValue,
     watch,
-    formState: { isSubmitting },
+    formState: { errors, isSubmitting },
+    trigger,
+    setError,
+    clearErrors,
   } = useFormContext();
+
+  const [showErrors, setShowErrors] = useState(false);
   const tipoDoc = prefilledData.tipo_documento;
   const isDNI = tipoDoc === 'DNI';
   const isCE = tipoDoc === 'CE';
   const isRUC = tipoDoc === 'RUC_PERSONA' || tipoDoc === 'RUC_EMPRESA';
   const passwordValue = watch('contraseña') || '';
+  const confirmPasswordValue = watch('confirmarContraseña') || '';
+  const tosValue = watch('tos');
 
   const showGoogleOption = isDNI || isCE;
 
@@ -96,21 +104,58 @@ const CompletionStep: React.FC<IProps> = ({
 
   const onFinalSubmit = async (data: any) => {
     try {
-      console.log('Datos del formulario:', data);
-      const tosValue = watch('tos');
-      console.log('TOS value (watch):', tosValue);
+      setShowErrors(true);
 
-      // Validar que se aceptaron los términos
-      if (!tosValue) {
-        alert('Debes aceptar los Términos y Condiciones para continuar');
-        return;
+      // Validar correo
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!data.correo || !emailRegex.test(data.correo)) {
+        setError('correo', {
+          type: 'manual',
+          message: 'Ingresa un correo electrónico válido',
+        });
+      }
+
+      // Validar contraseña (mínimo 8 caracteres)
+      if (!data.contraseña || data.contraseña.length < 8) {
+        setError('contraseña', {
+          type: 'manual',
+          message: 'La contraseña debe tener al menos 8 caracteres',
+        });
       }
 
       // Validar que las contraseñas coincidan
       if (data.contraseña !== data.confirmarContraseña) {
-        alert('Las contraseñas no coinciden');
-        return;
+        setError('confirmarContraseña', {
+          type: 'manual',
+          message: 'Las contraseñas no coinciden',
+        });
       }
+
+      // Validar términos y condiciones
+      if (!tosValue) {
+        setError('tos', {
+          type: 'manual',
+          message: 'Debes aceptar los Términos y Condiciones',
+        });
+      }
+
+      // Validar todos los campos
+      const isValid = await trigger();
+
+      if (!isValid || Object.keys(errors).length > 0) {
+        // Forzar actualización después de un breve delay para asegurar que los errores se rendericen
+        setTimeout(() => {
+          const firstErrorField = Object.keys(errors)[0];
+          const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+          if (errorElement) {
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+        return; // Detener el envío si hay errores
+      }
+
+      // Limpiar errores si todo está bien
+      clearErrors();
 
       // Preparar datos para enviar al backend
       const payload = {
@@ -208,38 +253,116 @@ const CompletionStep: React.FC<IProps> = ({
                 : 'Completa tus datos para continuar.'}
             </p>
           )}
-          <Input label='Correo electrónico' type='email' {...register('correo')} />
+          <div style={{ position: 'relative' }}>
+            <Input
+              label='Correo electrónico'
+              type='email'
+              {...register('correo', {
+                required: 'El correo electrónico es requerido',
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: 'Ingresa un correo electrónico válido',
+                },
+              })}
+              error={
+                showErrors && errors.correo?.message ? String(errors.correo.message) : undefined
+              }
+              style={{
+                borderColor: showErrors && errors.correo ? '#c33' : undefined,
+                borderWidth: showErrors && errors.correo ? '2px' : undefined,
+              }}
+            />
+          </div>
           <Input label='Teléfono' type='tel' {...register('telefono')} />
-          <Input label='Contraseña' type='password' isPassword {...register('contraseña')} />
+          <div style={{ position: 'relative' }}>
+            <Input
+              label='Contraseña'
+              type='password'
+              isPassword
+              {...register('contraseña', {
+                required: 'La contraseña es requerida',
+                minLength: {
+                  value: 8,
+                  message: 'La contraseña debe tener al menos 8 caracteres',
+                },
+              })}
+              error={
+                showErrors && errors.contraseña?.message
+                  ? String(errors.contraseña.message)
+                  : undefined
+              }
+              style={{
+                borderColor: showErrors && errors.contraseña ? '#c33' : undefined,
+                borderWidth: showErrors && errors.contraseña ? '2px' : undefined,
+              }}
+            />
+          </div>
           <PasswordConditions password={passwordValue} />
-          <Input
-            label='Confirmar Contraseña'
-            type='password'
-            isPassword
-            {...register('confirmarContraseña')}
-          />
+          <div style={{ position: 'relative' }}>
+            <Input
+              label='Confirmar Contraseña'
+              type='password'
+              isPassword
+              {...register('confirmarContraseña', {
+                required: 'Debes confirmar tu contraseña',
+                validate: (value) => value === passwordValue || 'Las contraseñas no coinciden',
+              })}
+              error={
+                showErrors && errors.confirmarContraseña?.message
+                  ? String(errors.confirmarContraseña.message)
+                  : undefined
+              }
+              style={{
+                borderColor: showErrors && errors.confirmarContraseña ? '#c33' : undefined,
+                borderWidth: showErrors && errors.confirmarContraseña ? '2px' : undefined,
+              }}
+            />
+          </div>
           <Controller
             name='tos'
             control={control}
             defaultValue={false}
+            rules={{ required: 'Debes aceptar los Términos y Condiciones' }}
             render={({ field: { value, onChange, ref } }) => (
-              <Switch
-                checked={value}
-                onChange={(e: any) => {
-                  const newValue = typeof e === 'boolean' ? e : e?.target?.checked || false;
-                  onChange(newValue);
-                  setValue('tos', newValue, { shouldValidate: true });
+              <div
+                style={{
+                  border: showErrors && errors.tos ? '2px solid #c33' : 'none',
+                  borderRadius: '8px',
+                  padding: showErrors && errors.tos ? '8px' : '0',
+                  backgroundColor:
+                    showErrors && errors.tos ? 'rgba(204, 51, 51, 0.05)' : 'transparent',
                 }}
               >
-                Acepto la{' '}
-                <Link href='/legal/privacy-policy' className='blue'>
-                  Política de privacidad
-                </Link>{' '}
-                y{' '}
-                <Link href='/legal/terms-of-service' className='blue'>
-                  Términos de servicio
-                </Link>
-              </Switch>
+                <Switch
+                  checked={value}
+                  onChange={(e: any) => {
+                    const newValue = typeof e === 'boolean' ? e : e?.target?.checked || false;
+                    onChange(newValue);
+                    setValue('tos', newValue, { shouldValidate: true });
+                  }}
+                >
+                  Acepto la{' '}
+                  <Link href='/legal/privacy-policy' className='blue'>
+                    Política de privacidad
+                  </Link>{' '}
+                  y{' '}
+                  <Link href='/legal/terms-of-service' className='blue'>
+                    Términos de servicio
+                  </Link>
+                </Switch>
+                {showErrors && errors.tos && (
+                  <p
+                    style={{
+                      color: '#c33',
+                      fontSize: '14px',
+                      marginTop: '4px',
+                      marginBottom: '0',
+                    }}
+                  >
+                    {String(errors.tos.message)}
+                  </p>
+                )}
+              </div>
             )}
           />
 
