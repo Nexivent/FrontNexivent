@@ -264,6 +264,12 @@ const Page: React.FC = () => {
         }
       }
 
+      // Calcular cantidad total de tickets
+      const cantidadVendida = reservationData.purchaseData.tickets.reduce(
+        (total, ticket) => total + ticket.quantity,
+        0
+      );
+
       console.log('API: Confirmando orden:', reservationData.orderId);
 
       const confirmResponse = await fetch(
@@ -277,6 +283,7 @@ const Page: React.FC = () => {
             paymentId: paymentMethodId,
             idEvento: reservationData.purchaseData.event.idEvento,
             fechaEvento: reservationData.purchaseData.fecha.fecha,
+            cantidadVendida: cantidadVendida,
           }),
         }
       );
@@ -285,6 +292,7 @@ const Page: React.FC = () => {
         paymentId: paymentMethodId,
         idEvento: reservationData.purchaseData.event.idEvento,
         fechaEvento: reservationData.purchaseData.fecha.fecha,
+        cantidadVendida: cantidadVendida,
       });
 
       if (!confirmResponse.ok) {
