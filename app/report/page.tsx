@@ -300,7 +300,7 @@ export default function ReportPage() {
                         {ev.entradasVendidas.toLocaleString()}
                       </td>
                       <td className="border border-white/30 p-3 text-right">
-                        S/.{ev.recaudacionTotal.toLocaleString()}
+                        S/.{ev.recaudacionTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}

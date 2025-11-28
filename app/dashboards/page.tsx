@@ -74,10 +74,12 @@ export default function DashboardPage() {
       (acc: number, e: any) => acc + (e.entradasVendidas || 0),
       0
     ),
-    recaudacionTotal: reportData.reduce(
-      (acc: number, e: any) => acc + (e.recaudacionTotal || 0),
-      0
+    recaudacionTotal: Number(
+      reportData
+        .reduce((acc: number, e: any) => acc + (e.recaudacionTotal || 0), 0)
+        .toFixed(2)
     ),
+
 
   };
 
@@ -141,6 +143,12 @@ export default function DashboardPage() {
                 <Tooltip
                   contentStyle={{ backgroundColor: "#222", border: "none" }}
                   labelStyle={{ color: "#fff" }}
+                  formatter={(value: number) =>
+                    `S/. ${value.toLocaleString('es-PE', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
+                  }
                 />
                 <Bar dataKey="recaudacionTotal" fill="#f6d13bff" />
               </BarChart>
@@ -167,7 +175,7 @@ export default function DashboardPage() {
                     <td className="p-3">{ev.titulo}</td>
                     <td className="p-3">{ev.lugar}</td>
                     <td className="p-3 text-right">{ev.entradasVendidas?.toLocaleString()}</td>
-                    <td className="p-3 text-right">S/. {ev.recaudacionTotal?.toLocaleString()}</td>
+                    <td className="p-3 text-right">S/. {ev.recaudacionTotal?.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 ))}
               </tbody>
