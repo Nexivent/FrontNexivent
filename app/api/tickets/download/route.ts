@@ -1,16 +1,31 @@
-// app/api/ticket-pdf/route.ts
+// app/api/tickets/download/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
 
+// ------------------------------------------------------
+// ⭐ Sanitizar texto (evita caracteres Unicode inválidos)
+// ------------------------------------------------------
+function sanitize(text: string) {
+  return text
+    .replace(/–/g, "-")           // en-dash
+    .replace(/—/g, "-")           // em-dash
+    .replace(/[“”]/g, '"')        // comillas curvas
+    .replace(/[‘’]/g, "'")        // apóstrofos curvos
+    .replace(/°/g, "o")           // símbolo grado
+    .normalize("NFKD")            // descomponer acentos
+    .replace(/[\u0300-\u036f]/g, ""); // eliminar acentos combinados
+}
+
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const eventName = url.searchParams.get('eventName') || 'Evento';
-    const eventDate = url.searchParams.get('eventWhen') || 'Fecha';
-    const eventVenue = url.searchParams.get('eventVenue') || 'Lugar';
+
+    const eventName = sanitize(url.searchParams.get('eventName') || 'Evento');
+    const eventDate = sanitize(url.searchParams.get('eventWhen') || 'Fecha');
+    const eventVenue = sanitize(url.searchParams.get('eventVenue') || 'Lugar');
 
     // Crear PDF
     const pdfDoc = await PDFDocument.create();
@@ -69,7 +84,7 @@ export async function GET(request: NextRequest) {
       y: 700,
       size: 28,
       font,
-      color: rgb(1, 1, 1), // blanco
+      color: rgb(1, 1, 1),
     });
 
     // Línea separadora
@@ -95,7 +110,7 @@ export async function GET(request: NextRequest) {
         color: rgb(1, 1, 1),
       });
 
-      page.drawText(value, {
+      page.drawText(sanitize(value), {
         x: margin + 140,
         y,
         size: 14,
@@ -122,11 +137,11 @@ export async function GET(request: NextRequest) {
     y -= 40;
 
     // ------------------------------------------------------
-    // ⭐ QR centrado (queda mejor en blanco sobre negro)
+    // ⭐ QR
     // ------------------------------------------------------
     const qrDataUrl = await QRCode.toDataURL(
       `${eventName}|${eventDate}|${eventVenue}`,
-      { color: { dark: "#FFFFFF", light: "#000000" } } // blanco sobre negro
+      { color: { dark: "#FFFFFF", light: "#000000" } }
     );
 
     const qrImageBytes = Buffer.from(qrDataUrl.split(',')[1], 'base64');
@@ -143,13 +158,13 @@ export async function GET(request: NextRequest) {
     y -= qrDims.height + 20;
 
     // ------------------------------------------------------
-    // ⭐ DISCLAIMER con texto en blanco
+    // ⭐ DISCLAIMER
     // ------------------------------------------------------
-    const disclaimerText = `
-Con el E-ticket puedes acercarte directamente al evento portando una copia impresa y legible o, de manera virtual desde tu celular, con excepción de los eventos deportivos, conforme a la Ley N°30037, que exige portar la entrada impresa y el Documento Nacional de Identidad (DNI), siendo este último escaneado para el ingreso al evento.
+    const disclaimerText = sanitize(`
+Con el E-ticket puedes acercarte directamente al evento portando una copia impresa y legible o, de manera virtual desde tu celular, con excepcion de los eventos deportivos, conforme a la Ley N30037, que exige portar la entrada impresa y el Documento Nacional de Identidad (DNI), siendo este ultimo escaneado para el ingreso al evento.
 
-El ingreso después de la hora señalada en la entrada está sujeto a las reglas del Organizador y del establecimiento donde se llevará a cabo el evento. El día del evento, al ingresar al establecimiento, el público podrá estar sujeto a verificaciones adicionales por razones de seguridad, de acuerdo a lo establecido por el organizador o la autoridad correspondiente.
-`.trim();
+El ingreso despues de la hora senalada en la entrada esta sujeto a las reglas del Organizador y del establecimiento donde se llevara a cabo el evento. El dia del evento, al ingresar al establecimiento, el publico podra estar sujeto a verificaciones adicionales por razones de seguridad, de acuerdo a lo establecido por el organizador o la autoridad correspondiente.
+    `.trim());
 
     const maxWidth = pageWidth - margin * 2;
     const fontSize = 10;
@@ -192,7 +207,7 @@ El ingreso después de la hora señalada en la entrada está sujeto a las reglas
           y: textY,
           size: fontSize,
           font,
-          color: rgb(1, 1, 1), // blanco
+          color: rgb(1, 1, 1),
         });
 
         textY -= lineHeight;
