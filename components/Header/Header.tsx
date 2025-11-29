@@ -32,10 +32,9 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
   const showMisTickets = useMemo(() => {
     if (!user) return false;
 
-    const isAsistente = user.rol_principal === 'ASISTENTE';
     const isDNIorCE = user.tipo_documento === 'DNI' || user.tipo_documento === 'CE';
 
-    return isAsistente || isDNIorCE;
+    return isDNIorCE;
   }, [user]);
 
   const logoHref = useMemo(() => {

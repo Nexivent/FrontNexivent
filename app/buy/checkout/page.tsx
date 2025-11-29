@@ -66,7 +66,7 @@ const Page: React.FC = () => {
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
-  
+
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -74,7 +74,7 @@ const Page: React.FC = () => {
 
   useEffect(() => {
     const storedData = sessionStorage.getItem('reservationData');
-    
+
     if (!storedData) {
       console.log('No reservation data found, redirecting to home');
       router.push('/');
@@ -84,7 +84,7 @@ const Page: React.FC = () => {
     try {
       const data: ReservationData = JSON.parse(storedData);
       console.log('Reservation data loaded:', data);
-      
+
       if (!data.orderId || !data.purchaseData) {
         console.error('Invalid reservation data structure:', data);
         router.push('/');
@@ -92,11 +92,11 @@ const Page: React.FC = () => {
       }
 
       const remaining = Math.floor((data.expiresAt - Date.now()) / 1000);
-      
+
       if (remaining <= 0) {
-        showAlert({ 
-          type: 'error', 
-          text: 'Tu reserva ha expirado. Por favor, intenta nuevamente.' 
+        showAlert({
+          type: 'error',
+          text: 'Tu reserva ha expirado. Por favor, intenta nuevamente.',
         });
         setTimeout(() => router.push('/'), 2000);
         return;
@@ -115,18 +115,18 @@ const Page: React.FC = () => {
     if (!reservationData || timeRemaining <= 0) return;
 
     const interval = setInterval(() => {
-      setTimeRemaining(prev => {
+      setTimeRemaining((prev) => {
         const newTime = prev - 1;
-        
+
         if (newTime <= 0) {
-          showAlert({ 
-            type: 'error', 
-            text: 'Tu reserva ha expirado.' 
+          showAlert({
+            type: 'error',
+            text: 'Tu reserva ha expirado.',
           });
           setTimeout(() => router.push('/'), 2000);
           return 0;
         }
-        
+
         return newTime;
       });
     }, 1000);
@@ -177,42 +177,64 @@ const Page: React.FC = () => {
 
   const handlePayment = async () => {
     if (!selectedMethod) {
-      showAlert({ 
-        type: 'error', 
-        text: 'Por favor selecciona un método de pago.' 
+      showAlert({
+        type: 'error',
+        text: 'Por favor selecciona un método de pago.',
       });
       return;
     }
 
     if (selectedMethod === 'card') {
       if (!cardNumber || !cardName || !cardExpiry || !cardCVV) {
-        showAlert({ 
-          type: 'error', 
-          text: 'Por favor completa todos los campos de la tarjeta.' 
+        showAlert({
+          type: 'error',
+          text: 'Por favor completa todos los campos de la tarjeta.',
         });
         return;
       }
-      
+
       if (cardNumber.length !== 16) {
-        showAlert({ 
-          type: 'error', 
-          text: 'El número de tarjeta debe tener 16 dígitos.' 
+        showAlert({
+          type: 'error',
+          text: 'El número de tarjeta debe tener 16 dígitos.',
         });
         return;
       }
-      
+
       if (cardExpiry.length !== 4) {
-        showAlert({ 
-          type: 'error', 
-          text: 'La fecha de expiración debe tener formato MM/YY.' 
+        showAlert({
+          type: 'error',
+          text: 'La fecha de expiración debe tener formato MM/YY.',
         });
         return;
       }
-      
+
+      // ✅ Validación de fecha de expiración no pasada
+      const month = parseInt(cardExpiry.slice(0, 2), 10);
+      const year = parseInt(cardExpiry.slice(2, 4), 10);
+      const now = new Date();
+      const currentYear = now.getFullYear() % 100;
+      const currentMonth = now.getMonth() + 1;
+
+      if (
+        isNaN(month) ||
+        isNaN(year) ||
+        month < 1 ||
+        month > 12 ||
+        year < currentYear ||
+        (year === currentYear && month < currentMonth)
+      ) {
+        showAlert({
+          type: 'error',
+          text: 'La fecha de expiración debe ser futura.',
+        });
+        return;
+      }
+
       if (cardCVV.length !== 3) {
-        showAlert({ 
-          type: 'error', 
-          text: 'El CVV debe tener 3 dígitos.' 
+        showAlert({
+          type: 'error',
+          text: 'El CVV debe tener 3 dígitos.',
         });
         return;
       }
@@ -225,18 +247,18 @@ const Page: React.FC = () => {
 
     try {
       const paymentMethodId = selectedMethod === 'card' ? '1' : '2';
-      
+
       console.log('PAYMENT: Método seleccionado:', selectedMethod);
       console.log('PAYMENT: Payment ID a enviar:', paymentMethodId);
 
       if (reservationData.cuponAplicado && user?.id) {
         try {
           console.log('CUPON: Registrando uso del cupón...');
-          
+
           const cuponPayload = {
             cuponId: reservationData.cuponAplicado.id,
             usuarioId: parseInt(user.id),
-            cantUsada: reservationData.cuponAplicado.cantUsadaPorElUsuario + 1
+            cantUsada: reservationData.cuponAplicado.cantUsadaPorElUsuario + 1,
           };
 
           console.log('API: Enviando a /cupon/usuario:', cuponPayload);
@@ -303,15 +325,18 @@ const Page: React.FC = () => {
       const confirmData = await confirmResponse.json();
       console.log('SUCCESS: Orden confirmada:', confirmData);
 
-      sessionStorage.setItem('confirmedOrder', JSON.stringify({
-        orderId: reservationData.orderId,
-        estado: 'CONFIRMADA',
-        purchaseData: reservationData.purchaseData,
-        paymentMethod: selectedMethod,
-        paymentMethodId: paymentMethodId,
-        timestamp: Date.now(),
-        cuponUsado: reservationData.cuponAplicado || null,
-      }));
+      sessionStorage.setItem(
+        'confirmedOrder',
+        JSON.stringify({
+          orderId: reservationData.orderId,
+          estado: 'CONFIRMADA',
+          purchaseData: reservationData.purchaseData,
+          paymentMethod: selectedMethod,
+          paymentMethodId: paymentMethodId,
+          timestamp: Date.now(),
+          cuponUsado: reservationData.cuponAplicado || null,
+        })
+      );
 
       console.log('CLEANUP: Limpiando sessionStorage...');
       sessionStorage.removeItem('purchaseData');
@@ -320,17 +345,17 @@ const Page: React.FC = () => {
       console.log('SUCCESS: SessionStorage limpio');
 
       router.push('/buy/success');
-
     } catch (error) {
       console.error('ERROR: Error en el proceso de pago:', error);
-      
+
       setSubmitting(false);
-      
-      showAlert({ 
-        type: 'error', 
-        text: error instanceof Error 
-          ? error.message 
-          : 'Error al procesar el pago. Por favor, intenta nuevamente.' 
+
+      showAlert({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Error al procesar el pago. Por favor, intenta nuevamente.',
       });
     }
   };
@@ -371,7 +396,9 @@ const Page: React.FC = () => {
 
             <div className='timer-box'>
               <span className='material-symbols-outlined'>schedule</span>
-              <span>Tiempo restante: <strong>{formatTime(timeRemaining)}</strong></span>
+              <span>
+                Tiempo restante: <strong>{formatTime(timeRemaining)}</strong>
+              </span>
             </div>
 
             <div className='payment-methods'>
@@ -473,15 +500,17 @@ const Page: React.FC = () => {
                     <p>Escanea el código QR con tu app de Yape:</p>
                   </div>
                   <div className='yape-qr-container'>
-                    <img 
-                      src='https://nexivent-multimedia.s3.us-east-2.amazonaws.com/yape.jpg' 
-                      alt='QR de Yape' 
+                    <img
+                      src='https://nexivent-multimedia.s3.us-east-2.amazonaws.com/yape.jpg'
+                      alt='QR de Yape'
                       className='yape-qr'
                     />
                   </div>
                   <div className='payment-info'>
                     <span className='material-symbols-outlined'>info</span>
-                    <span>Después de yapear, presiona &quot;Pagar&quot; para confirmar tu compra</span>
+                    <span>
+                      Después de yapear, presiona &quot;Pagar&quot; para confirmar tu compra
+                    </span>
                   </div>
                 </div>
               )}
