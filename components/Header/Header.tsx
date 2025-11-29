@@ -159,7 +159,7 @@ const Header: React.FC<HeaderProps> = ({ user: propUser, onMenuToggle }) => {
                     border: '1px solid rgba(255, 255, 255, 0.125)',
                   }}
                 >
-                  {!showMisTickets && (
+                  {showMisTickets && (
                     <Link
                       href='/members/tickets'
                       className='block px-4 py-2 text-sm text-gray-200 hover:bg-white/10 transition-colors'
