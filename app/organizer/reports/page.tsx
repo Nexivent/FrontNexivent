@@ -333,10 +333,6 @@ const ReportsDashboard: React.FC = () => {
             <span className='label'>Cargos de servicio</span>
             <strong>{formatCurrency(event.cargosServicio.toFixed(2))}</strong>
           </div>
-          <div>
-            <span className='label'>Comisiones</span>
-            <strong>{formatCurrency(event.comisiones)}</strong>
-          </div>
         </div>
 
         {/* Indicador de expandir/colapsar */}
