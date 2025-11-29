@@ -82,6 +82,12 @@ type RawEventoApi = {
     PrecioBase?: number;
     Tarifa?: number;
   }>;
+  Interaccion?: Array<{
+    ID?: number | string;
+    Tipo?: number | string;
+    tipo?: number | string;
+    accion?: number | string;
+  }>;
 };
 
 type InteractionAction = 0 | 1 | 2;
@@ -97,6 +103,7 @@ const buildApiUrl = (path: string) => {
 };
 
 const FEED_ENDPOINT = buildApiUrl('/feed/eventos');
+const FEED_INTERACTION_ENDPOINT = buildApiUrl('/feed/eventos/con-interacciones');
 const INTERACTION_ENDPOINT = buildApiUrl('/evento/interaccion');
 
 const fallbackEventos: Evento[] = [
@@ -245,6 +252,24 @@ const resolvePrice = (raw: RawEventoApi): number => {
   return firstDefined ?? 0;
 };
 
+const resolveInteractionState = (raw: RawEventoApi): Evento['interes'] => {
+  const collection =
+    Array.isArray((raw as any).Interaccion) && (raw as any).Interaccion.length > 0
+      ? (raw as any).Interaccion
+      : Array.isArray((raw as any).interaccion)
+      ? (raw as any).interaccion
+      : [];
+
+  for (const item of collection) {
+    const typeCandidate = (item as any)?.Tipo ?? (item as any)?.tipo ?? (item as any)?.accion;
+    const numericType = typeof typeCandidate === 'number' ? typeCandidate : Number(typeCandidate);
+    if (numericType === 1) return true; // me interesa
+    if (numericType === 2) return false; // no me interesa
+  }
+
+  return null;
+};
+
 const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
   const candidateId =
     raw.ID ?? raw.Id ?? raw.IdEvento ?? raw.idEvento ?? raw.id ?? index + 1;
@@ -275,7 +300,7 @@ const mapApiEvent = (raw: RawEventoApi, index: number): Evento => {
     precio: String(priceCandidate ?? 0),
     tipo: isVideo ? 'video' : 'imagen',
     media: media.length > 0 ? media : '/eventoHH.jpg',
-    interes: null,
+    interes: resolveInteractionState(raw),
   };
 };
 
@@ -363,14 +388,16 @@ const NexiventFeed: React.FC = () => {
   }, [resolvedUserId]);
 
   const loadFeed = useCallback(
-    async (signal?: AbortSignal) => {
+    async (opts?: { signal?: AbortSignal; withInteractions?: boolean }) => {
+      const { signal, withInteractions } = opts ?? {};
       try {
         setStatus('loading');
         const shouldUseNeutralFeed = useNeutralFeed || !resolvedUserId;
+        const endpoint = withInteractions ? FEED_INTERACTION_ENDPOINT : FEED_ENDPOINT;
         const feedUrl =
           shouldUseNeutralFeed || !resolvedUserId
-            ? FEED_ENDPOINT
-            : `${FEED_ENDPOINT}?usuarioId=${resolvedUserId}`;
+            ? endpoint
+            : `${endpoint}?usuarioId=${resolvedUserId}`;
 
         const response = await fetch(feedUrl, {
           cache: 'no-store',
@@ -418,7 +445,7 @@ const NexiventFeed: React.FC = () => {
 
   useEffect(() => {
     const controller = new AbortController();
-    void loadFeed(controller.signal);
+    void loadFeed({ signal: controller.signal });
 
     return () => controller.abort();
   }, [loadFeed]);
@@ -598,7 +625,7 @@ const NexiventFeed: React.FC = () => {
     setCurrentIndex(0);
     viewedEvents.current.clear();
     setExhaustedFeed(false);
-    setUseNeutralFeed(true);
+    void loadFeed({ withInteractions: true });
   };
 
   return (
